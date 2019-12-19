@@ -1,0 +1,7 @@
+domain: dmall.com
+repo: gitlab.dmall.com/arch/sym-admin
+resources:
+- group: workload
+  kind: AdvDeployment
+  version: v1beta1
+version: "2"

@@ -1,0 +1,46 @@
+apiVersion: apiextensions.k8s.io/v1beta1
+kind: CustomResourceDefinition
+metadata:
+  creationTimestamp: null
+  name: advdeployments.workload.dmall.com
+spec:
+  additionalPrinterColumns:
+    - JSONPath: .status.status
+      description: Status of the resource
+      name: Status
+      type: string
+    - JSONPath: .spec.replicas
+      description: Desire replicas of Pod
+      name: Desire
+      type: integer
+    - JSONPath: .status.readyReplicas
+      description: Ready replicas of Pod
+      name: Ready
+      type: integer
+    - JSONPath: .status.version
+      description: Version of the resource
+      name: Version
+      type: string
+    - JSONPath: .spec.installMultiClusters
+      description: Is install and schedule multi cluster
+      name: IsMultiClusters
+      type: boolean
+    - JSONPath: .metadata.creationTimestamp
+      name: Age
+      type: date
+  group: workload.dmall.com
+  names:
+    kind: AdvDeployment
+    listKind: AdvDeploymentList
+    plural: advdeployments
+    singular: advdeployment
+    shortNames:
+      - ad
+  scope: Namespaced
+  subresources:
+    status: {}
+  version: v1beta1
+  versions:
+    - name: v1beta1
+      served: true
+      storage: true

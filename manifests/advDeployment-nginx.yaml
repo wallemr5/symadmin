@@ -1,0 +1,33 @@
+apiVersion: workload.dmall.com/v1beta1
+kind: AdvDeployment
+metadata:
+  name: nginx
+  namespace: default
+spec:
+  replicas: 4
+  workloadType: deployment
+  serviceName: nginx-svc
+  strategy:
+    upgradeType: blueGreen
+    needWaitingForConfirm: true
+    meta:
+      sym-available-zone: BJ4
+      sym-cluster-info: TCC_BJ4_DKS_TEST_01
+    cellReplicas:
+      - cellName: gz01b-bule
+        replicas: 2
+      - cellName: gz01b-green
+        replicas: 2
+  selector:
+    matchLabels:
+      app: nginx
+  template:
+    metadata:
+      labels:
+        app: nginx
+    spec:
+      containers:
+        - name: nginx
+          image: nginx:1.8
+          ports:
+            - containerPort: 80
