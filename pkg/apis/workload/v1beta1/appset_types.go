@@ -43,9 +43,23 @@ type AppSetSpec struct {
 	// of the workload.
 	PodSpec PodSpec `json:",inline"`
 
+	// UpdateStrategy indicates the strategy the advDeployment use to preform the update,
+	// when template is changed.
+	// +optional
+	UpdateStrategy AppSetUpdateStrategy `json:"updateStrategy,omitempty"`
 	// Topology describes the pods distribution detail between each of subsets.
 	// +optional
 	ClusterTopology ClusterTopology `json:"clusterTopology,omitempty"`
+}
+
+type AppSetUpdateStrategy struct {
+	// canary, blue, green
+	UpgradeType           string                  `json:"upgradeType,omitempty"`
+	MinReadySeconds       int32                   `json:"minReadySeconds,omitempty"`
+	PriorityStrategy      *UpdatePriorityStrategy `json:"priorityStrategy,omitempty"`
+	CanaryClusters        []string                `json:"canaryClusters,omitempty"`
+	Paused                bool                    `json:"paused,omitempty"`
+	NeedWaitingForConfirm bool                    `json:"needWaitingForConfirm,omitempty"`
 }
 
 type ClusterTopology struct {

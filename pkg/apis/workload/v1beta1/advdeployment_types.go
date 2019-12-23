@@ -43,10 +43,8 @@ type StatefulSetStrategy struct {
 }
 
 type AdvDeploymentUpdateStrategy struct {
-	// Beta, Batch, BlueGreen, Cell
+	// canary, blue, green
 	UpgradeType         string               `json:"upgradeType,omitempty"`
-	BatchSize           *int32               `json:"batchSize,omitempty"`
-	RzNum               *int32               `json:"rzNum,omitempty"`
 	StatefulSetStrategy *StatefulSetStrategy `json:"statefulSetStrategy,omitempty"`
 	MinReadySeconds     int32                `json:"minReadySeconds,omitempty"`
 	// CellReplicas          []*CellReplicas      `json:"cellReplicas,omitempty"`
@@ -58,23 +56,6 @@ type AdvDeploymentUpdateStrategy struct {
 	PriorityStrategy      *UpdatePriorityStrategy `json:"priorityStrategy,omitempty"`
 	Paused                bool                    `json:"paused,omitempty"`
 	NeedWaitingForConfirm bool                    `json:"needWaitingForConfirm,omitempty"`
-}
-
-type CellReplicas struct {
-	CellName string `json:"cellName,omitempty"`
-	Replicas int32  `json:"replicas,omitempty"`
-}
-
-type ClusterAllocator struct {
-	Name        string            `json:"name"`
-	AllocFactor int               `json:"allocFactor"`
-	Meta        map[string]string `json:"meta,omitempty"`
-}
-
-type ClusterRef struct {
-	ClusterInfoRef    *corev1.ConfigMapKeySelector `json:"configMapKeyRef,omitempty"`
-	Selector          map[string]string
-	ClusterAllocators []*ClusterAllocator `json:"clusterAllocators,omitempty"`
 }
 
 // AdvDeploymentSpec defines the desired state of AdvDeployment
