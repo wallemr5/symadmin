@@ -18,7 +18,7 @@ package v1beta1
 
 import (
 	"fmt"
-	v1 "k8s.io/api/core/v1"
+	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/util/intstr"
@@ -42,17 +42,22 @@ type StatefulSetStrategy struct {
 	PodUpdatePolicy PodUpdateStrategyType `json:"podUpdatePolicy,omitempty"`
 }
 
-type UpdateStrategy struct {
+type AdvDeploymentUpdateStrategy struct {
 	// Beta, Batch, BlueGreen, Cell
-	UpgradeType           string               `json:"upgradeType,omitempty"`
-	BatchSize             *int32               `json:"batchSize,omitempty"`
-	RzNum                 *int32               `json:"rzNum,omitempty"`
-	StatefulSetStrategy   *StatefulSetStrategy `json:"statefulSetStrategy,omitempty"`
-	Paused                bool                 `json:"paused,omitempty"`
-	NeedWaitingForConfirm bool                 `json:"needWaitingForConfirm,omitempty"`
-	MinReadySeconds       int32                `json:"minReadySeconds,omitempty"`
-	CellReplicas          []*CellReplicas      `json:"cellReplicas,omitempty"`
-	Meta                  map[string]string    `json:"meta,omitempty"`
+	UpgradeType         string               `json:"upgradeType,omitempty"`
+	BatchSize           *int32               `json:"batchSize,omitempty"`
+	RzNum               *int32               `json:"rzNum,omitempty"`
+	StatefulSetStrategy *StatefulSetStrategy `json:"statefulSetStrategy,omitempty"`
+	MinReadySeconds     int32                `json:"minReadySeconds,omitempty"`
+	// CellReplicas          []*CellReplicas      `json:"cellReplicas,omitempty"`
+	Meta map[string]string `json:"meta,omitempty"`
+	// Priorities are the rules for calculating the priority of updating pods.
+	// Each pod to be updated, will pass through these terms and get a sum of weights.
+	// Also, priorityStrategy can just be allowed to work with Parallel podManagementPolicy.
+	// +optional
+	PriorityStrategy      *UpdatePriorityStrategy `json:"priorityStrategy,omitempty"`
+	Paused                bool                    `json:"paused,omitempty"`
+	NeedWaitingForConfirm bool                    `json:"needWaitingForConfirm,omitempty"`
 }
 
 type CellReplicas struct {
@@ -65,26 +70,55 @@ type ClusterAllocator struct {
 	AllocFactor int               `json:"allocFactor"`
 	Meta        map[string]string `json:"meta,omitempty"`
 }
+
 type ClusterRef struct {
-	ClusterInfoRef    *v1.ConfigMapKeySelector `json:"configMapKeyRef,omitempty"`
-	ClusterAllocators []*ClusterAllocator      `json:"clusterAllocators,omitempty"`
+	ClusterInfoRef    *corev1.ConfigMapKeySelector `json:"configMapKeyRef,omitempty"`
+	Selector          map[string]string
+	ClusterAllocators []*ClusterAllocator `json:"clusterAllocators,omitempty"`
 }
 
 // AdvDeploymentSpec defines the desired state of AdvDeployment
 type AdvDeploymentSpec struct {
-	// support PodSet：InPlaceSet，StatefulSet, deployment
+	// support PodSet：helm, InPlaceSet，StatefulSet, deployment
 	// Default value is deployment
-	WorkloadType         string                     `json:"workloadType,omitempty"`
-	RevisionHistoryLimit *int32                     `json:"revisionHistoryLimit,omitempty"`
-	Replicas             *int32                     `json:"replicas,omitempty"`
-	Domain               *string                    `json:"domain,omitempty"`
-	Selector             *metav1.LabelSelector      `json:"selector,omitempty"`
-	Template             v1.PodTemplateSpec         `json:"template"`
-	VolumeClaimTemplates []v1.PersistentVolumeClaim `json:"volumeClaimTemplates,omitempty"`
-	ServiceName          string                     `json:"serviceName,omitempty"`
-	Strategy             UpdateStrategy             `json:"strategy,omitempty"`
-	InstallMultiClusters bool                       `json:"installMultiClusters,omitempty"`
-	ClusterRef           *ClusterRef                `json:"clusterRef,omitempty"`
+	// +optional
+	DeployType string `json:"deployType,omitempty"`
+	// Replicas is the total desired replicas of all the subsets.
+	// If unspecified, defaults to 1.
+	// +optional
+	Replicas *int32 `json:"replicas,omitempty"`
+
+	// template is the object that describes the pod that will be created if
+	// insufficient replicas are detected. Each pod stamped out by the workload
+	// will fulfill this Template, but have a unique identity from the rest
+	// of the workload.
+	PodSpec PodSpec `json:",inline"`
+
+	ServiceName *string `json:"serviceName,omitempty"`
+	// UpdateStrategy indicates the strategy the advDeployment use to preform the update,
+	// when template is changed.
+	// +optional
+	UpdateStrategy AdvDeploymentUpdateStrategy `json:"updateStrategy,omitempty"`
+
+	// Topology describes the pods distribution detail between each of subsets.
+	// +optional
+	Topology Topology `json:"topology,omitempty"`
+
+	// Indicates the number of histories to be conserved.
+	// If unspecified, defaults to 10.
+	// +optional
+	RevisionHistoryLimit *int32 `json:"revisionHistoryLimit,omitempty"`
+}
+
+// Topology defines the spread detail of each subset under UnitedDeployment.
+// A UnitedDeployment manages multiple homogeneous workloads which are called subset.
+// Each of subsets under the UnitedDeployment is described in Topology.
+type Topology struct {
+
+	// Contains the details of each subset. Each element in this array represents one subset
+	// which will be provisioned and managed by UnitedDeployment.
+	// +optional
+	PodSets map[string][]PodSet `json:"podSets,omitempty"`
 }
 
 type AdvDeploymentConditionType string
@@ -104,12 +138,22 @@ const (
 	DeploymentReplicaFailure AdvDeploymentConditionType = "ReplicaFailure"
 )
 
+type DeployState string
+
+const (
+	Created         DeployState = "Created"
+	ReconcileFailed DeployState = "ReconcileFailed"
+	Reconciling     DeployState = "Reconciling"
+	Available       DeployState = "Available"
+	Unmanaged       DeployState = "Unmanaged"
+)
+
 // AdvDeploymentCondition describes the state of a adv deployment at a certain point.
 type AdvDeploymentCondition struct {
 	// Type of deployment condition.
 	Type AdvDeploymentConditionType `json:"type"`
 	// Status of the condition, one of True, False, Unknown.
-	Status v1.ConditionStatus `json:"status"`
+	Status corev1.ConditionStatus `json:"status"`
 	// The last time this condition was updated.
 	LastUpdateTime metav1.Time `json:"lastUpdateTime,omitempty"`
 	// Last time the condition transitioned from one status to another.
@@ -121,34 +165,43 @@ type AdvDeploymentCondition struct {
 }
 
 type PodSetStatus struct {
-	Name                string `json:"name,omitempty"`
-	ObservedGeneration  int64  `json:"observedGeneration,omitempty"`
-	Replicas            int32  `json:"replicas,omitempty"`
-	UpdatedReplicas     int32  `json:"updatedReplicas,omitempty"`
-	ReadyReplicas       int32  `json:"readyReplicas,omitempty"`
-	AvailableReplicas   int32  `json:"availableReplicas,omitempty"`
-	UnavailableReplicas int32  `json:"unavailableReplicas,omitempty"`
+	Name               string `json:"name,omitempty"`
+	ObservedGeneration int64  `json:"observedGeneration,omitempty"`
+	Replicas           int32  `json:"replicas,omitempty"`
+	ReadyReplicas      int32  `json:"readyReplicas,omitempty"`
+	CurrentReplicas    int32  `json:"currentReplicas,omitempty"`
+	UpdatedReplicas    int32  `json:"updatedReplicas,omitempty"`
 }
-
-type DeployState string
-
-const (
-	Created         DeployState = "Created"
-	ReconcileFailed DeployState = "ReconcileFailed"
-	Reconciling     DeployState = "Reconciling"
-	Available       DeployState = "Available"
-	Unmanaged       DeployState = "Unmanaged"
-)
 
 // AdvDeploymentStatus defines the observed state of AdvDeployment
 type AdvDeploymentStatus struct {
-	Status        DeployState              `json:"status,omitempty"`
-	Version       string                   `json:"version,omitempty"`
-	Message       string                   `json:"message,omitempty"`
-	Replicas      int32                    `json:"replicas,omitempty" `
-	ReadyReplicas int32                    `json:"readyReplicas,omitempty" `
-	PodSets       map[string]PodSetStatus  `json:"podSets,omitempty"`
-	Conditions    []AdvDeploymentCondition `json:"conditions,omitempty"`
+	Version         string                   `json:"version,omitempty"`
+	Message         string                   `json:"message,omitempty"`
+	Replicas        int32                    `json:"replicas,omitempty"`
+	ReadyReplicas   int32                    `json:"readyReplicas,omitempty"`
+	CurrentReplicas int32                    `json:"currentReplicas,omitempty"`
+	UpdatedReplicas int32                    `json:"updatedReplicas,omitempty"`
+	PodSets         []PodSetStatus           `json:"podSets,omitempty"`
+	Conditions      []AdvDeploymentCondition `json:"conditions,omitempty"`
+
+	// observedGeneration is the most recent generation observed for this workload. It corresponds to the
+	// StatefulSet's generation, which is updated on mutation by the API Server.
+	// +optional
+	ObservedGeneration int64 `json:"observedGeneration,omitempty"`
+
+	// currentRevision, if not empty, indicates the version of the workload used to generate Pods in the
+	// sequence [0,currentReplicas).
+	CurrentRevision string `json:"currentRevision,omitempty"`
+
+	// updateRevision, if not empty, indicates the version of the workload used to generate Pods in the sequence
+	// [replicas-updatedReplicas,replicas)
+	UpdateRevision string `json:"updateRevision,omitempty"`
+
+	// collisionCount is the count of hash collisions for the workload. The workload controller
+	// uses this field as a collision avoidance mechanism when it needs to create the name for the
+	// newest ControllerRevision.
+	// +optional
+	CollisionCount *int32 `json:"collisionCount,omitempty"`
 }
 
 // +kubebuilder:object:root=true
