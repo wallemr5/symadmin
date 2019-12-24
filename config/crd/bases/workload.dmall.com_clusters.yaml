@@ -1,0 +1,328 @@
+
+---
+apiVersion: apiextensions.k8s.io/v1beta1
+kind: CustomResourceDefinition
+metadata:
+  creationTimestamp: null
+  name: clusters.workload.dmall.com
+spec:
+  group: workload.dmall.com
+  names:
+    kind: Cluster
+    listKind: ClusterList
+    plural: clusters
+    singular: cluster
+  scope: ""
+  validation:
+    openAPIV3Schema:
+      properties:
+        apiVersion:
+          description: 'APIVersion defines the versioned schema of this representation
+            of an object. Servers should convert recognized schemas to the latest
+            internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources'
+          type: string
+        kind:
+          description: 'Kind is a string value representing the REST resource this
+            object represents. Servers may infer this from the endpoint the client
+            submits requests to. Cannot be updated. In CamelCase. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds'
+          type: string
+        metadata:
+          type: object
+        spec:
+          properties:
+            additionals:
+              additionalProperties:
+                type: string
+              type: object
+            alertSpec:
+              properties:
+                enable:
+                  type: boolean
+              required:
+              - enable
+              type: object
+            apps:
+              items:
+                properties:
+                  chartName:
+                    type: string
+                  chartVersion:
+                    type: string
+                  name:
+                    type: string
+                  namespace:
+                    type: string
+                  overrideValue:
+                    type: string
+                  repo:
+                    type: string
+                  values:
+                    additionalProperties:
+                      type: string
+                    type: object
+                type: object
+              type: array
+            description:
+              type: string
+            displayName:
+              type: string
+            helmSpec:
+              properties:
+                maxHistory:
+                  type: integer
+                namespace:
+                  type: string
+                overrideImageSpec:
+                  type: string
+              required:
+              - namespace
+              type: object
+            kubeConfig:
+              type: string
+            pause:
+              type: boolean
+            symNodeName:
+              type: string
+          required:
+          - pause
+          - symNodeName
+          type: object
+        status:
+          properties:
+            appStatus:
+              items:
+                properties:
+                  chartVersion:
+                    type: string
+                  name:
+                    type: string
+                  overrideVa:
+                    type: string
+                  rlsName:
+                    type: string
+                  rlsStatus:
+                    type: string
+                  rlsVersion:
+                    format: int32
+                    type: integer
+                type: object
+              type: array
+            clusterStatus:
+              items:
+                properties:
+                  conditions:
+                    items:
+                      description: Information about the condition of a component.
+                      properties:
+                        error:
+                          description: Condition error code for a component. For example,
+                            a health check error code.
+                          type: string
+                        message:
+                          description: Message about the condition for a component.
+                            For example, information about a health check.
+                          type: string
+                        status:
+                          description: 'Status of the condition for a component. Valid
+                            values for "Healthy": "True", "False", or "Unknown".'
+                          type: string
+                        type:
+                          description: 'Type of condition for a component. Valid value:
+                            "Healthy"'
+                          type: string
+                      required:
+                      - status
+                      - type
+                      type: object
+                    type: array
+                  name:
+                    type: string
+                required:
+                - name
+                type: object
+              type: array
+            monitoringStatus:
+              properties:
+                alertManagerEndpoint:
+                  type: string
+                grafanaEndpoint:
+                  type: string
+                prometheusEndpoint:
+                  type: string
+              type: object
+            nodeDetail:
+              properties:
+                allocatable:
+                  additionalProperties:
+                    type: string
+                  description: ResourceList is a set of (resource name, quantity)
+                    pairs.
+                  type: object
+                capacity:
+                  additionalProperties:
+                    type: string
+                  description: ResourceList is a set of (resource name, quantity)
+                    pairs.
+                  type: object
+                cpuUsagePercent:
+                  format: int32
+                  type: integer
+                limits:
+                  additionalProperties:
+                    type: string
+                  description: ResourceList is a set of (resource name, quantity)
+                    pairs.
+                  type: object
+                memoryUsagePercent:
+                  format: int32
+                  type: integer
+                nodeStatus:
+                  items:
+                    properties:
+                      allocatable:
+                        additionalProperties:
+                          type: string
+                        description: ResourceList is a set of (resource name, quantity)
+                          pairs.
+                        type: object
+                      capacity:
+                        additionalProperties:
+                          type: string
+                        description: ResourceList is a set of (resource name, quantity)
+                          pairs.
+                        type: object
+                      controlPlane:
+                        type: boolean
+                      cpuUsagePercent:
+                        format: int32
+                        type: integer
+                      diskPressure:
+                        type: string
+                      etcd:
+                        type: boolean
+                      kernelDeadlock:
+                        type: string
+                      limits:
+                        additionalProperties:
+                          type: string
+                        description: ResourceList is a set of (resource name, quantity)
+                          pairs.
+                        type: object
+                      memoryPressure:
+                        type: string
+                      memoryUsagePercent:
+                        format: int32
+                        type: integer
+                      networkUnavailable:
+                        type: string
+                      nodeName:
+                        type: string
+                      outOfDisk:
+                        type: string
+                      pidPressure:
+                        type: string
+                      podUsagePercent:
+                        format: int32
+                        type: integer
+                      ready:
+                        type: string
+                      requested:
+                        additionalProperties:
+                          type: string
+                        description: ResourceList is a set of (resource name, quantity)
+                          pairs.
+                        type: object
+                      storageUsagePercent:
+                        format: int32
+                        type: integer
+                      worker:
+                        type: boolean
+                    required:
+                    - controlPlane
+                    - cpuUsagePercent
+                    - diskPressure
+                    - etcd
+                    - kernelDeadlock
+                    - memoryPressure
+                    - memoryUsagePercent
+                    - networkUnavailable
+                    - nodeName
+                    - outOfDisk
+                    - pidPressure
+                    - podUsagePercent
+                    - ready
+                    - storageUsagePercent
+                    - worker
+                    type: object
+                  type: array
+                podUsagePercent:
+                  format: int32
+                  type: integer
+                requested:
+                  additionalProperties:
+                    type: string
+                  description: ResourceList is a set of (resource name, quantity)
+                    pairs.
+                  type: object
+                storageUsagePercent:
+                  format: int32
+                  type: integer
+              required:
+              - cpuUsagePercent
+              - memoryUsagePercent
+              - nodeStatus
+              - podUsagePercent
+              - storageUsagePercent
+              type: object
+            version:
+              description: 'Info contains versioning information. TODO: Add []string
+                of api versions supported? It''s still unclear how we''ll want to
+                distribute that information.'
+              properties:
+                buildDate:
+                  type: string
+                compiler:
+                  type: string
+                gitCommit:
+                  type: string
+                gitTreeState:
+                  type: string
+                gitVersion:
+                  type: string
+                goVersion:
+                  type: string
+                major:
+                  type: string
+                minor:
+                  type: string
+                platform:
+                  type: string
+              required:
+              - buildDate
+              - compiler
+              - gitCommit
+              - gitTreeState
+              - gitVersion
+              - goVersion
+              - major
+              - minor
+              - platform
+              type: object
+          required:
+          - nodeDetail
+          type: object
+      required:
+      - spec
+      - status
+      type: object
+  version: v1beta1
+  versions:
+  - name: v1beta1
+    served: true
+    storage: true
+status:
+  acceptedNames:
+    kind: ""
+    plural: ""
+  conditions: []
+  storedVersions: []
