@@ -6,7 +6,7 @@ import (
 	"k8s.io/apimachinery/pkg/util/intstr"
 )
 
-// Pod
+// Pod info
 type Pod struct {
 	Name        string      `json:"name,omitempty"`
 	Namespace   string      `json:"namespace,omitempty"`
@@ -114,9 +114,9 @@ type ChartSpec struct {
 type PodSpec struct {
 	// Selector is a label query over pods that should match the replica count.
 	// It must match the pod template's labels.
-	Selector *metav1.LabelSelector  `json:"selector,omitempty"`
-	Template corev1.PodTemplateSpec `json:"template,omitempty"`
-	Chart    *ChartSpec             `json:"chart,omitempty"`
+	Selector *metav1.LabelSelector   `json:"selector,omitempty"`
+	Template *corev1.PodTemplateSpec `json:"template,omitempty"`
+	Chart    *ChartSpec              `json:"chart,omitempty"`
 }
 
 // Subset defines the detail of a subset.

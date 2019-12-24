@@ -91,10 +91,10 @@ type NodeDetail struct {
 	Allocatable         v1.ResourceList `json:"allocatable,omitempty"`
 	Requested           v1.ResourceList `json:"requested,omitempty"`
 	Limits              v1.ResourceList `json:"limits,omitempty"`
-	CpuUsagePercent     float64         `json:"cpuUsagePercent"`
-	PodUsagePercent     float64         `json:"podUsagePercent"`
-	StorageUsagePercent float64         `json:"storageUsagePercent"`
-	MemoryUsagePercent  float64         `json:"memoryUsagePercent"`
+	CpuUsagePercent     int32           `json:"cpuUsagePercent"`
+	PodUsagePercent     int32           `json:"podUsagePercent"`
+	StorageUsagePercent int32           `json:"storageUsagePercent"`
+	MemoryUsagePercent  int32           `json:"memoryUsagePercent"`
 }
 
 type NodeStatus struct {
@@ -113,8 +113,8 @@ type NodeStatus struct {
 	MemoryPressure      string          `json:"memoryPressure"`
 	DiskPressure        string          `json:"diskPressure"`
 	PIDPressure         string          `json:"pidPressure"`
-	CpuUsagePercent     float64         `json:"cpuUsagePercent"`
-	MemoryUsagePercent  float64         `json:"memoryUsagePercent"`
-	PodUsagePercent     float64         `json:"podUsagePercent"`
-	StorageUsagePercent float64         `json:"storageUsagePercent"`
+	CpuUsagePercent     int32           `json:"cpuUsagePercent"`
+	MemoryUsagePercent  int32           `json:"memoryUsagePercent"`
+	PodUsagePercent     int32           `json:"podUsagePercent"`
+	StorageUsagePercent int32           `json:"storageUsagePercent"`
 }

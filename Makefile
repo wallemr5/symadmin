@@ -37,12 +37,8 @@ run: generate fmt vet manifests
 	go run cmd/operator/main.go
 
 # Install CRDs into a cluster
-install: manifests
-	kustomize build config/crd >> manifests/crd-AdvDeployment.yaml
-
-# Uninstall CRDs from a cluster
-uninstall: manifests
-	kustomize build config/crd | kubectl delete -f -
+crd: manifests
+	kustomize build config/crd > manifests/crd.yaml
 
 # Deploy controller in the configured Kubernetes cluster in ~/.kube/config
 deploy: manifests
@@ -61,7 +57,7 @@ fmt:
 vet:
 	go vet ./...
 
-# Generate code
+# Generate code, e.g. XXX.deepcopy.go
 generate: controller-gen
 	$(CONTROLLER_GEN) object:headerFile=./hack/boilerplate.go.txt paths="./..."
 

@@ -36,7 +36,7 @@ func New(mgr manager.Manager, config *workloadv1beta1.AdvDeployment) *Reconciler
 	}
 }
 
-func (r *Reconciler) Deployment(cell *workloadv1beta1.CellReplicas) runtime.Object {
+func (r *Reconciler) Deployment(cell *workloadv1beta1.Topology) runtime.Object {
 	lb := r.GetDeployLabels(cell.CellName)
 
 	deploy := &appsv1.Deployment{

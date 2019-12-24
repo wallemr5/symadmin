@@ -57,7 +57,7 @@ func (r *AdvDeploymentReconciler) SetupWithManager(mgr ctrl.Manager) error {
 		WithEventFilter(GetWatchPredicateForNs()).
 		// WithEventFilter(GetWatchPredicateForApp()).
 		Watches(&source.Kind{Type: &corev1.Pod{}}, &handler.Funcs{}).
-		// Watches(&source.Kind{Type: &corev1.Pod{}}, &handler.EnqueueRequestsFromMapFunc{ToRequests: GetEnqueueRequestsMapper()}).
+		Watches(&source.Kind{Type: &corev1.Pod{}}, &handler.EnqueueRequestsFromMapFunc{ToRequests: GetEnqueueRequestsMapper()}).
 		Named("AdvDeployment-controllers").
 		Complete(r)
 }
@@ -69,6 +69,9 @@ func Add(mgr manager.Manager) error {
 		Log:    ctrl.Log.WithName("controllers").WithName("AdvDeployment"),
 	}
 
+	cacher := mgr.GetCache()
+
+	cacher.GetInformer()
 	err := reconciler.SetupWithManager(mgr)
 	if err != nil {
 		return emperror.Wrapf(err, "unable to create AdvDeployment controller")

@@ -42,6 +42,7 @@ type StatefulSetStrategy struct {
 	PodUpdatePolicy PodUpdateStrategyType `json:"podUpdatePolicy,omitempty"`
 }
 
+//
 type AdvDeploymentUpdateStrategy struct {
 	// canary, blue, green
 	UpgradeType         string               `json:"upgradeType,omitempty"`
@@ -95,11 +96,10 @@ type AdvDeploymentSpec struct {
 // A UnitedDeployment manages multiple homogeneous workloads which are called subset.
 // Each of subsets under the UnitedDeployment is described in Topology.
 type Topology struct {
-
 	// Contains the details of each subset. Each element in this array represents one subset
 	// which will be provisioned and managed by UnitedDeployment.
 	// +optional
-	PodSets map[string][]PodSet `json:"podSets,omitempty"`
+	PodSets []PodSet `json:"podSets,omitempty"`
 }
 
 type AdvDeploymentConditionType string
@@ -185,9 +185,20 @@ type AdvDeploymentStatus struct {
 	CollisionCount *int32 `json:"collisionCount,omitempty"`
 }
 
+// +genclient
+// +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
+
 // +kubebuilder:object:root=true
 
 // AdvDeployment is the Schema for the advdeployments API
+// +k8s:openapi-gen=true
+// +kubebuilder:subresource:status
+// +kubebuilder:resource:shortName=ad
+// +kubebuilder:printcolumn:name="DESIRED",type="integer",JSONPath=".spec.replicas",description="The desired number of pods."
+// +kubebuilder:printcolumn:name="CURRENT",type="integer",JSONPath=".status.replicas",description="The number of currently all pods."
+// +kubebuilder:printcolumn:name="UPDATED",type="integer",JSONPath=".status.updatedReplicas",description="The number of pods updated."
+// +kubebuilder:printcolumn:name="READY",type="integer",JSONPath=".status.readyReplicas",description="The number of pods ready."
+// +kubebuilder:printcolumn:name="AGE",type="date",JSONPath=".metadata.creationTimestamp",description="CreationTimestamp is a timestamp representing the server time when this object was created. "
 type AdvDeployment struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`
@@ -195,6 +206,8 @@ type AdvDeployment struct {
 	Spec   AdvDeploymentSpec   `json:"spec,omitempty"`
 	Status AdvDeploymentStatus `json:"status,omitempty"`
 }
+
+// +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
 
 // +kubebuilder:object:root=true
 

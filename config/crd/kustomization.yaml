@@ -3,6 +3,8 @@
 # It should be run by config/default
 resources:
 - bases/workload.dmall.com_advdeployments.yaml
+- bases/workload.dmall.com_appsets.yaml
+- bases/workload.dmall.com_clusters.yaml
 # +kubebuilder:scaffold:crdkustomizeresource
 
 patchesStrategicMerge:

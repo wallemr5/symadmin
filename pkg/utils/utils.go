@@ -15,6 +15,7 @@ var ObservedNamespace = []string{
 const (
 	ObserveMustLabelClusterName      = "sym-cluster-info"
 	ObserveMustLabelAppName          = "app"
+	ObserveMustLabelVersion          = "version"
 	ObserveMustLabelReleaseName      = "release"
 	ObserveMustLabelLdcName          = "sym-ldc"
 	ObserveMustLabelLightningDomain0 = "lightningDomain0"

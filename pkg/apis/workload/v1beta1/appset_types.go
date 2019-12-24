@@ -5,10 +5,19 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-// +kubebuilder:object:root=true
-// AppSet represents a union for app
 // +genclient
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
+
+// +kubebuilder:object:root=true
+// AppSet represents a union for app
+
+// +k8s:openapi-gen=true
+// +kubebuilder:subresource:status
+// +kubebuilder:printcolumn:name="DESIRED",type="integer",JSONPath=".spec.replicas",description="The desired number of pods."
+// +kubebuilder:printcolumn:name="CURRENT",type="integer",JSONPath=".status.replicas",description="The number of currently all pods."
+// +kubebuilder:printcolumn:name="UPDATED",type="integer",JSONPath=".status.updatedReplicas",description="The number of pods updated."
+// +kubebuilder:printcolumn:name="READY",type="integer",JSONPath=".status.readyReplicas",description="The number of pods ready."
+// +kubebuilder:printcolumn:name="AGE",type="date",JSONPath=".metadata.creationTimestamp",description="CreationTimestamp is a timestamp representing the server time when this object was created. "
 type AppSet struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`
@@ -63,15 +72,16 @@ type AppSetUpdateStrategy struct {
 }
 
 type ClusterTopology struct {
-	// Contains the details of each subset. Each element in this array represents one subset
-	// which will be provisioned and managed by UnitedDeployment.
-	// +optional
-	PodSets map[string][]PodSet `json:"podSets,omitempty"`
+	Clusters []TargetCluster `json:"clusters,omitempty"`
 }
 
 type TargetCluster struct {
 	// Target cluster name
 	Name string `json:"name,omitempty"`
+	// Contains the details of each subset. Each element in this array represents one subset
+	// which will be provisioned and managed by UnitedDeployment.
+	// +optional
+	PodSets []PodSet `json:"podSets,omitempty"`
 }
 
 // AppSetConditionType indicates valid conditions type of a UnitedDeployment.
@@ -118,7 +128,7 @@ type AppSetStatus struct {
 	// +optional
 	Conditions []AppSetCondition `json:"conditions,omitempty"`
 	Status     AppSatus          `json:"status,omitempty"`
-	AppAggr
+	AppActual  AppActual         `json:"appActual,omitempty"`
 }
 
 // app status
@@ -182,118 +192,4 @@ type AppActual struct {
 	Pods       []*Pod           `json:"pods,omitempty"`
 	WarnEvents []*Event         `json:"warnEvents,omitempty"`
 	Service    *Service         `json:"service,omitempty"`
-}
-
-func DeepEqualAppDesired(x, y AppDesired) bool {
-	if x.Total != y.Total {
-		return false
-	}
-
-	if len(x.Items) != len(y.Items) {
-		return false
-	}
-
-	for i := range x.Items {
-		if x.Items[i].Name != y.Items[i].Name {
-			return false
-		}
-
-		if x.Items[i].Desired != y.Items[i].Desired {
-			return false
-		}
-	}
-	return true
-}
-
-func DeepEqualAppActual(x, y AppActual) bool {
-	if x.Total != y.Total {
-		return false
-	}
-
-	if len(x.Items) != len(y.Items) {
-		return false
-	}
-
-	for i := range x.Items {
-		if x.Items[i].Name != y.Items[i].Name {
-			return false
-		}
-
-		if x.Items[i].Available != y.Items[i].Available {
-			return false
-		}
-	}
-
-	if len(x.Pods) != len(y.Pods) {
-		return false
-	}
-
-	for i := range x.Pods {
-		if x.Pods[i].Name != y.Pods[i].Name {
-			return false
-		}
-
-		if x.Pods[i].Namespace != y.Pods[i].Namespace {
-			return false
-		}
-
-		if x.Pods[i].State != y.Pods[i].State {
-			return false
-		}
-
-		if x.Pods[i].PodIp != y.Pods[i].PodIp {
-			return false
-		}
-
-		if x.Pods[i].NodeName != y.Pods[i].NodeName {
-			return false
-		}
-
-		if x.Pods[i].ClusterName != y.Pods[i].ClusterName {
-			return false
-		}
-
-		if x.Pods[i].StartTime.Second() != y.Pods[i].StartTime.Second() {
-			return false
-		}
-	}
-
-	if len(x.WarnEvents) != len(y.WarnEvents) {
-		return false
-	}
-
-	for i := range x.WarnEvents {
-		if x.WarnEvents[i].Name != y.WarnEvents[i].Name {
-			return false
-		}
-
-		if x.WarnEvents[i].Message != y.WarnEvents[i].Message {
-			return false
-		}
-	}
-
-	if x.Service != nil && y.Service != nil {
-		if x.Service.Type != y.Service.Type {
-			return false
-		}
-		if x.Service.ClusterIP != y.Service.ClusterIP {
-			return false
-		}
-
-	} else {
-		return false
-	}
-	return true
-}
-
-func DeepEqualAppAggr(x, y *AppAggr) bool {
-	if !DeepEqualAppDesired(x.Desired, y.Desired) {
-		return false
-	}
-
-	if !DeepEqualAppActual(x.Actual, y.Actual) {
-		return false
-	}
-
-	return true
 }
