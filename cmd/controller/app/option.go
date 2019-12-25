@@ -15,20 +15,11 @@ type RootOption struct {
 	ConfigContext    string
 	Namespace        string
 	DefaultNamespace string
-	File             string
-
-	// use expose /metrics, /read, /live, /pprof.
-	HttpAddr             string
-	EnableLeaderElection bool
-	// output format (yaml or short)
-	OutputFormat string
 }
 
 func DefaultRootOption() *RootOption {
 	return &RootOption{
-		Namespace:            corev1.NamespaceAll,
-		HttpAddr:             ":8080",
-		EnableLeaderElection: false,
+		Namespace: corev1.NamespaceAll,
 	}
 }
 
@@ -52,7 +43,7 @@ func (c *DksCli) GetK8sConfig() (*rest.Config, error) {
 	return config, nil
 }
 
-func (c *DksCli) GetKubeset() (*kubernetes.Clientset, error) {
+func (c *DksCli) GetKubeInterface() (kubernetes.Interface, error) {
 	cfg, err := c.GetK8sConfig()
 	if err != nil {
 		return nil, errors.Wrap(err, "could not get k8s config")

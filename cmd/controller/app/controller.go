@@ -2,18 +2,64 @@ package app
 
 import (
 	"github.com/spf13/cobra"
+	controller "gitlab.dmall.com/arch/sym-admin/pkg/controllers"
+	k8sclient "gitlab.dmall.com/arch/sym-admin/pkg/k8s/client"
+	"gitlab.dmall.com/arch/sym-admin/pkg/manager"
 	"k8s.io/klog"
+	ctrl "sigs.k8s.io/controller-runtime"
+	logf "sigs.k8s.io/controller-runtime/pkg/runtime/log"
+)
+
+var (
+	log = logf.KBLog.WithName("controller")
 )
 
 func NewControllerCmd(cli *DksCli) *cobra.Command {
+	opt := manager.DefaultManagerOption()
 	cmd := &cobra.Command{
 		Use:     "controller",
 		Aliases: []string{"ctl"},
 		Short:   "Manage controller Component",
 		Run: func(cmd *cobra.Command, args []string) {
-			klog.Info("enter controller run")
+			cfg, err := cli.GetK8sConfig()
+			if err != nil {
+				klog.Fatalf("unable to get kubeconfig err: %v", err)
+			}
+
+			mgr, err := ctrl.NewManager(cfg, ctrl.Options{
+				Scheme:             k8sclient.GetScheme(),
+				MetricsBindAddress: "0",
+				LeaderElection:     opt.EnableLeaderElection,
+			})
+			if err != nil {
+				klog.Fatalf("unable to new manager err: %v", err)
+			}
+
+			dksMgr, err := manager.NewDksManager(opt, log, "controller")
+			if err != nil {
+				klog.Fatalf("unable to NewDksManager err: %v", err)
+			}
+
+			// Setup all Controllers
+			klog.Info("Setting up controller")
+			if err := controller.AddToManager(mgr, dksMgr); err != nil {
+				klog.Fatalf("unable to register controllers to the manager err: %v", err)
+			}
+
+			klog.Info("starting manager")
+			if err := mgr.Start(ctrl.SetupSignalHandler()); err != nil {
+				klog.Fatalf("problem start running manager err: %v", err)
+			}
 		},
 	}
 
+	cmd.PersistentFlags().IntVar(&opt.GoroutineThreshold, "goroutine-threshold", opt.GoroutineThreshold, "the max Goroutine Threshold")
+	cmd.PersistentFlags().StringVar(&opt.HttpAddr, "http-addr", opt.HttpAddr, "HttpAddr for some info")
+	cmd.PersistentFlags().BoolVar(&opt.EnableLeaderElection, "enable-leader", opt.EnableLeaderElection,
+		"Enable leader election for controller manager. Enabling this will ensure there is only one active controller manager.")
+	cmd.PersistentFlags().BoolVar(&opt.GinLogEnabled, "enable-ginlog", opt.GinLogEnabled, "Enabled will open gin run log.")
+	cmd.PersistentFlags().BoolVar(&opt.PprofEnabled, "enable-pprof", opt.PprofEnabled, "Enabled will open endpoint for go pprof.")
+	cmd.PersistentFlags().BoolVar(&opt.MasterEnabled, "enable-master", opt.MasterEnabled, "Enable master controller")
+	cmd.PersistentFlags().BoolVar(&opt.WorkerEnabled, "enable-worker", opt.WorkerEnabled, "Enable worker controller")
 	return cmd
 }

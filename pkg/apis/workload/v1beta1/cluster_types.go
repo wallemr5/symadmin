@@ -6,6 +6,10 @@ import (
 	"k8s.io/apimachinery/pkg/version"
 )
 
+func init() {
+	SchemeBuilder.Register(&Cluster{}, &ClusterList{})
+}
+
 // +kubebuilder:object:root=true
 // +genclient
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object

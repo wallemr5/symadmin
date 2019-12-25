@@ -1,8 +1,8 @@
-package workload
+package utils
 
 import (
-	"gitlab.dmall.com/arch/sym-admin/pkg/utils"
 	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/klog"
 	"sigs.k8s.io/controller-runtime/pkg/event"
 	"sigs.k8s.io/controller-runtime/pkg/handler"
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
@@ -11,7 +11,7 @@ import (
 
 // isObserveNamespaces
 func isObserveNamespaces(ns string) bool {
-	for _, obvNs := range utils.ObservedNamespace {
+	for _, obvNs := range ObservedNamespace {
 		if obvNs == ns {
 			return true
 		}
@@ -21,22 +21,23 @@ func isObserveNamespaces(ns string) bool {
 
 // isObserveApp
 func isObserveApp(labels map[string]string) bool {
-	if _, ok := labels[utils.ObserveMustLabelAppName]; !ok {
+	if _, ok := labels[ObserveMustLabelAppName]; !ok {
 		return false
 	}
 
-	if _, ok := labels[utils.ObserveMustLabelClusterName]; !ok {
+	if _, ok := labels[ObserveMustLabelClusterName]; !ok {
 		return false
 	}
 	return true
 }
 
 func getObserveApp(labels map[string]string) string {
-	if _, ok := labels[utils.ObserveMustLabelClusterName]; !ok {
+	if _, ok := labels[ObserveMustLabelClusterName]; !ok {
 		return ""
 	}
 
-	if va, ok := labels[utils.ObserveMustLabelAppName]; ok {
+	if va, ok := labels[ObserveMustLabelAppName]; ok {
+		klog.V(4).Info("Observe label app:%s", va)
 		return va
 	}
 

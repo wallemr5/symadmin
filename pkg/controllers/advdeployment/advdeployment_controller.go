@@ -14,7 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package workload
+package advdeployment
 
 import (
 	"context"
@@ -27,6 +27,7 @@ import (
 	"gitlab.dmall.com/arch/sym-admin/pkg/resources"
 	"gitlab.dmall.com/arch/sym-admin/pkg/resources/deployment"
 	"gitlab.dmall.com/arch/sym-admin/pkg/resources/svc"
+	"gitlab.dmall.com/arch/sym-admin/pkg/utils"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
@@ -37,11 +38,11 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 	"sigs.k8s.io/controller-runtime/pkg/source"
-	"time"
 )
 
 // AdvDeploymentReconciler reconciles a AdvDeployment object
 type AdvDeploymentReconciler struct {
+	Name string
 	client.Client
 	Log logr.Logger
 	Mgr manager.Manager
@@ -54,24 +55,23 @@ func (r *AdvDeploymentReconciler) SetupWithManager(mgr ctrl.Manager) error {
 		Owns(&appsv1.StatefulSet{}).
 		Owns(&kruisev1alpha1.StatefulSet{}).
 		Owns(&corev1.Service{}).
-		WithEventFilter(GetWatchPredicateForNs()).
-		// WithEventFilter(GetWatchPredicateForApp()).
-		Watches(&source.Kind{Type: &corev1.Pod{}}, &handler.Funcs{}).
-		Watches(&source.Kind{Type: &corev1.Pod{}}, &handler.EnqueueRequestsFromMapFunc{ToRequests: GetEnqueueRequestsMapper()}).
-		Named("AdvDeployment-controllers").
+		WithEventFilter(utils.GetWatchPredicateForNs()).
+		WithEventFilter(utils.GetWatchPredicateForApp()).
+		// Watches(&source.Kind{Type: &corev1.Pod{}}, &handler.Funcs{}).
+		Watches(&source.Kind{Type: &corev1.Pod{}}, &handler.EnqueueRequestsFromMapFunc{ToRequests: utils.GetEnqueueRequestsMapper()}).
 		Complete(r)
 }
 
 func Add(mgr manager.Manager) error {
 	reconciler := &AdvDeploymentReconciler{
+		Name:   "AdvDeployment-controllers",
 		Client: mgr.GetClient(),
 		Mgr:    mgr,
 		Log:    ctrl.Log.WithName("controllers").WithName("AdvDeployment"),
 	}
 
-	cacher := mgr.GetCache()
-
-	cacher.GetInformer()
+	// cacher := mgr.GetCache()
+	// cacher.GetInformer()
 	err := reconciler.SetupWithManager(mgr)
 	if err != nil {
 		return emperror.Wrapf(err, "unable to create AdvDeployment controller")
@@ -120,13 +120,14 @@ func (r *AdvDeploymentReconciler) Reconcile(req ctrl.Request) (ctrl.Result, erro
 	}
 	logger.Info("Reconciling get events", "num", len(events.Items))
 
-	_, _ = r.reconcile(logger, advDeploy)
+	// _, _ = r.reconcile(logger, advDeploy)
+	// logger.Info("Reconciling AdvDeployment")
+	// return ctrl.Result{
+	// 	Requeue:      true,
+	// 	RequeueAfter: 20 * time.Second,
+	// }, nil
 
-	logger.Info("Reconciling AdvDeployment")
-	return ctrl.Result{
-		Requeue:      true,
-		RequeueAfter: 20 * time.Second,
-	}, nil
+	return reconcile.Result{}, nil
 }
 
 func (r *AdvDeploymentReconciler) reconcile(logger logr.Logger, config *workloadv1beta1.AdvDeployment) (reconcile.Result, error) {

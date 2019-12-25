@@ -19,7 +19,7 @@ spec:
     type: integer
   - JSONPath: .status.readyReplicas
     description: The number of pods ready.
-    name: READYversion
+    name: READY
     type: integer
   - JSONPath: .metadata.creationTimestamp
     description: 'CreationTimestamp is a timestamp representing the server time when
@@ -12262,6 +12262,8 @@ spec:
                         type: string
                       namespace:
                         type: string
+                      nodeIp:
+                        type: string
                       nodeName:
                         type: string
                       podIp:
@@ -12280,6 +12282,8 @@ spec:
                         values are None, empty string (""), or a valid IP address.
                         None can be specified for headless services when proxying
                         is not required
+                      type: string
+                    domain:
                       type: string
                     internalEndpoint:
                       description: InternalEndpoint of all Kubernetes services that

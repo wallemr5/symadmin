@@ -12,6 +12,7 @@ type Pod struct {
 	Namespace   string      `json:"namespace,omitempty"`
 	State       string      `json:"state,omitempty"`
 	PodIp       string      `json:"podIp,omitempty"`
+	NodeIp      string      `json:"nodeIp,omitempty"`
 	NodeName    string      `json:"nodeName,omitempty"`
 	ClusterName string      `json:"clusterName,omitempty"`
 	StartTime   metav1.Time `json:"startTime,omitempty"`
@@ -99,6 +100,8 @@ type Service struct {
 	// ClusterIP is usually assigned by the master. Valid values are None, empty string (""), or
 	// a valid IP address. None can be specified for headless services when proxying is not required
 	ClusterIP string `json:"clusterIP, omitempty"`
+
+	Domain *string `json:"domain,omitempty"`
 }
 
 type ChartUrl struct {

@@ -5,6 +5,10 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
+func init() {
+	SchemeBuilder.Register(&AppSet{}, &AppSetList{})
+}
+
 // +genclient
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
 
@@ -187,7 +191,8 @@ type AppActualItem struct {
 
 // AppActual represent the app status
 type AppActual struct {
-	Total      int32            `json:"total"`
+	Total int32 `json:"total"`
+
 	Items      []*AppActualItem `json:"items,omitempty"`
 	Pods       []*Pod           `json:"pods,omitempty"`
 	WarnEvents []*Event         `json:"warnEvents,omitempty"`

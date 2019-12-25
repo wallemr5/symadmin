@@ -1,4 +1,4 @@
-package ctrl
+package customctrl
 
 import (
 	"context"
@@ -10,11 +10,12 @@ import (
 
 	"k8s.io/client-go/tools/cache"
 
+	"sync"
+	"time"
+
 	"gitlab.dmall.com/arch/sym-admin/pkg/labels"
 	"k8s.io/client-go/util/workqueue"
 	"k8s.io/klog"
-	"sync"
-	"time"
 )
 
 var (

@@ -1,4 +1,4 @@
-package ctrl
+package customctrl
 
 import (
 	"fmt"
