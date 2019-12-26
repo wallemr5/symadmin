@@ -1,6 +1,6 @@
 # CRD 定义说明
 
-主要定义三层 `CRD type`，从上到下分别为：`ClusterTypes`、`AppSetTypes`、`AdvDeploymentTypes`。以此介绍如下：
+主要定义三层 `CRD type`，从上到下分别为：`ClusterTypes`、`AppSetTypes`、`AdvDeploymentTypes`。依次介绍如下：
 
 ## 一、ClusterTypes
 
