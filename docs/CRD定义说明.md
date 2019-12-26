@@ -47,6 +47,14 @@
   - AlertManagerEndpoint `*string`
   - PrometheusEndpoint `*string`
 - NodeDetail `*NodeDetail`
+  - Capacity `v1.ResourceList`
+  - Allocatable `v1.ResourceList`
+  - Requested `v1.ResourceList`
+  - Limits `v1.ResourceList`
+  - CpuUsagePercent `int32`
+  - PodUsagePercent `int32`
+  - StorageUsagePercent `int32`
+  - MemoryUsagePercent `int32`
   - NodeStatus `[]*NodeStatus`
     - NodeName `string`
     - Etcd `bool`
@@ -67,14 +75,7 @@
     - MemoryUsagePercent `int32`
     - PodUsagePercent `int32`
     - StorageUsagePercent `int32`
-  - Capacity `v1.ResourceList`
-  - Allocatable `v1.ResourceList`
-  - Requested `v1.ResourceList`
-  - Limits `v1.ResourceList`
-  - CpuUsagePercent `int32`
-  - PodUsagePercent `int32`
-  - StorageUsagePercent `int32`
-  - MemoryUsagePercent `int32`
+
 
 ## 二、AppSetTypes
 
