@@ -1,9 +1,7 @@
 package svc
 
 import (
-	"context"
 	"github.com/go-logr/logr"
-	"github.com/goph/emperror"
 	workloadv1beta1 "gitlab.dmall.com/arch/sym-admin/pkg/apis/workload/v1beta1"
 	"gitlab.dmall.com/arch/sym-admin/pkg/resources"
 	"gitlab.dmall.com/arch/sym-admin/pkg/utils"
@@ -38,9 +36,9 @@ func New(mgr manager.Manager, config *workloadv1beta1.AdvDeployment, port int) *
 func (r *Reconciler) Service() runtime.Object {
 	svc := &corev1.Service{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      r.Config.Spec.ServiceName,
+			// Name:      r.Config.Spec.ServiceName,
 			Namespace: r.Config.Namespace,
-			Labels:    r.GetSvcLabels(),
+			// Labels:    r.GetSvcLabels(),
 			// Annotations: nil,
 		},
 		Spec: corev1.ServiceSpec{
@@ -68,21 +66,21 @@ func (r *Reconciler) Deployment() runtime.Object {
 
 func (r *Reconciler) Reconcile(log logr.Logger) error {
 	log = log.WithValues("component", componentName)
-
-	for _, res := range []resources.Resource{
-		r.Service,
-		// r.Deployment,
-	} {
-		o := res()
-		result, err := controllerutil.CreateOrUpdate(context.TODO(), r.Mgr.GetClient(), o, func() error {
-			return nil
-		})
-		if err != nil {
-			return emperror.WrapWith(err, "failed to reconcile resource",
-				"resource", o.GetObjectKind().GroupVersionKind(),
-				"result", result)
-		}
-	}
+	//
+	// for _, res := range []resources.Resource{
+	// 	r.Service,
+	// 	// r.Deployment,
+	// } {
+	// 	o := res()
+	// 	result, err := controllerutil.CreateOrUpdate(context.TODO(), r.Mgr.GetClient(), o, func() error {
+	// 		return nil
+	// 	})
+	// 	if err != nil {
+	// 		return emperror.WrapWith(err, "failed to reconcile resource",
+	// 			"resource", o.GetObjectKind().GroupVersionKind(),
+	// 			"result", result)
+	// 	}
+	// }
 	log.Info("Reconciled")
 	return nil
 }

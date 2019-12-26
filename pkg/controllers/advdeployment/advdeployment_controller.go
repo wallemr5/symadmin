@@ -21,7 +21,6 @@ import (
 
 	"github.com/go-logr/logr"
 	"github.com/gofrs/uuid"
-	kruisev1alpha1 "github.com/openkruise/kruise/pkg/apis/apps/v1alpha1"
 	"github.com/pkg/errors"
 	workloadv1beta1 "gitlab.dmall.com/arch/sym-admin/pkg/apis/workload/v1beta1"
 	helmv2 "gitlab.dmall.com/arch/sym-admin/pkg/helm/v2"
@@ -29,7 +28,6 @@ import (
 	"gitlab.dmall.com/arch/sym-admin/pkg/resources"
 	"gitlab.dmall.com/arch/sym-admin/pkg/resources/deployment"
 	"gitlab.dmall.com/arch/sym-admin/pkg/resources/svc"
-	"gitlab.dmall.com/arch/sym-admin/pkg/utils"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
@@ -38,11 +36,12 @@ import (
 	"k8s.io/klog"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-	"sigs.k8s.io/controller-runtime/pkg/controller"
-	"sigs.k8s.io/controller-runtime/pkg/handler"
+
+	// "sigs.k8s.io/controller-runtime/pkg/controller"
+	// "sigs.k8s.io/controller-runtime/pkg/handler"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
-	"sigs.k8s.io/controller-runtime/pkg/source"
+	// "sigs.k8s.io/controller-runtime/pkg/source"
 )
 
 // AdvDeploymentReconciler reconciles a AdvDeployment object
@@ -55,18 +54,20 @@ type AdvDeploymentReconciler struct {
 }
 
 func (r *AdvDeploymentReconciler) SetupWithManager(mgr ctrl.Manager) error {
-	return ctrl.NewControllerManagedBy(mgr).
-		For(&workloadv1beta1.AdvDeployment{}).
-		Owns(&appsv1.Deployment{}).
-		Owns(&appsv1.StatefulSet{}).
-		Owns(&kruisev1alpha1.StatefulSet{}).
-		Owns(&corev1.Service{}).
-		WithOptions(controller.Options{MaxConcurrentReconciles: 3}).
-		WithEventFilter(utils.GetWatchPredicateForNs()).
-		WithEventFilter(utils.GetWatchPredicateForApp()).
-		// Watches(&source.Kind{Type: &corev1.Pod{}}, &handler.Funcs{}).
-		Watches(&source.Kind{Type: &corev1.Pod{}}, &handler.EnqueueRequestsFromMapFunc{ToRequests: utils.GetEnqueueRequestsMapper()}).
-		Complete(r)
+	// return ctrl.NewControllerManagedBy(mgr).
+	// 	For(&workloadv1beta1.AdvDeployment{}).
+	// 	Owns(&appsv1.Deployment{}).
+	// 	Owns(&appsv1.StatefulSet{}).
+	// 	// Owns(&kruisev1alpha1.StatefulSet{}).
+	// 	Owns(&corev1.Service{}).
+	// 	WithOptions(controller.Options{MaxConcurrentReconciles: 3}).
+	// 	WithEventFilter(utils.GetWatchPredicateForNs()).
+	// 	WithEventFilter(utils.GetWatchPredicateForApp()).
+	// 	// Watches(&source.Kind{Type: &corev1.Pod{}}, &handler.Funcs{}).
+	// 	Watches(&source.Kind{Type: &corev1.Pod{}}, &handler.EnqueueRequestsFromMapFunc{ToRequests: utils.GetEnqueueRequestsMapper()}).
+	// 	Complete(r)
+
+	return nil
 }
 
 func Add(mgr manager.Manager, cMgr *pkgmanager.DksManager) error {
@@ -120,7 +121,7 @@ func (r *AdvDeploymentReconciler) Reconcile(req ctrl.Request) (ctrl.Result, erro
 	}
 
 	events := &corev1.EventList{}
-	err = r.Client.List(ctx, events)
+	// err = r.Client.List(ctx, events)
 	if err != nil {
 		logger.Error(err, "failed to get events")
 		if apierrors.IsNotFound(err) {

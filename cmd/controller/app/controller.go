@@ -22,14 +22,18 @@ import (
 	"github.com/spf13/cobra"
 	controller "gitlab.dmall.com/arch/sym-admin/pkg/controllers"
 	k8sclient "gitlab.dmall.com/arch/sym-admin/pkg/k8s/client"
-	"gitlab.dmall.com/arch/sym-admin/pkg/manager"
+
 	"k8s.io/klog"
-	ctrl "sigs.k8s.io/controller-runtime"
-	logf "sigs.k8s.io/controller-runtime/pkg/runtime/log"
+	// ctrl "sigs.k8s.io/controller-runtime"
+	ctrlmanager "sigs.k8s.io/controller-runtime/pkg/manager"
+	"sigs.k8s.io/controller-runtime/pkg/runtime/signals"
+
+	// logf "sigs.k8s.io/controller-runtime/pkg/runtime/log"
+	"gitlab.dmall.com/arch/sym-admin/pkg/manager"
 )
 
 var (
-	log = logf.KBLog.WithName("controller")
+// log = logf.KBLog.WithName("controller")
 )
 
 func NewControllerCmd(cli *DksCli) *cobra.Command {
@@ -45,7 +49,7 @@ func NewControllerCmd(cli *DksCli) *cobra.Command {
 			}
 
 			rp := time.Second * 120
-			mgr, err := ctrl.NewManager(cfg, ctrl.Options{
+			mgr, err := ctrlmanager.New(cfg, ctrlmanager.Options{
 				Scheme:             k8sclient.GetScheme(),
 				MetricsBindAddress: "0",
 				LeaderElection:     opt.EnableLeaderElection,
@@ -56,7 +60,7 @@ func NewControllerCmd(cli *DksCli) *cobra.Command {
 				klog.Fatalf("unable to new manager err: %v", err)
 			}
 
-			dksMgr, err := manager.NewDksManager(opt, log, "controller")
+			dksMgr, err := manager.NewDksManager(opt, nil, "controller")
 			if err != nil {
 				klog.Fatalf("unable to NewDksManager err: %v", err)
 			}
@@ -68,7 +72,7 @@ func NewControllerCmd(cli *DksCli) *cobra.Command {
 			}
 
 			klog.Info("starting manager")
-			if err := mgr.Start(ctrl.SetupSignalHandler()); err != nil {
+			if err := mgr.Start(signals.SetupSignalHandler()); err != nil {
 				klog.Fatalf("problem start running manager err: %v", err)
 			}
 		},

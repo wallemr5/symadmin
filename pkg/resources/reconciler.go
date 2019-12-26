@@ -1,12 +1,14 @@
 package resources
 
 import (
-	"fmt"
 	"github.com/go-logr/logr"
 	workloadv1beta1 "gitlab.dmall.com/arch/sym-admin/pkg/apis/workload/v1beta1"
 	"gitlab.dmall.com/arch/sym-admin/pkg/utils"
+
 	// metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"context"
+	"reflect"
+
 	"github.com/goph/emperror"
 	"gitlab.dmall.com/arch/sym-admin/pkg/resources/patch"
 	corev1 "k8s.io/api/core/v1"
@@ -14,7 +16,6 @@ import (
 	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
-	"reflect"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 )
@@ -37,32 +38,32 @@ type ComponentReconciler interface {
 
 type Resource func() runtime.Object
 
-func (r *Reconciler) GetSvcLabels() map[string]string {
-	var domain string
-	if r.Config.Spec.Domain != nil {
-		domain = *r.Config.Spec.Domain
-	} else {
-		domain = fmt.Sprintf("%s.dmalll.com", r.Config.Name)
-	}
-	labels := map[string]string{
-		utils.ObserveMustLabelAppName:          r.Config.Name,
-		utils.ObserveMustLabelLightningDomain0: domain,
-	}
-	return utils.MergeLabels(labels, r.Config.Spec.Strategy.Meta)
-}
+// func (r *Reconciler) GetSvcLabels() map[string]string {
+// 	var domain string
+// 	if r.Config.Spec.Domain != nil {
+// 		domain = *r.Config.Spec.Domain
+// 	} else {
+// 		domain = fmt.Sprintf("%s.dmalll.com", r.Config.Name)
+// 	}
+// 	labels := map[string]string{
+// 		utils.ObserveMustLabelAppName:          r.Config.Name,
+// 		utils.ObserveMustLabelLightningDomain0: domain,
+// 	}
+// 	return utils.MergeLabels(labels, r.Config.Spec.Strategy.Meta)
+// }
 
-func (r *Reconciler) GetDeployLabels(name string) map[string]string {
-	ldcName, groupName, _ := utils.SplitMetaLdcGroupKey(name)
-
-	labels := map[string]string{
-		utils.ObserveMustLabelAppName:     r.Config.Name,
-		utils.ObserveMustLabelReleaseName: r.Config.Name + "-" + name,
-		utils.ObserveMustLabelLdcName:     ldcName,
-		utils.ObserveMustLabelGroupName:   groupName,
-	}
-
-	return utils.MergeLabels(labels, r.Config.Spec.Strategy.Meta)
-}
+// func (r *Reconciler) GetDeployLabels(name string) map[string]string {
+// 	ldcName, groupName, _ := utils.SplitMetaLdcGroupKey(name)
+//
+// 	labels := map[string]string{
+// 		utils.ObserveMustLabelAppName:     r.Config.Name,
+// 		utils.ObserveMustLabelReleaseName: r.Config.Name + "-" + name,
+// 		utils.ObserveMustLabelLdcName:     ldcName,
+// 		utils.ObserveMustLabelGroupName:   groupName,
+// 	}
+//
+// 	return utils.MergeLabels(labels, r.Config.Spec.Strategy.Meta)
+// }
 
 func (r *Reconciler) GetAffinity() *corev1.Affinity {
 	return &corev1.Affinity{

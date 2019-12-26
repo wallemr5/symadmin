@@ -91,9 +91,9 @@ func (p *PolicyTrigger) Start(stop <-chan struct{}) error {
 
 func NewAppSetController(mgr manager.Manager, cMgr *pkgmanager.DksManager) (*AppSetReconciler, *customctrl.Impl) {
 	c := &AppSetReconciler{
-		DksMgr:   cMgr,
-		Manager:  mgr,
-		recorder: mgr.GetEventRecorderFor(controllerName),
+		DksMgr:  cMgr,
+		Manager: mgr,
+		// recorder: mgr.GetEventRecorderFor(controllerName),
 	}
 
 	// cacher := mgr.GetCache()

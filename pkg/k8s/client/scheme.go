@@ -17,7 +17,7 @@ limitations under the License.
 package client
 
 import (
-	kruisev1alpha1 "github.com/openkruise/kruise/pkg/apis/apps/v1alpha1"
+	// kruisev1alpha1 "github.com/openkruise/kruise/pkg/apis/apps/v1alpha1"
 	workloadv1beta1 "gitlab.dmall.com/arch/sym-admin/pkg/apis/workload/v1beta1"
 	apiextensionsv1beta1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1beta1"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -35,7 +35,7 @@ func init() {
 	_ = clientgoscheme.AddToScheme(scheme)
 	_ = apiextensionsv1beta1.AddToScheme(scheme)
 	_ = workloadv1beta1.AddToScheme(scheme)
-	_ = kruisev1alpha1.AddToScheme(scheme)
+	// _ = kruisev1alpha1.AddToScheme(scheme)
 
 	// _ = monitorv1.AddToScheme(scheme)
 	// _ = networkingv1alpha3.AddToScheme(scheme)
