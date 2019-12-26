@@ -29,43 +29,43 @@ type ServicePort struct {
 // Event is a single event representation.
 type Event struct {
 	// A human-readable description of the status of related object.
-	Message string `json:"message, omitempty"`
+	Message string `json:"message,omitempty"`
 
 	// Component from which the event is generated.
-	SourceComponent string `json:"sourceComponent, omitempty"`
+	SourceComponent string `json:"sourceComponent,omitempty"`
 
-	Name string `json:"name, omitempty"`
+	Name string `json:"name,omitempty"`
 
 	// Reference to a piece of an object, which triggered an event. For example
 	// "spec.containers{name}" refers to container within pod with given name, if no container
 	// name is specified, for example "spec.containers[2]", then it refers to container with
 	// index 2 in this pod.
-	SubObject string `json:"object, omitempty"`
+	SubObject string `json:"object,omitempty"`
 
 	// The number of times this event has occurred.
-	Count int32 `json:"count, omitempty"`
+	Count int32 `json:"count,omitempty"`
 
 	// The time at which the event was first recorded.
-	FirstSeen metav1.Time `json:"firstSeen, omitempty"`
+	FirstSeen metav1.Time `json:"firstSeen,omitempty"`
 
 	// The time at which the most recent occurrence of this event was recorded.
-	LastSeen metav1.Time `json:"lastSeen, omitempty"`
+	LastSeen metav1.Time `json:"lastSeen,omitempty"`
 
 	// Short, machine understandable string that gives the reason
 	// for this event being generated.
-	Reason string `json:"reason, omitempty"`
+	Reason string `json:"reason,omitempty"`
 
 	// Event type (at the moment only normal and warning are supported).
-	Type string `json:"type, omitempty"`
+	Type string `json:"type,omitempty"`
 }
 
 // Endpoint describes an endpoint that is host and a list of available ports for that host.
 type Endpoint struct {
 	// Hostname, either as a domain name or IP address.
-	Host string `json:"host, omitempty"`
+	Host string `json:"host,omitempty"`
 
 	// List of ports opened for this endpoint on the hostname.
-	Ports []ServicePort `json:"ports, omitempty"`
+	Ports []ServicePort `json:"ports,omitempty"`
 }
 
 // type Resource struct {
@@ -87,19 +87,19 @@ type ResourceApp struct {
 type Service struct {
 	// InternalEndpoint of all Kubernetes services that have the same label selector as connected Replication
 	// Controller. Endpoints is DNS name merged with ports.
-	InternalEndpoint Endpoint `json:"internalEndpoint, omitempty"`
+	InternalEndpoint Endpoint `json:"internalEndpoint,omitempty"`
 
 	Labels map[string]string `json:"labels,omitempty"`
 
 	// Label selector of the service.
-	Selector map[string]string `json:"selector, omitempty"`
+	Selector map[string]string `json:"selector,omitempty"`
 
 	// Type determines how the service will be exposed.  Valid options: ClusterIP, NodePort, LoadBalancer
-	Type string `json:"type, omitempty"`
+	Type string `json:"type,omitempty"`
 
 	// ClusterIP is usually assigned by the master. Valid values are None, empty string (""), or
 	// a valid IP address. None can be specified for headless services when proxying is not required
-	ClusterIP string `json:"clusterIP, omitempty"`
+	ClusterIP string `json:"clusterIP,omitempty"`
 
 	Domain *string `json:"domain,omitempty"`
 }

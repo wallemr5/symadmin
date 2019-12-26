@@ -215,7 +215,8 @@ type AdvDeployment struct {
 type AdvDeploymentList struct {
 	metav1.TypeMeta `json:",inline"`
 	metav1.ListMeta `json:"metadata,omitempty"`
-	Items           []AdvDeployment `json:"items"`
+
+	Items []AdvDeployment `json:"items"`
 }
 
 func init() {

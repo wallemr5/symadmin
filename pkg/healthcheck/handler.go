@@ -42,8 +42,16 @@ func (s *basicHandler) Routes() []*router.Route {
 	var routes []*router.Route
 
 	ctlRoutes := []*router.Route{
-		{"GET", "/live", s.LiveEndpoint, ""},
-		{"GET", "/ready", s.ReadyEndpoint, ""},
+		&router.Route{
+			Method:  "GET",
+			Path:    "/live",
+			Handler: s.LiveEndpoint,
+		},
+		&router.Route{
+			Method:  "GET",
+			Path:    "/ready",
+			Handler: s.ReadyEndpoint,
+		},
 	}
 
 	routes = append(routes, ctlRoutes...)

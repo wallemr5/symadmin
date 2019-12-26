@@ -214,7 +214,10 @@ func (p *Prometheus) runServer() {
 }
 
 func (p *Prometheus) getMetrics() []byte {
-	response, _ := http.Get(p.Ppg.MetricsURL)
+	response, err := http.Get(p.Ppg.MetricsURL)
+	if err != nil {
+		return nil
+	}
 
 	defer response.Body.Close()
 	body, _ := ioutil.ReadAll(response.Body)
@@ -329,7 +332,7 @@ func (p *Prometheus) registerMetrics(subsystem string) {
 	for _, metricDef := range p.MetricsList {
 		metric := NewMetric(metricDef, subsystem)
 		if err := prometheus.Register(metric); err != nil {
-			klog.Infof("%s could not be registered: ", metricDef.Name, err)
+			klog.Infof("%s could not be registered: %s", metricDef.Name, err)
 		} else {
 			klog.Infof("%s registered.", metricDef.Name)
 		}

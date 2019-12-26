@@ -134,7 +134,7 @@ func (r *Router) Start(stopCh <-chan struct{}) error {
 	var err error
 	select {
 	case <-stopCh:
-		klog.Info("Shutting down the http/https:%s server...", r.Addr)
+		klog.Infof("Shutting down the http/https:%s server...", r.Addr)
 		if r.ShutdownTimeout > 0 {
 			ctx, cancel := context.WithTimeout(context.Background(), r.ShutdownTimeout)
 			defer cancel()
