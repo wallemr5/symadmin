@@ -27,8 +27,8 @@ var (
 )
 
 // Reconciler is the interface that controller implementations are expected to implement
-type Reconciler interface {
-	Reconcile(ctx context.Context, key string) error
+type CustomReconciler interface {
+	CustomReconcile(ctx context.Context, key string) error
 }
 
 // Impl is our core controller implementation.  It handles queuing and feeding work
@@ -49,14 +49,14 @@ type Impl struct {
 	mu sync.Mutex
 
 	// Reconciler is the workhorse of this controller
-	Reconciler Reconciler
+	Reconciler CustomReconciler
 
 	// WorkQueue is a rate limited work queue.
 	WorkQueue workqueue.RateLimitingInterface
 }
 
 // NewImpl instantiates an instance of our controller
-func NewImpl(r Reconciler, name string, maxRetries, threadiness *int, namespaces ...string) *Impl {
+func NewImpl(r CustomReconciler, name string, maxRetries, threadiness *int, namespaces ...string) *Impl {
 	impl := &Impl{
 		Name:       name,
 		Namespaces: namespaces,
@@ -374,7 +374,7 @@ func (c *Impl) processNextWorkItem() bool {
 	}
 
 	// Run Reconcile, passing it the namespaces/namespace/name string of the resource to be synced.
-	if err = c.Reconciler.Reconcile(context.TODO(), key); err != nil {
+	if err = c.Reconciler.CustomReconcile(context.TODO(), key); err != nil {
 		c.handleErr(err, key)
 		klog.V(3).Infof("Name: %s Reconcile failed. Time taken: %v. key: %s", c.Name, time.Since(startTime), key)
 		return true

@@ -21,9 +21,11 @@ import (
 
 	"github.com/go-logr/logr"
 	"github.com/gofrs/uuid"
-	"github.com/goph/emperror"
 	kruisev1alpha1 "github.com/openkruise/kruise/pkg/apis/apps/v1alpha1"
+	"github.com/pkg/errors"
 	workloadv1beta1 "gitlab.dmall.com/arch/sym-admin/pkg/apis/workload/v1beta1"
+	helmv2 "gitlab.dmall.com/arch/sym-admin/pkg/helm/v2"
+	pkgmanager "gitlab.dmall.com/arch/sym-admin/pkg/manager"
 	"gitlab.dmall.com/arch/sym-admin/pkg/resources"
 	"gitlab.dmall.com/arch/sym-admin/pkg/resources/deployment"
 	"gitlab.dmall.com/arch/sym-admin/pkg/resources/svc"
@@ -32,8 +34,11 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/types"
+	helmenv "k8s.io/helm/pkg/helm/environment"
+	"k8s.io/klog"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/controller"
 	"sigs.k8s.io/controller-runtime/pkg/handler"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
@@ -44,8 +49,9 @@ import (
 type AdvDeploymentReconciler struct {
 	Name string
 	client.Client
-	Log logr.Logger
-	Mgr manager.Manager
+	Log       logr.Logger
+	Mgr       manager.Manager
+	Helmv2env *helmenv.EnvSettings
 }
 
 func (r *AdvDeploymentReconciler) SetupWithManager(mgr ctrl.Manager) error {
@@ -55,6 +61,7 @@ func (r *AdvDeploymentReconciler) SetupWithManager(mgr ctrl.Manager) error {
 		Owns(&appsv1.StatefulSet{}).
 		Owns(&kruisev1alpha1.StatefulSet{}).
 		Owns(&corev1.Service{}).
+		WithOptions(controller.Options{MaxConcurrentReconciles: 3}).
 		WithEventFilter(utils.GetWatchPredicateForNs()).
 		WithEventFilter(utils.GetWatchPredicateForApp()).
 		// Watches(&source.Kind{Type: &corev1.Pod{}}, &handler.Funcs{}).
@@ -62,7 +69,7 @@ func (r *AdvDeploymentReconciler) SetupWithManager(mgr ctrl.Manager) error {
 		Complete(r)
 }
 
-func Add(mgr manager.Manager) error {
+func Add(mgr manager.Manager, cMgr *pkgmanager.DksManager) error {
 	reconciler := &AdvDeploymentReconciler{
 		Name:   "AdvDeployment-controllers",
 		Client: mgr.GetClient(),
@@ -70,12 +77,16 @@ func Add(mgr manager.Manager) error {
 		Log:    ctrl.Log.WithName("controllers").WithName("AdvDeployment"),
 	}
 
-	// cacher := mgr.GetCache()
-	// cacher.GetInformer()
 	err := reconciler.SetupWithManager(mgr)
 	if err != nil {
-		return emperror.Wrapf(err, "unable to create AdvDeployment controller")
+		return errors.Wrapf(err, "unable to create AdvDeployment controller")
 	}
+
+	helmv2env, err := helmv2.InitHelmRepoEnv("dmall", cMgr.Opt.Repos)
+	if err != nil {
+		klog.Errorf("InitHelmRepoEnv err:%v", err)
+	}
+	reconciler.Helmv2env = helmv2env
 	return nil
 }
 
