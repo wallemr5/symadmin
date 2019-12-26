@@ -11,6 +11,7 @@ type Manager struct {
 	clusters map[string]*Cluster
 	mu       *sync.RWMutex
 	kubecli  kubernetes.Interface
+	ns       string
 }
 
 func NewManager(kubecli kubernetes.Interface) *Manager {

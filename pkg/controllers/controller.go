@@ -46,7 +46,7 @@ func AddToManager(m manager.Manager, dksMgr *pkgmanager.DksManager) error {
 		}
 
 		if dksMgr.Opt.WorkerEnabled {
-			AddToManagerFuncs = append(AddToManagerFuncs, advdeployment.Add)
+			AddToManagerWithCMFuncs = append(AddToManagerWithCMFuncs, advdeployment.Add)
 		}
 	}
 

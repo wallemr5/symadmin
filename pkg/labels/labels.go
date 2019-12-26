@@ -4,6 +4,12 @@ import (
 	"fmt"
 )
 
+var ObservedNamespace = []string{
+	// "default",
+	"dmall-inner",
+	"dmall-outer",
+}
+
 const (
 	LabelCreatedBy      = "createdBy"
 	LabelClusterName    = "clusterName"
