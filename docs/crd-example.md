@@ -24,8 +24,8 @@ spec:
         minReadySeconds: 30
         priorityStrategy:
             orderPriority:
-                - orderdKey: ""
-                - orderdKey: ""
+            - orderdKey: ""
+            - orderdKey: ""
             weightPriority:
                 weight: 100
                 matchSelector: metav1.LabelSelector
@@ -63,7 +63,7 @@ status:
     - type: "Available" # Available/Progressing/ReplicaFailure
         status: True # True/False/Unknown
         lastUpdateTime: "2019-12-26 13:37:47"
-        lastTransitionTime "2019-12-26 13:37:59"
+        lastTransitionTime: "2019-12-26 13:37:59"
         reason: ""
         message: ""
     status: Running # Running/Migrating/WorkRatioing/Scaling/Updateing/Installing/Unknown
@@ -114,7 +114,17 @@ status:
           reason: ""
           type: ""
         service:
-            internalEndpoint
+            internalEndpoint:
+                host: "api.dmall.com"
+                ports:
+                - name: ""
+                  port: 8080
+                  protocol: http
+                  targetPort: 30080
+                - name: ""
+                  port: 8080
+                  protocol: http
+                  targetPort: 30080
             labels:
             - k1: v1
               k2: v2
@@ -126,7 +136,7 @@ status:
             Domain: ""
 ```
 
-## AdvDeploymentSpec
+## AdvDeployment
 
 ``` yaml
 spec:
