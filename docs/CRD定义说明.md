@@ -47,6 +47,26 @@
   - AlertManagerEndpoint `*string`
   - PrometheusEndpoint `*string`
 - NodeDetail `*NodeDetail`
+  - NodeStatus `[]*NodeStatus`
+      - NodeName `string`
+      - Etcd `bool`
+      - ControlPlane `bool`
+      - Worker `bool`
+      - Capacity `v1.ResourceList`
+      - Allocatable `v1.ResourceList`
+      - Requested `v1.ResourceList`
+      - Limits `v1.ResourceList`
+      - Ready `string`
+      - KernelDeadlock `string`
+      - NetworkUnavailable `string`
+      - OutOfDisk `string`
+      - MemoryPressure `string`
+      - DiskPressure `string`
+      - PIDPressure `string`
+      - CpuUsagePercent `int32`
+      - MemoryUsagePercent `int32`
+      - PodUsagePercent `int32`
+      - StorageUsagePercent `int32`
   - Capacity `v1.ResourceList`
   - Allocatable `v1.ResourceList`
   - Requested `v1.ResourceList`
@@ -55,26 +75,6 @@
   - PodUsagePercent `int32`
   - StorageUsagePercent `int32`
   - MemoryUsagePercent `int32`
-  - NodeStatus `[]*NodeStatus`
-    - NodeName `string`
-    - Etcd `bool`
-    - ControlPlane `bool`
-    - Worker `bool`
-    - Capacity `v1.ResourceList`
-    - Allocatable `v1.ResourceList`
-    - Requested `v1.ResourceList`
-    - Limits `v1.ResourceList`
-    - Ready `string`
-    - KernelDeadlock `string`
-    - NetworkUnavailable `string`
-    - OutOfDisk `string`
-    - MemoryPressure `string`
-    - DiskPressure `string`
-    - PIDPressure `string`
-    - CpuUsagePercent `int32`
-    - MemoryUsagePercent `int32`
-    - PodUsagePercent `int32`
-    - StorageUsagePercent `int32`
 
 
 ## 二、AppSetTypes
