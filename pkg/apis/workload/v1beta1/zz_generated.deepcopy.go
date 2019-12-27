@@ -76,7 +76,7 @@ func (in *AdvDeploymentCondition) DeepCopy() *AdvDeploymentCondition {
 func (in *AdvDeploymentList) DeepCopyInto(out *AdvDeploymentList) {
 	*out = *in
 	out.TypeMeta = in.TypeMeta
-	in.ListMeta.DeepCopyInto(&out.ListMeta)
+	out.ListMeta = in.ListMeta
 	if in.Items != nil {
 		in, out := &in.Items, &out.Items
 		*out = make([]AdvDeployment, len(*in))
@@ -434,7 +434,7 @@ func (in *AppSetCondition) DeepCopy() *AppSetCondition {
 func (in *AppSetList) DeepCopyInto(out *AppSetList) {
 	*out = *in
 	out.TypeMeta = in.TypeMeta
-	in.ListMeta.DeepCopyInto(&out.ListMeta)
+	out.ListMeta = in.ListMeta
 	if in.Items != nil {
 		in, out := &in.Items, &out.Items
 		*out = make([]AppSet, len(*in))
@@ -647,7 +647,7 @@ func (in *ClusterComponentStatus) DeepCopy() *ClusterComponentStatus {
 func (in *ClusterList) DeepCopyInto(out *ClusterList) {
 	*out = *in
 	out.TypeMeta = in.TypeMeta
-	in.ListMeta.DeepCopyInto(&out.ListMeta)
+	out.ListMeta = in.ListMeta
 	if in.Items != nil {
 		in, out := &in.Items, &out.Items
 		*out = make([]Cluster, len(*in))

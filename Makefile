@@ -30,11 +30,11 @@ test: generate fmt vet manifests
 
 # Build manager binary
 manager: generate fmt vet
-	go build -o bin/sym-admin-controller cmd/operator/main.go
+	go build -o bin/sym-admin-controller cmd/controller/main.go
 
 # Run against the configured Kubernetes cluster in ~/.kube/config
 run: generate fmt vet manifests
-	go run cmd/operator/main.go
+	go run cmd/controller/main.go
 
 # Install CRDs into a cluster
 crd: manifests
@@ -67,7 +67,7 @@ docker-build:
 
 build:
 	$(GO) -v -o bin/sym-admin-controller -ldflags "-s -w -X pkg/version.Release=$(VERSION) -X pkg/version.Commit=$(COMMIT)   \
-	-X pkg/version.BuildDate=$(BuildDate)" cmd/operator/main.go
+	-X pkg/version.BuildDate=$(BuildDate)" cmd/controller/main.go
 
 # Push the docker image
 docker-push:

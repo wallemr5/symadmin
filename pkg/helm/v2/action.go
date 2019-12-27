@@ -171,7 +171,7 @@ func DeleteAllRelease(hClient *Client) error {
 				}
 				deletedReleases[r.Name] = true
 
-				klog.Info("release successfully deleted, name:%s", r.Name)
+				klog.Infof("release successfully deleted, name:%s", r.Name)
 			}
 		}
 	}
@@ -418,7 +418,6 @@ func ParseReleaseManifest(manifest string, resourceTypes []string) ([]ReleaseRes
 
 		obj, _, err := decode([]byte(object), nil, nil)
 		if err != nil {
-			err.Error()
 			klog.Warningf("Error while decoding YAML object. Err was: %s", err)
 			continue
 		}
