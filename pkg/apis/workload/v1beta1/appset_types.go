@@ -17,10 +17,10 @@ func init() {
 
 // +k8s:openapi-gen=true
 // +kubebuilder:subresource:status
-// +kubebuilder:printcolumn:name="DESIRED",type="integer",JSONPath=".spec.replicas",description="The desired number of pods."
-// +kubebuilder:printcolumn:name="CURRENT",type="integer",JSONPath=".status.replicas",description="The number of currently all pods."
-// +kubebuilder:printcolumn:name="UPDATED",type="integer",JSONPath=".status.updatedReplicas",description="The number of pods updated."
-// +kubebuilder:printcolumn:name="READY",type="integer",JSONPath=".status.readyReplicas",description="The number of pods ready."
+// +kubebuilder:resource:shortName=as
+// +kubebuilder:printcolumn:name="DESIRED",type="integer",JSONPath=".spec.desired",description="The desired number of pods."
+// +kubebuilder:printcolumn:name="AVAILABEL",type="integer",JSONPath=".status.available",description="The number of pods ready."
+// +kubebuilder:printcolumn:name="VERSION",type="string",JSONPath=".status.version",description="The image version."
 // +kubebuilder:printcolumn:name="AGE",type="date",JSONPath=".metadata.creationTimestamp",description="CreationTimestamp is a timestamp representing the server time when this object was created. "
 type AppSet struct {
 	metav1.TypeMeta   `json:",inline"`
@@ -82,6 +82,10 @@ type ClusterTopology struct {
 type TargetCluster struct {
 	// Target cluster name
 	Name string `json:"name,omitempty"`
+
+	// exp: zone, rack
+	Mata map[string]string `json:"meta,omitempty"`
+
 	// Contains the details of each subset. Each element in this array represents one subset
 	// which will be provisioned and managed by UnitedDeployment.
 	// +optional
@@ -115,19 +119,16 @@ type AppSetStatus struct {
 	// worklod's generation, which is updated on mutation by the API Server.
 	// +optional
 	ObservedGeneration int64 `json:"observedGeneration,omitempty"`
-	// The number of ready replicas.
-	// +optional
-	ReadyReplicas int32 `json:"readyReplicas,omitempty"`
 
-	// Replicas is the most recently observed number of replicas.
-	Replicas int32 `json:"replicas"`
+	//
+	Version string `json:"version,omitempty"`
 
-	// The number of pods in current version.
-	UpdatedReplicas int32 `json:"updatedReplicas"`
+	//
+	Desired int32 `json:"desired,omitempty"`
 
-	// The number of ready current revision replicas for this UnitedDeployment.
-	// +optional
-	UpdatedReadyReplicas int32 `json:"updatedReadyReplicas,omitempty"`
+	//
+	Available int32 `json:"available,omitempty"`
+
 	// Represents the latest available observations of a UnitedDeployment's current state.
 	// +optional
 	Conditions []AppSetCondition `json:"conditions,omitempty"`
@@ -159,42 +160,18 @@ const (
 // 	Message            string                 `json:"message,omitempty"`
 // }
 
-type AppAggr struct {
-	Desired    AppDesired `json:"desired"`
-	Actual     AppActual  `json:"actual"`
-	HaveDeploy bool       `json:"haveDeploy"`
-}
-
-type AppDesiredItem struct {
-	Name       string `json:"Name"`
-	Desired    int32  `json:"desired"`
-	HaveDeploy bool   `json:"haveDeploy"`
-}
-
-type AppDesired struct {
-	Total int32             `json:"total"`
-	Items []*AppDesiredItem `json:"items,omitempty"`
-}
-
-// AppActualItems
-type AppActualItem struct {
-	Name          string `json:"Name"`
-	Available     int32  `json:"available"`
-	HaveDeploy    bool   `json:"haveDeploy"`
-	Ready         *int32 `json:"ready,omitempty"`
-	Update        *int32 `json:"update,omitempty"`
-	Current       *int32 `json:"current,omitempty"`
-	Running       *int32 `json:"running,omitempty"`
-	WarnEvent     *int32 `json:"warnEvent,omitempty"`
-	EndpointReady *int32 `json:"endpointReady,omitempty"`
+// ClusterAppActual
+type ClusterAppActual struct {
+	Name      string            `json:"name"`
+	Desired   int32             `json:"desired"`
+	Available int32             `json:"available"`
+	PodSets   []PodSetSatusInfo `json:"podSets,omitempty"`
 }
 
 // AppActual represent the app status
 type AppActual struct {
-	Total int32 `json:"total"`
-
-	Items      []*AppActualItem `json:"items,omitempty"`
-	Pods       []*Pod           `json:"pods,omitempty"`
-	WarnEvents []*Event         `json:"warnEvents,omitempty"`
-	Service    *Service         `json:"service,omitempty"`
+	Clusters   []*ClusterAppActual `json:"clusters,omitempty"`
+	Pods       []*Pod              `json:"pods,omitempty"`
+	WarnEvents []*Event            `json:"warnEvents,omitempty"`
+	Service    *Service            `json:"service,omitempty"`
 }

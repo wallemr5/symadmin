@@ -114,12 +114,28 @@ type ChartSpec struct {
 	Url      *ChartUrl `json:"url,omitempty"`
 }
 
+// PodSpec
 type PodSpec struct {
 	// Selector is a label query over pods that should match the replica count.
 	// It must match the pod template's labels.
 	Selector *metav1.LabelSelector   `json:"selector,omitempty"`
 	Template *corev1.PodTemplateSpec `json:"template,omitempty"`
 	Chart    *ChartSpec              `json:"chart,omitempty"`
+}
+
+// PodSetSatusInfo
+type PodSetSatusInfo struct {
+	Name          string `json:"name"`
+	Version       string `json:"version,omitempty"`
+	Desired       int32  `json:"desired"`
+	Available     int32  `json:"available"`
+	HaveDeploy    *bool  `json:"haveDeploy,omitempty"`
+	Ready         *int32 `json:"ready,omitempty"`
+	Update        *int32 `json:"update,omitempty"`
+	Current       *int32 `json:"current,omitempty"`
+	Running       *int32 `json:"running,omitempty"`
+	WarnEvent     *int32 `json:"warnEvent,omitempty"`
+	EndpointReady *int32 `json:"endpointReady,omitempty"`
 }
 
 // Subset defines the detail of a subset.
@@ -142,6 +158,12 @@ type PodSet struct {
 	// +optional
 	Replicas *intstr.IntOrString `json:"replicas,omitempty"`
 
+	//
+	Version string `json:"version,omitempty"`
+
 	// use for helm
 	RawValues string `json:"rawValues,omitempty"`
+
+	// exp: bule/green, rz/gz
+	Mata map[string]string `json:"meta,omitempty"`
 }

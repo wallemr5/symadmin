@@ -32,7 +32,7 @@ type ClusterList struct {
 type ClusterSpec struct {
 	KubeConfig  string            `json:"kubeConfig,omitempty"`
 	SymNodeName string            `json:"symNodeName"`
-	Additionals map[string]string `json:"additionals,omitempty"`
+	Meta        map[string]string `json:"meta,omitempty"`
 	DisplayName string            `json:"displayName,omitempty"`
 	Description string            `json:"description,omitempty"`
 	HelmSpec    *HelmSpec         `json:"helmSpec,omitempty"`

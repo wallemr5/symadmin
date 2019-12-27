@@ -16,6 +16,8 @@ import (
 	"gitlab.dmall.com/arch/sym-admin/pkg/labels"
 	"k8s.io/client-go/util/workqueue"
 	"k8s.io/klog"
+	ctrl "sigs.k8s.io/controller-runtime"
+	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 )
 
 var (
@@ -26,9 +28,14 @@ var (
 	DefaultMaxRetries = 10
 )
 
+type CustomRequest struct {
+	ClusterName string
+	reconcile.Request
+}
+
 // Reconciler is the interface that controller implementations are expected to implement
 type CustomReconciler interface {
-	CustomReconcile(ctx context.Context, key string) error
+	CustomReconcile(ctx context.Context, req CustomRequest) (ctrl.Result, error)
 }
 
 // Impl is our core controller implementation.  It handles queuing and feeding work
@@ -344,17 +351,19 @@ func (c *Impl) runWorker() {
 func (c *Impl) processNextWorkItem() bool {
 	obj, shutdown := c.WorkQueue.Get()
 	if shutdown {
+		// Stop working
 		return false
 	}
 
 	startTime := time.Now()
 	defer c.WorkQueue.Done(obj)
 
-	var key string
+	var req CustomRequest
 	var ok bool
-	var err error
 
 	defer func() {
+		// todo Update metrics after processing each item
+
 		diffTime := time.Since(startTime)
 		var logLevel klog.Level
 		if diffTime > 2*time.Second {
@@ -364,24 +373,36 @@ func (c *Impl) processNextWorkItem() bool {
 		} else {
 			logLevel = 4
 		}
-		klog.V(logLevel).Infof("Name:%s Reconcile succeeded. Time taken: %v. key: %s", c.Name, diffTime, key)
+		klog.V(logLevel).Infof("Name:%s Reconcile succeeded. Time taken: %v. key: %v", c.Name, diffTime, req)
 	}()
 
-	if key, ok = obj.(string); !ok {
+	if req, ok = obj.(CustomRequest); !ok {
 		c.WorkQueue.Forget(obj)
 		runtime.HandleError(fmt.Errorf("expected string in workqueue but got %#v", obj))
 		return true
 	}
 
 	// Run Reconcile, passing it the namespaces/namespace/name string of the resource to be synced.
-	if err = c.Reconciler.CustomReconcile(context.TODO(), key); err != nil {
-		c.handleErr(err, key)
-		klog.V(3).Infof("Name: %s Reconcile failed. Time taken: %v. key: %s", c.Name, time.Since(startTime), key)
+	if res, err := c.Reconciler.CustomReconcile(context.TODO(), req); err != nil {
+		// c.handleErr(err, key)
+		c.WorkQueue.AddRateLimited(req)
+		klog.V(3).Infof("Name: %s Reconcile failed. Time taken: %v. req: %v", c.Name, time.Since(startTime), req)
+		return true
+	} else if res.RequeueAfter > 0 {
+		// The result.RequeueAfter request will be lost, if it is returned
+		// along with a non-nil error. But this is intended as
+		// We need to drive to stable reconcile loops before queuing due
+		// to result.RequestAfter
+		c.WorkQueue.Forget(obj)
+		c.WorkQueue.AddAfter(req, res.RequeueAfter)
+		return true
+	} else if res.Requeue {
+		c.WorkQueue.AddRateLimited(req)
 		return true
 	}
 
 	// Finally, if no error occurs we Forget this item so it does not have any delay when another change happens.
-	c.WorkQueue.Forget(key)
+	c.WorkQueue.Forget(req)
 	return true
 }
 

@@ -110,6 +110,7 @@ func (r *AdvDeploymentReconciler) Reconcile(req ctrl.Request) (ctrl.Result, erro
 	}
 
 	rSet := &appsv1.ReplicaSet{}
+
 	err = r.Client.Get(ctx, types.NamespacedName{Name: "sym-operator-5d8f9f7dcc", Namespace: "sym"}, rSet)
 	if err != nil {
 		logger.Error(err, "failed to get ReplicaSet")
@@ -118,6 +119,23 @@ func (r *AdvDeploymentReconciler) Reconcile(req ctrl.Request) (ctrl.Result, erro
 		}
 
 		return reconcile.Result{}, err
+	}
+
+	podall := make([]*corev1.Pod, 0, 8)
+
+	pods := &corev1.PodList{}
+	err = r.Client.List(ctx, &client.ListOptions{Namespace: "dmall-innner"}, pods)
+	if err != nil {
+		logger.Error(err, "failed to get ReplicaSet")
+		if apierrors.IsNotFound(err) {
+			return reconcile.Result{}, nil
+		}
+
+		return reconcile.Result{}, err
+	}
+
+	for i := range pods.Items {
+		podall = append(podall, &pods.Items[i])
 	}
 
 	events := &corev1.EventList{}

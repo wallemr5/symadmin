@@ -130,8 +130,8 @@ func NewAppSetController(mgr manager.Manager, cMgr *pkgmanager.DksManager) (*App
 	return c, customImpl
 }
 
-func (r *AppSetReconciler) CustomReconcile(ctx context.Context, key string) error {
-	return nil
+func (r *AppSetReconciler) CustomReconcile(ctx context.Context, request customctrl.CustomRequest) (reconcile.Result, error) {
+	return reconcile.Result{}, nil
 }
 
 func (r *AppSetReconciler) Reconcile(request reconcile.Request) (reconcile.Result, error) {

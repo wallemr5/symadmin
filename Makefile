@@ -37,7 +37,7 @@ run: generate fmt vet manifests
 	go run cmd/controller/main.go
 
 # Install CRDs into a cluster
-crd: manifests
+crd: generate manifests
 	kustomize build config/crd > manifests/crd.yaml
 
 # Deploy controller in the configured Kubernetes cluster in ~/.kube/config

@@ -18,6 +18,7 @@ package v1beta1
 
 import (
 	"fmt"
+
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -146,29 +147,17 @@ type AdvDeploymentCondition struct {
 }
 
 type PodSetStatus struct {
-	Name               string `json:"name,omitempty"`
-	ObservedGeneration int64  `json:"observedGeneration,omitempty"`
-	Replicas           int32  `json:"replicas,omitempty"`
-	ReadyReplicas      int32  `json:"readyReplicas,omitempty"`
-	CurrentReplicas    int32  `json:"currentReplicas,omitempty"`
-	UpdatedReplicas    int32  `json:"updatedReplicas,omitempty"`
+	PodSets []PodSetSatusInfo `json:",inline"`
 }
 
 // AdvDeploymentStatus defines the observed state of AdvDeployment
 type AdvDeploymentStatus struct {
-	Version         string                   `json:"version,omitempty"`
-	Message         string                   `json:"message,omitempty"`
-	Replicas        int32                    `json:"replicas,omitempty"`
-	ReadyReplicas   int32                    `json:"readyReplicas,omitempty"`
-	CurrentReplicas int32                    `json:"currentReplicas,omitempty"`
-	UpdatedReplicas int32                    `json:"updatedReplicas,omitempty"`
-	PodSets         []PodSetStatus           `json:"podSets,omitempty"`
-	Conditions      []AdvDeploymentCondition `json:"conditions,omitempty"`
-
-	// observedGeneration is the most recent generation observed for this workload. It corresponds to the
-	// StatefulSet's generation, which is updated on mutation by the API Server.
-	// +optional
-	ObservedGeneration int64 `json:"observedGeneration,omitempty"`
+	//
+	Version    string                   `json:"version,omitempty"`
+	Desired    int32                    `json:"desired"`
+	Available  int32                    `json:"available"`
+	PodSets    []PodSetSatusInfo        `json:"podSets,omitempty"`
+	Conditions []AdvDeploymentCondition `json:"conditions,omitempty"`
 
 	// currentRevision, if not empty, indicates the version of the workload used to generate Pods in the
 	// sequence [0,currentReplicas).
@@ -177,6 +166,11 @@ type AdvDeploymentStatus struct {
 	// updateRevision, if not empty, indicates the version of the workload used to generate Pods in the sequence
 	// [replicas-updatedReplicas,replicas)
 	UpdateRevision string `json:"updateRevision,omitempty"`
+
+	// observedGeneration is the most recent generation observed for this workload. It corresponds to the
+	// StatefulSet's generation, which is updated on mutation by the API Server.
+	// +optional
+	ObservedGeneration int64 `json:"observedGeneration,omitempty"`
 
 	// collisionCount is the count of hash collisions for the workload. The workload controller
 	// uses this field as a collision avoidance mechanism when it needs to create the name for the
@@ -194,10 +188,9 @@ type AdvDeploymentStatus struct {
 // +k8s:openapi-gen=true
 // +kubebuilder:subresource:status
 // +kubebuilder:resource:shortName=ad
-// +kubebuilder:printcolumn:name="DESIRED",type="integer",JSONPath=".spec.replicas",description="The desired number of pods."
-// +kubebuilder:printcolumn:name="CURRENT",type="integer",JSONPath=".status.replicas",description="The number of currently all pods."
-// +kubebuilder:printcolumn:name="UPDATED",type="integer",JSONPath=".status.updatedReplicas",description="The number of pods updated."
-// +kubebuilder:printcolumn:name="READY",type="integer",JSONPath=".status.readyReplicas",description="The number of pods ready."
+// +kubebuilder:printcolumn:name="DESIRED",type="integer",JSONPath=".spec.desired",description="The desired number of pods."
+// +kubebuilder:printcolumn:name="AVAILABEL",type="integer",JSONPath=".status.available",description="The number of pods ready."
+// +kubebuilder:printcolumn:name="VERSION",type="string",JSONPath=".status.version",description="The image version."
 // +kubebuilder:printcolumn:name="AGE",type="date",JSONPath=".metadata.creationTimestamp",description="CreationTimestamp is a timestamp representing the server time when this object was created. "
 type AdvDeployment struct {
 	metav1.TypeMeta   `json:",inline"`
