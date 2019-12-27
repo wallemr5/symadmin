@@ -10,7 +10,6 @@ require (
 	github.com/Masterminds/goutils v1.1.0 // indirect
 	github.com/Masterminds/semver v1.5.0 // indirect
 	github.com/Masterminds/sprig v2.22.0+incompatible
-	github.com/Sirupsen/logrus v0.0.0-00010101000000-000000000000 // indirect
 	github.com/appscode/jsonpatch v0.0.0-00010101000000-000000000000 // indirect
 	github.com/cenkalti/backoff v2.2.1+incompatible // indirect
 	github.com/chai2010/gettext-go v0.0.0-20191225085308-6b9f4b1008e1 // indirect
