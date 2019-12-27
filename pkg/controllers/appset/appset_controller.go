@@ -80,11 +80,12 @@ type PolicyTrigger struct {
 func NewPolicyTrigger(r *AppSetReconciler) *PolicyTrigger {
 	return &PolicyTrigger{
 		AppSetReconciler: r,
-		Period:           5 * time.Second,
+		Period:           30 * time.Second,
 	}
 }
 
 func (p *PolicyTrigger) Start(stop <-chan struct{}) error {
+	klog.Info("start policy trigger loop ... ")
 	wait.Until(p.AppSetReconciler.PolicyEnqueueKey, p.Period, stop)
 	return nil
 }
@@ -109,8 +110,8 @@ func NewAppSetController(mgr manager.Manager, cMgr *pkgmanager.DksManager) (*App
 		return nil, nil
 	}
 
-	// Watch for changes to UnitedDeployment
-	err = c.Watch(&source.Kind{Type: &workloadv1beta1.AppSet{}}, &handler.EnqueueRequestForObject{})
+	// Watch for changes to AppSet
+	err = ctl.Watch(&source.Kind{Type: &workloadv1beta1.AppSet{}}, &handler.EnqueueRequestForObject{})
 	if err != nil {
 		return nil, nil
 	}
@@ -138,5 +139,5 @@ func (r *AppSetReconciler) Reconcile(request reconcile.Request) (reconcile.Resul
 }
 
 func (r *AppSetReconciler) PolicyEnqueueKey() {
-
+	klog.V(4).Infof("new time: %v", time.Now())
 }

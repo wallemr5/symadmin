@@ -21,9 +21,13 @@ import (
 
 	"github.com/go-logr/logr"
 
+	"context"
+
 	"gitlab.dmall.com/arch/sym-admin/pkg/healthcheck"
 	k8smanager "gitlab.dmall.com/arch/sym-admin/pkg/k8s/manager"
 	"gitlab.dmall.com/arch/sym-admin/pkg/router"
+	"k8s.io/client-go/kubernetes"
+	"k8s.io/klog"
 )
 
 type ManagerOption struct {
@@ -47,7 +51,7 @@ type DksManager struct {
 
 	Router       *router.Router
 	HealthHander healthcheck.Handler
-	K8sMgr       *k8smanager.Manager
+	K8sMgr       *k8smanager.ClusterManager
 }
 
 func DefaultManagerOption() *ManagerOption {
@@ -57,7 +61,7 @@ func DefaultManagerOption() *ManagerOption {
 		EnableLeaderElection: false,
 		GinLogEnabled:        true,
 		PprofEnabled:         true,
-		MasterEnabled:        false,
+		MasterEnabled:        true,
 		WorkerEnabled:        false,
 		Repos: map[string]string{
 			"dmall": "http://chartmuseum.dmall.com",
@@ -65,7 +69,7 @@ func DefaultManagerOption() *ManagerOption {
 	}
 }
 
-func NewDksManager(opt *ManagerOption, logger logr.Logger, componentName string) (*DksManager, error) {
+func NewDksManager(kubecli kubernetes.Interface, opt *ManagerOption, logger logr.Logger, componentName string) (*DksManager, error) {
 	routerOptions := &router.RouterOptions{
 		GinLogEnabled:    opt.GinLogEnabled,
 		MetricsEnabled:   true,
@@ -84,11 +88,24 @@ func NewDksManager(opt *ManagerOption, logger logr.Logger, componentName string)
 	rt.AddRoutes("health", healthHander.Routes())
 	// rt.AddRoutes("cluster", mgr.Routes())
 
-	return &DksManager{
+	dksMgr := &DksManager{
 		Opt:          opt,
 		Router:       rt,
 		HealthHander: healthHander,
-	}, nil
+	}
+	if opt.MasterEnabled {
+		klog.Info("start init multi cluster manager ... ")
+		manager, err := k8smanager.NewManager(kubecli, logger, k8smanager.DefaultClusterManagerOption())
+		if err != nil {
+			klog.Fatalf("unable to new k8s manager err: %v", err)
+		}
+
+		ctx, _ := context.WithTimeout(context.Background(), time.Minute)
+		manager.InitStart(ctx.Done())
+		dksMgr.K8sMgr = manager
+	}
+
+	return dksMgr, nil
 }
 
 func NewHttpsRouter() *router.Router {

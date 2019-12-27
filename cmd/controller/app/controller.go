@@ -28,12 +28,12 @@ import (
 	ctrlmanager "sigs.k8s.io/controller-runtime/pkg/manager"
 	"sigs.k8s.io/controller-runtime/pkg/runtime/signals"
 
-	// logf "sigs.k8s.io/controller-runtime/pkg/runtime/log"
 	"gitlab.dmall.com/arch/sym-admin/pkg/manager"
+	logf "sigs.k8s.io/controller-runtime/pkg/runtime/log"
 )
 
 var (
-// log = logf.KBLog.WithName("controller")
+	logger = logf.KBLog.WithName("controller")
 )
 
 func NewControllerCmd(cli *DksCli) *cobra.Command {
@@ -60,19 +60,28 @@ func NewControllerCmd(cli *DksCli) *cobra.Command {
 				klog.Fatalf("unable to new manager err: %v", err)
 			}
 
-			dksMgr, err := manager.NewDksManager(opt, nil, "controller")
+			stopCh := signals.SetupSignalHandler()
+			dksMgr, err := manager.NewDksManager(cli.GetKubeInterfaceOrDie(), opt, logger, "controller")
 			if err != nil {
 				klog.Fatalf("unable to NewDksManager err: %v", err)
 			}
 
+			// add http server Runnable
+			mgr.Add(dksMgr.Router)
+
+			if dksMgr.K8sMgr != nil {
+				// add k8s cluster manager Runnable
+				mgr.Add(dksMgr.K8sMgr)
+			}
 			// Setup all Controllers
 			klog.Info("Setting up controller")
 			if err := controller.AddToManager(mgr, dksMgr); err != nil {
 				klog.Fatalf("unable to register controllers to the manager err: %v", err)
 			}
 
+			logger.WithValues("SyncPeriod", rp)
 			klog.Info("starting manager")
-			if err := mgr.Start(signals.SetupSignalHandler()); err != nil {
+			if err := mgr.Start(stopCh); err != nil {
 				klog.Fatalf("problem start running manager err: %v", err)
 			}
 		},

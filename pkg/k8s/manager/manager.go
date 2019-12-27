@@ -4,34 +4,82 @@ import (
 	"errors"
 	"sync"
 
+	"time"
+
+	"github.com/go-logr/logr"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	kblabels "k8s.io/apimachinery/pkg/labels"
+	"k8s.io/apimachinery/pkg/util/wait"
 	"k8s.io/client-go/kubernetes"
+	"k8s.io/klog"
 )
 
-type Manager struct {
-	clusters map[string]*Cluster
-	mu       *sync.RWMutex
-	kubecli  kubernetes.Interface
-	ns       string
+type ClusterManagerOption struct {
+	Namespace     string
+	LabelSelector kblabels.Set
 }
 
-func NewManager(kubecli kubernetes.Interface) *Manager {
-	mgr := &Manager{
-		kubecli:  kubecli,
-		clusters: make(map[string]*Cluster),
-		mu:       &sync.RWMutex{},
+type ClusterManager struct {
+	clusters      map[string]*Cluster
+	mu            *sync.RWMutex
+	MasterKubecli kubernetes.Interface
+	Opt           *ClusterManagerOption
+}
+
+func DefaultClusterManagerOption() *ClusterManagerOption {
+	return &ClusterManagerOption{
+		Namespace: "default",
+		LabelSelector: kblabels.Set{
+			"ClusterOwer": "sym-admin",
+		},
+	}
+}
+
+func NewManager(kubecli kubernetes.Interface, log logr.Logger, opt *ClusterManagerOption) (*ClusterManager, error) {
+	lsel := opt.LabelSelector.AsSelector()
+	configMaps, err := kubecli.CoreV1().ConfigMaps(opt.Namespace).List(metav1.ListOptions{LabelSelector: lsel.String()})
+	if err != nil {
+		klog.Error("unable to get cluster configmap err: %v", err)
 	}
 
-	return mgr
+	klog.Infof("find %d cluster form namespace: %s ls: %v ", len(configMaps.Items), opt.Namespace, opt.LabelSelector)
+	mgr := &ClusterManager{
+		MasterKubecli: kubecli,
+		clusters:      make(map[string]*Cluster),
+		mu:            &sync.RWMutex{},
+		Opt:           opt,
+	}
+
+	for i := range configMaps.Items {
+		cm := &configMaps.Items[i]
+		for k, v := range cm.Data {
+			if k != "kubeconfig.yaml" {
+				klog.Infof("data key:%s", k)
+				break
+			}
+
+			cluster, err := NewCluster(cm.Name, []byte(v), log)
+			if err != nil {
+				klog.Error("new cluster err: %v", err)
+				break
+			}
+
+			klog.Infof("add cluster name: %s ", cm.Name)
+			mgr.Add(cluster)
+		}
+	}
+
+	return mgr, nil
 }
 
-func (m *Manager) GetAll() map[string]*Cluster {
+func (m *ClusterManager) GetAll() map[string]*Cluster {
 	m.mu.RLock()
 	defer m.mu.RUnlock()
 
 	return m.clusters
 }
 
-func (m *Manager) Add(cluster *Cluster) error {
+func (m *ClusterManager) Add(cluster *Cluster) error {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 
@@ -40,7 +88,7 @@ func (m *Manager) Add(cluster *Cluster) error {
 	return nil
 }
 
-func (m *Manager) Delete(cluster *Cluster) error {
+func (m *ClusterManager) Delete(cluster *Cluster) error {
 	if cluster == nil {
 		return nil
 	}
@@ -57,7 +105,7 @@ func (m *Manager) Delete(cluster *Cluster) error {
 	return nil
 }
 
-func (m *Manager) Get(name string) (*Cluster, error) {
+func (m *ClusterManager) Get(name string) (*Cluster, error) {
 	m.mu.RLock()
 	defer m.mu.RUnlock()
 
@@ -69,7 +117,34 @@ func (m *Manager) Get(name string) (*Cluster, error) {
 	return cluster, nil
 }
 
-// check cluster headlth
-func (c *Manager) Start(stopCh <-chan struct{}) error {
+// init start Informers
+func (m *ClusterManager) InitStart(stopCh <-chan struct{}) error {
+	klog.Info("initStart cluster manager ... ")
+	for name, c := range m.clusters {
+		if !c.health_check() {
+			break
+		}
+
+		if !c.Started {
+			klog.Infof("start cache Informers cluster name: %s", name)
+			go func() {
+				_ = c.cache.Start(stopCh)
+			}()
+
+			c.cache.WaitForCacheSync(stopCh)
+			c.Started = true
+		}
+	}
+	return nil
+}
+
+func (m *ClusterManager) cluterCheck() {
+	klog.V(4).Infof("new time: %v", time.Now())
+}
+
+// timer check cluster headlth
+func (m *ClusterManager) Start(stopCh <-chan struct{}) error {
+	klog.Info("start cluster manager check loop ... ")
+	wait.Until(m.cluterCheck, time.Minute, stopCh)
 	return nil
 }

@@ -10,6 +10,7 @@ require (
 	github.com/Masterminds/goutils v1.1.0 // indirect
 	github.com/Masterminds/semver v1.5.0 // indirect
 	github.com/Masterminds/sprig v2.22.0+incompatible
+	github.com/Sirupsen/logrus v0.0.0-00010101000000-000000000000 // indirect
 	github.com/appscode/jsonpatch v0.0.0-00010101000000-000000000000 // indirect
 	github.com/cenkalti/backoff v2.2.1+incompatible // indirect
 	github.com/chai2010/gettext-go v0.0.0-20191225085308-6b9f4b1008e1 // indirect
@@ -57,7 +58,6 @@ require (
 	github.com/pkg/errors v0.8.1
 	github.com/prometheus/client_golang v1.1.0
 	github.com/rubenv/sql-migrate v0.0.0-20191213152630-06338513c237 // indirect
-	github.com/sirupsen/logrus v1.4.2
 	github.com/soheilhy/cmux v0.1.4 // indirect
 	github.com/spf13/cobra v0.0.5
 	github.com/spf13/pflag v1.0.5
@@ -82,7 +82,7 @@ require (
 	k8s.io/helm v2.13.1+incompatible
 	k8s.io/klog v0.4.0
 	k8s.io/kube-openapi v0.0.0-20191107075043-30be4d16710a // indirect
-	k8s.io/kubernetes v1.13.5 // indirect
+	k8s.io/kubernetes v1.13.5
 	k8s.io/utils v0.0.0-20191218082557-f07c713de883 // indirect
 	sigs.k8s.io/controller-runtime v0.1.12
 	sigs.k8s.io/testing_frameworks v0.1.2 // indirect
