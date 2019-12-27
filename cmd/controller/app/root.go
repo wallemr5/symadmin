@@ -22,8 +22,9 @@ import (
 	"github.com/spf13/cobra"
 	"github.com/spf13/pflag"
 	"k8s.io/klog"
+
 	// ctrl "sigs.k8s.io/controller-runtime"
-	// "sigs.k8s.io/controller-runtime/pkg/log/zap"
+	logf "sigs.k8s.io/controller-runtime/pkg/runtime/log"
 )
 
 func AddFlags(cmd *cobra.Command) {
@@ -49,13 +50,12 @@ func GetRootCmd(args []string) *cobra.Command {
 	rootCmd.PersistentFlags().StringVarP(&opt.Kubeconfig, "kubeconfig", "c", "", "Kubernetes configuration file")
 	rootCmd.PersistentFlags().StringVar(&opt.ConfigContext, "context", "", "The name of the kubeconfig context to use")
 	rootCmd.PersistentFlags().StringVarP(&opt.Namespace, "namespace", "n", opt.Namespace, "Config namespace")
+	rootCmd.PersistentFlags().BoolVarP(&opt.DevelopmentMode, "devel-mode", "d", opt.DevelopmentMode, "Set development mode (mainly for logging)")
 
 	// Make sure that klog logging variables are initialized so that we can
 	// update them from this file.
 	klog.InitFlags(nil)
-	// ctrl.SetLogger(zap.New(func(o *zap.Options) {
-	// 	o.Development = true
-	// }))
+	logf.SetLogger(logf.ZapLogger(opt.DevelopmentMode))
 
 	// Make sure klog (used by the client-go dependency) logs to stderr, as it
 	// will try to log to directories that may not exist in the cilium-operator

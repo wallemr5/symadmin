@@ -57,7 +57,6 @@ require (
 	github.com/pkg/errors v0.8.1
 	github.com/prometheus/client_golang v1.1.0
 	github.com/rubenv/sql-migrate v0.0.0-20191213152630-06338513c237 // indirect
-	github.com/sirupsen/logrus v1.4.2
 	github.com/soheilhy/cmux v0.1.4 // indirect
 	github.com/spf13/cobra v0.0.5
 	github.com/spf13/pflag v1.0.5
@@ -82,7 +81,7 @@ require (
 	k8s.io/helm v2.13.1+incompatible
 	k8s.io/klog v0.4.0
 	k8s.io/kube-openapi v0.0.0-20191107075043-30be4d16710a // indirect
-	k8s.io/kubernetes v1.13.5 // indirect
+	k8s.io/kubernetes v1.13.5
 	k8s.io/utils v0.0.0-20191218082557-f07c713de883 // indirect
 	sigs.k8s.io/controller-runtime v0.1.12
 	sigs.k8s.io/testing_frameworks v0.1.2 // indirect

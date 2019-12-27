@@ -31,11 +31,13 @@ type RootOption struct {
 	ConfigContext    string
 	Namespace        string
 	DefaultNamespace string
+	DevelopmentMode  bool
 }
 
 func DefaultRootOption() *RootOption {
 	return &RootOption{
-		Namespace: corev1.NamespaceAll,
+		Namespace:       corev1.NamespaceAll,
+		DevelopmentMode: true,
 	}
 }
 
@@ -71,4 +73,13 @@ func (c *DksCli) GetKubeInterface() (kubernetes.Interface, error) {
 	}
 
 	return kubeCli, nil
+}
+
+func (c *DksCli) GetKubeInterfaceOrDie() kubernetes.Interface {
+	kubeCli, err := c.GetKubeInterface()
+	if err != nil {
+		klog.Fatalf("unable to get kube interface err: %v", err)
+	}
+
+	return kubeCli
 }
