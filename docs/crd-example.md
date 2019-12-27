@@ -10,196 +10,290 @@ spec:
     meta:
         k1: v1
         k2: v2
-    replicas: 2
+    replicas: 20
     serviceName: nginx
-    deployType: helm # Helm/InPlaceSet/StatefulSet/Deployment
     podSpec:
         selector: metav1.LabelSelector
-        template: corev1.PodTemplateSpec
-        chart:
-            rawChart: XXXX # []byte
-            url: http://xxxx.xxxx
-    updateStrategy:
-        upgrageType: canary # canary/blue/green
-        minReadySeconds: 30
-        priorityStrategy:
-            orderPriority:
-            - orderdKey: ""
-            - orderdKey: ""
-            weightPriority:
-                weight: 100
-                matchSelector: metav1.LabelSelector
-        canaryClusters:
-        - ""
-          ""
-          ""
-        paused: false
-        needWaitingForConfirm: false
+        template:
+            rawValues: ""
+            chart:
+                rawChart: XXXX # []byte
+                url: http://xxxx.xxxx
+            yaml: corev1.PodTemplateSpec
     clusterTopology:
-        - clusters:
-            name: ""
-            podSets:
-            - name: ""
-              nodeSelectorTerm: corev1.NodeSelectorTerm
-              replicas: 1
-              rawValues: "" # use for helm
-            _ name: ""
-              nodeSelectorTerm: corev1.NodeSelectorTerm
-              replicas: 1
-              rawValues: "" # use for helm
+    - zoneInfo:
+        zoneName: "北方地区"
+        zoneTag: "gz01"
+        zoneReplicas: 10
+        - clusterInfo:
+            clusterName: "康盛机房"
+            clusterTag: "gz01a"
+            clusterReplicas: 5
+            template:
+                rawValues: ""
+                chart:
+                    rawChart: XXXX # []byte
+                    url: http://xxxx.xxxx
+                yaml: corev1.PodTemplateSpec
+            advInfo:
+            - groupInfo:
+                groupType: "Blue" # Blue/Green/Canary
+                groupName: "aabb-gz01a-blue"
+                groupReplicas: 2
+                nodeSelectorTerm: corev1.NodeSelectorTerm
+                template:
+                    rawValues: ""
+                    chart:
+                        rawChart: XXXX # []byte
+                        url: http://xxxx.xxxx
+                    yaml: corev1.PodTemplateSpec
+            - groupInfo:
+                groupType: "Green" # Blue/Green/Canary
+                groupName: "aabb-gz01a-blue"
+                groupReplicas: 2
+                nodeSelectorTerm: corev1.NodeSelectorTerm
+                template:
+                    rawValues: ""
+                    chart:
+                        rawChart: XXXX # []byte
+                        url: http://xxxx.xxxx
+                    yaml: corev1.PodTemplateSpec
+            - groupInfo:
+                groupType: "Canary" # Blue/Green/Canary
+                groupName: "aabb-gz01a-blue"
+                groupReplicas: 1
+                nodeSelectorTerm: corev1.NodeSelectorTerm
+                template:
+                    rawValues: ""
+                    chart:
+                        rawChart: XXXX # []byte
+                        url: http://xxxx.xxxx
+                    yaml: corev1.PodTemplateSpec
+        - clusterInfo:
+            clusterName: "腾讯云5区"
+            clusterTag: "gz01b"
+            template:
+                rawValues: ""
+                chart:
+                    rawChart: XXXX # []byte
+                    url: http://xxxx.xxxx
+                yaml: corev1.PodTemplateSpec
+            advInfo:
+            - groupInfo:
+                groupType: "Green" # Blue/Green/Canary
+                groupName: "aabb-gz01b-blue"
+                groupReplicas: 2
+                nodeSelectorTerm: corev1.NodeSelectorTerm
+                template:
+                    rawValues: ""
+                    chart:
+                        rawChart: XXXX # []byte
+                        url: http://xxxx.xxxx
+                    yaml: corev1.PodTemplateSpec
+    - zoneInfo:
+        zoneName: "西南地区"
+        zoneTag: "rz01"
+        zoneReplicas: 10
+        - clusterInfo:
+            clusterName: "tke-cd1"
+            clusterTag: "rz01a"
+            clusterReplicas: 5
+            template:
+                rawValues: ""
+                chart:
+                    rawChart: XXXX # []byte
+                    url: http://xxxx.xxxx
+                yaml: corev1.PodTemplateSpec
+            advInfo:
+            - groupInfo:
+                groupType: "Blue" # Blue/Green/Canary
+                groupName: "aabb-rz01a-blue"
+                nodeSelectorTerm: corev1.NodeSelectorTerm
+                groupReplicas: 2
+                template:
+                    rawValues: ""
+                    chart:
+                        rawChart: XXXX # []byte
+                        url: http://xxxx.xxxx
+        - clusterInfo:
+            clusterName: "tke-cd2"
+            clusterTag: "rz01b"
+            template:
+                rawValues: ""
+                chart:
+                    rawChart: XXXX # []byte
+                    url: http://xxxx.xxxx
+                yaml: corev1.PodTemplateSpec
+            advInfo:
+            - groupInfo:
+                groupType: "Green" # Blue/Green/Canary
+                groupName: "aabb-rz01b-blue"
+                nodeSelectorTerm: corev1.NodeSelectorTerm
+                groupReplicas: 2
+                rawValues: ""
+                chart:
+                    rawChart: XXXX # []byte
+                    url: http://xxxx.xxxx
 status:
     observedGeneration: 1
-    readyReplicas: 2
-    replicas: 3
-    updatedReplicas: 0
-    updatedReadyReplicas: 2
-    conditions: 
-    - type: "Available" # Available/Progressing/ReplicaFailure
-        status: True # True/False/Unknown
-        lastUpdateTime: "2019-12-26 13:37:47"
-        lastTransitionTime "2019-12-26 13:37:59"
-        reason: ""
-        message: ""
-    - type: "Available" # Available/Progressing/ReplicaFailure
-        status: True # True/False/Unknown
-        lastUpdateTime: "2019-12-26 13:37:47"
-        lastTransitionTime: "2019-12-26 13:37:59"
-        reason: ""
-        message: ""
-    status: Running # Running/Migrating/WorkRatioing/Scaling/Updateing/Installing/Unknown
-    appActual:
-        total: 1
-        items:
-        - name: ""
-          available: 1
-          haveDeploy: false
-          ready: 1
-          update: 0
-          current: 1
-          running: 1
-          warnEvent: 1
-          endpointReady: 1
-        - name: ""
-          available: 1
-          haveDeploy: false
-          ready: 1
-          update: 0
-          current: 1
-          running: 1
-          warnEvent: 1
-          endpointReady: 1
-        pods:
-        - name: ""
-          namespace: ""
-          state: ""
-          podIP: ""
-          nodeIP: ""
-          clusterName: ""
-          startTime: "2019-12-26 14:36:52"
-        warnEvents:
-        - message: ""
-          sourceComponent: ""
-          name: ""
-          subObject: ""
-          firstSeen: "2019-12-26 14:38:02"
-          lastSeen: "2019-12-26 14:38:09"
-          reason: ""
-          type: ""
-        - message: ""
-          sourceComponent: ""
-          name: ""
-          subObject: ""
-          firstSeen: "2019-12-26 14:38:02"
-          lastSeen: "2019-12-26 14:38:09"
-          reason: ""
-          type: ""
-        service:
-            internalEndpoint:
-                host: "api.dmall.com"
-                ports:
-                - name: ""
-                  port: 8080
-                  protocol: http
-                  targetPort: 30080
-                - name: ""
-                  port: 8080
-                  protocol: http
-                  targetPort: 30080
-            labels:
-            - k1: v1
-              k2: v2
-            selector:
-            - k1: v1
-              k2: v2
-            type: "ClusterIP" # ClusterIP/NodePort/LoadBalancer
+    totalReplicas: 10
+    totalAvailableCount: 5
+    totalUnavailableCount: 2
+    - zoneInfo:
+        zoneTag: "gz01"
+        - clusterInfo:
+            clusterTag: "gz01a"
+            clusterReplicas: 10
+            clusterAvailableCount: 5
+            clusterUnavailableCount: 2
+            serviceType: "ClusterIP" # ClusterIP/NodePort/LoadBalancer
             clusterIP: ""
-            Domain: ""
+            domain: ""
+            - group:
+                groupType: "Canary"
+                groupReplicas: 10
+                groupAvailableCount: 5
+                groupUnavailableCount: 2
+            - group:
+                groupType: "Blue"
+                groupReplicas: 10
+                groupAvailableCount: 5
+                groupUnavailableCount: 2
+            - group:
+                groupType: "Green"
+                groupReplicas: 10
+                groupAvailableCount: 5
+                groupUnavailableCount: 2
+            conditions:
+            - type: "Available" # Available/Progressing/ReplicaFailure
+              status: True # True/False/Unknown
+              lastUpdateTime: "2019-12-26 13:37:47"
+              lastTransitionTime: "2019-12-26 13:37:59"
+              reason: ""
+              message: ""
+            - type: "Available" # Available/Progressing/ReplicaFailure
+              status: True # True/False/Unknown
+              lastUpdateTime: "2019-12-26 13:37:47"
+              lastTransitionTime: "2019-12-26 13:37:59"
+              reason: ""
+              message: ""
+              events: array
+        - clusterInfo:
+            clusterTag: "gz01b"
+            clusterReplicas: 10
+            clusterAvailableCount: 5
+            clusterUnavailableCount: 2
+            serviceType: "ClusterIP" # ClusterIP/NodePort/LoadBalancer
+            clusterIP: ""
+            domain: ""
+            - group:
+                groupType: "Canary"
+                groupReplicas: 10
+                groupAvailableCount: 5
+                groupUnavailableCount: 2
+            - group:
+                groupType: "Blue"
+                groupReplicas: 10
+                groupAvailableCount: 5
+                groupUnavailableCount: 2
+            - group:
+                groupType: "Green"
+                groupReplicas: 10
+                groupAvailableCount: 5
+                groupUnavailableCount: 2
+            conditions:
+            - type: "Available" # Available/Progressing/ReplicaFailure
+                status: True # True/False/Unknown
+                lastUpdateTime: "2019-12-26 13:37:47"
+                lastTransitionTime "2019-12-26 13:37:59"
+                reason: ""
+                message: ""
+            - type: "Available" # Available/Progressing/ReplicaFailure
+                status: True # True/False/Unknown
+                lastUpdateTime: "2019-12-26 13:37:47"
+                lastTransitionTime "2019-12-26 13:37:59"
+                reason: ""
+                message: ""
+            message: ""
+            events: array
+    status: Running # Running/Migrating/WorkRatioing/Scaling/Updateing/Installing/Unknown
 ```
 
 ## AdvDeployment
 
 ``` yaml
 spec:
-    deployType: helm # helm/InPlaceSet/StatefulSet/deployment
-    replicas: 1
-    PodSpec:
-        selector: metav1.LabelSelector
-        template: corev1.PodTemplateSpec
-        chart:
-            rawChart: XXXX # []byte
-            url: http://xxxx.xxxx
     serviceName: nginx
-    updateStrategy:
-        upgrageType: canary # canary/blue/green
-        statefulSetStrategy:
-            partition: 10
-            maxUnavailable: 5 # 20%
-            podUpdatePolicy: ReCreate # ReCreate/InPlaceIfPossible/InPlaceOnly
-        minReadySeconds: 30
-        meta:
-            key1: value1
-            key2: value2
-        priorityStrategy:
-            orderPriority:
-                - orderdKey: ""
-                - orderdKey: ""
-            weightPriority:
-                weight: 100
-                matchSelector: metav1.LabelSelector
-        paused: false
-        needWaitingForConfirm: false
-    topology:
-        - podSets:
-            name: ""
-            nodeSelectorTerm: corev1.NodeSelectorTerm
-            replicas: 1
-            rawValues: "" # use for helm
-        - podSets:
-            name: ""
-            nodeSelectorTerm: corev1.NodeSelectorTerm
-            replicas: 1
-            rawValues: "" # use for helm
-    revisionHistoryLimit: 1 # default 10
+    clusterReplicas: 5
+    podSpec:
+        selector: metav1.LabelSelector
+        template:
+            rawValues: ""
+            chart:
+                rawChart: XXXX # []byte
+                url: http://xxxx.xxxx
+            yaml: corev1.PodTemplateSpec
+    details:
+    - groupInfo:
+        groupType: "Blue" # Blue/Green/Canary
+        groupName: "aabb-gz01a-blue"
+        groupReplicas: 2
+        nodeSelectorTerm: corev1.NodeSelectorTerm
+        template:
+            rawValues: ""
+            chart:
+                rawChart: XXXX # []byte
+                url: http://xxxx.xxxx
+            yaml: corev1.PodTemplateSpec
+    - groupInfo:
+        groupType: "Green" # Blue/Green/Canary
+        groupName: "aabb-gz01a-blue"
+        groupReplicas: 2
+        nodeSelectorTerm: corev1.NodeSelectorTerm
+        template:
+            rawValues: ""
+            chart:
+                rawChart: XXXX # []byte
+                url: http://xxxx.xxxx
+            yaml: corev1.PodTemplateSpec
+    - groupInfo:
+        groupType: "Canary" # Blue/Green/Canary
+        groupName: "aabb-gz01a-blue"
+        groupReplicas: 1
+        nodeSelectorTerm: corev1.NodeSelectorTerm
+        template:
+            rawValues: ""
+            chart:
+                rawChart: XXXX # []byte
+                url: http://xxxx.xxxx
+            yaml: corev1.PodTemplateSpec
 status:
-    version: 1.1
+    version:
+    - "v1"
+    - "v2"
     message: ""
-    replicas: 10
-    readyReplicas: 5
-    currentReplicas: 0
-    updateReplicas: 0
-    podSets:
-    - name: nginx
-        observedGeneration: 1
-        replicas: 2
-        readyReplicas: 1
-        currentReplicas: 1
-        updatedReplicas: 2
-    - name: nginx
-        observedGeneration: 1
-        replicas: 2
-        readyReplicas: 1
-        currentReplicas: 1
-        updatedReplicas: 2
+    clusterReplicas: 10
+    clusterAvailableCount: 5
+    clusterUnavailableCount: 2
+    serviceType: "ClusterIP" # ClusterIP/NodePort/LoadBalancer
+    clusterIP: ""
+    domain: ""
+    details:
+    - groupInfo:
+        groupType: "Canary"
+        groupReplicas: 10
+        groupAvailableCount: 5
+        groupUnavailableCount: 2
+    - groupInfo:
+        groupType: "Green"
+        groupReplicas: 10
+        groupAvailableCount: 5
+        groupUnavailableCount: 2
+    - groupInfo:
+        groupType: "Blue"
+        groupReplicas: 10
+        groupAvailableCount: 5
+        groupUnavailableCount: 2
     conditions:
     - type: "Available" # Available/Progressing/ReplicaFailure
         status: True # True/False/Unknown
@@ -217,4 +311,5 @@ status:
     currentRevision: ""
     updateRevision: ""
     collisionCount: 1
+    events: array
 ```
