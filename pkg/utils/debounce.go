@@ -93,3 +93,7 @@ func (d *Debounce) start() {
 func (d *Debounce) Put(req Request) {
 	d.ch <- req
 }
+
+func (d *Debounce) Close() {
+	close(d.ch)
+}
