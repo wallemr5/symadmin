@@ -46,15 +46,11 @@ type AppSetSpec struct {
 	Replicas    *int32            `json:"replicas,omitempty"`
 	ServiceName *string           `json:"serviceName,omitempty"`
 
-	// support PodSet：helm, InPlaceSet，StatefulSet, deployment
-	// Default value is deployment
-	// +optional
-	DeployType string `json:"deployType,omitempty"`
 	// template is the object that describes the pod that will be created if
 	// insufficient replicas are detected. Each pod stamped out by the workload
 	// will fulfill this Template, but have a unique identity from the rest
 	// of the workload.
-	PodSpec PodSpec `json:",inline"`
+	PodSpec PodSpec `json:"podSpec,omitempty"`
 
 	// UpdateStrategy indicates the strategy the advDeployment use to preform the update,
 	// when template is changed.

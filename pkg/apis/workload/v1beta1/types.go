@@ -116,6 +116,10 @@ type ChartSpec struct {
 
 // PodSpec
 type PodSpec struct {
+	// support PodSet：helm, InPlaceSet，StatefulSet, deployment
+	// Default value is deployment
+	// +optional
+	DeployType string `json:"deployType,omitempty"`
 	// Selector is a label query over pods that should match the replica count.
 	// It must match the pod template's labels.
 	Selector *metav1.LabelSelector   `json:"selector,omitempty"`

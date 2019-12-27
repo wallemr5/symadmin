@@ -112,12 +112,12 @@ func (in *AdvDeploymentSpec) DeepCopyInto(out *AdvDeploymentSpec) {
 		*out = new(int32)
 		**out = **in
 	}
-	in.PodSpec.DeepCopyInto(&out.PodSpec)
 	if in.ServiceName != nil {
 		in, out := &in.ServiceName, &out.ServiceName
 		*out = new(string)
 		**out = **in
 	}
+	in.PodSpec.DeepCopyInto(&out.PodSpec)
 	in.UpdateStrategy.DeepCopyInto(&out.UpdateStrategy)
 	in.Topology.DeepCopyInto(&out.Topology)
 	if in.RevisionHistoryLimit != nil {
