@@ -142,7 +142,7 @@ func (m *ClusterManager) cluterCheck() {
 	klog.V(4).Infof("new time: %v", time.Now())
 }
 
-// timer check cluster headlth
+// Start timer check cluster headlth
 func (m *ClusterManager) Start(stopCh <-chan struct{}) error {
 	klog.Info("start cluster manager check loop ... ")
 	wait.Until(m.cluterCheck, time.Minute, stopCh)

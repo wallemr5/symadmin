@@ -208,16 +208,16 @@ spec:
               properties:
                 chart:
                   properties:
+                    chartUrl:
+                      properties:
+                        chartVersion:
+                          type: string
+                        url:
+                          type: string
+                      type: object
                     rawChart:
                       format: byte
                       type: string
-                    url:
-                      properties:
-                        rawChart:
-                          type: string
-                        version:
-                          type: string
-                      type: object
                   type: object
                 deployType:
                   description: support PodSet：helm, InPlaceSet，StatefulSet, deployment

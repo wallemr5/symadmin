@@ -105,13 +105,13 @@ type Service struct {
 }
 
 type ChartUrl struct {
-	Url     string `json:"rawChart,omitempty"`
-	Version string `json:"version,omitempty"`
+	Url          string `json:"url,omitempty"`
+	ChartVersion string `json:"chartVersion,omitempty"`
 }
 
 type ChartSpec struct {
 	RawChart *[]byte   `json:"rawChart,omitempty"`
-	Url      *ChartUrl `json:"url,omitempty"`
+	ChartUrl *ChartUrl `json:"chartUrl,omitempty"`
 }
 
 // PodSpec

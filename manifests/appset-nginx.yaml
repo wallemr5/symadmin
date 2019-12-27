@@ -8,7 +8,9 @@ spec:
   podSpec:
     deployType: helm
     chart:
-      url: dmall/nginx
+      chartUrl:
+        url: dmall/nginx
+        chartVersion: 3.3.2
   serviceName: nginx-svc
   updateStrategy:
     upgradeType: canary|blue|green
@@ -18,63 +20,64 @@ spec:
     needWaitingForConfirm: true
     paused: false
   clusterTopology:
-    - name: tcc-bj4-dks-test-01
-      meta:
-        area: beijing
-        az: bj4
-        ldc: TCC_BJ4_DKS_TEST_01
-      podSets:
-        - name: nginx-gz01b-canary
-          replicas: 1
-          version: v2
-          meta:
-            app: nginx
+    clusters:
+      - name: tcc-bj4-dks-test-01
+        meta:
+          area: beijing
+          az: bj4
+          ldc: TCC_BJ4_DKS_TEST_01
+        podSets:
+          - name: nginx-gz01b-canary
+            replicas: 1
             version: v2
-            sym-group: canary
-            sym-ldc: gz01b
-        - name: nginx-gz01b-blue
-          replicas: 2
-          version: v1
-          meta:
-            app: nginx
+            meta:
+              app: nginx
+              version: v2
+              sym-group: canary
+              sym-ldc: gz01b
+          - name: nginx-gz01b-blue
+            replicas: 2
             version: v1
-            sym-group: blue
-            sym-ldc: gz01b
-        - name: nginx-gz01b-green
-          replicas: 2
-          version: v1
-          meta:
-            app: nginx
+            meta:
+              app: nginx
+              version: v1
+              sym-group: blue
+              sym-ldc: gz01b
+          - name: nginx-gz01b-green
+            replicas: 2
             version: v1
-            sym-group: green
-            sym-ldc: gz01b
-    - name: tcc-bj5-dks-test-01
-      meta:
-        area: beijing
-        az: bj5
-        ldc: TCC_BJ5_DKS_TEST_01
-      podSets:
-        - name: nginx-gz01a-canary
-          replicas: 1
-          version: v2
-          meta:
-            app: nginx
+            meta:
+              app: nginx
+              version: v1
+              sym-group: green
+              sym-ldc: gz01b
+      - name: tcc-bj5-dks-test-01
+        meta:
+          area: beijing
+          az: bj5
+          ldc: TCC_BJ5_DKS_TEST_01
+        podSets:
+          - name: nginx-gz01a-canary
+            replicas: 1
             version: v2
-            sym-group: canary
-            sym-ldc: gz01a
-        - name: nginx-gz01a-blue
-          replicas: 2
-          version: v1
-          meta:
-            app: nginx
+            meta:
+              app: nginx
+              version: v2
+              sym-group: canary
+              sym-ldc: gz01a
+          - name: nginx-gz01a-blue
+            replicas: 2
             version: v1
-            sym-group: blue
-            sym-ldc: gz01a
-        - name: nginx-gz01a-green
-          replicas: 2
-          version: v1
-          meta:
-            app: nginx
+            meta:
+              app: nginx
+              version: v1
+              sym-group: blue
+              sym-ldc: gz01a
+          - name: nginx-gz01a-green
+            replicas: 2
             version: v1
-            sym-group: green
-            sym-ldc: gz01a
+            meta:
+              app: nginx
+              version: v1
+              sym-group: green
+              sym-ldc: gz01a

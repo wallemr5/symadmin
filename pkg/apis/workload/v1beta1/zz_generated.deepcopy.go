@@ -463,8 +463,8 @@ func (in *ChartSpec) DeepCopyInto(out *ChartSpec) {
 			copy(*out, *in)
 		}
 	}
-	if in.Url != nil {
-		in, out := &in.Url, &out.Url
+	if in.ChartUrl != nil {
+		in, out := &in.ChartUrl, &out.ChartUrl
 		*out = new(ChartUrl)
 		**out = **in
 	}
