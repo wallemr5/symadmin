@@ -21,6 +21,10 @@ spec:
     description: The image version.
     name: VERSION
     type: string
+  - JSONPath: .status.status
+    description: The app run status.
+    name: STATUS
+    type: string
   - JSONPath: .metadata.creationTimestamp
     description: 'CreationTimestamp is a timestamp representing the server time when
       this object was created. '
@@ -4384,7 +4388,7 @@ spec:
                     this array represents one subset which will be provisioned and
                     managed by UnitedDeployment.
                   items:
-                    description: Subset defines the detail of a subset.
+                    description: PodSet defines the detail of a PodSet.
                     properties:
                       meta:
                         additionalProperties:
@@ -4686,6 +4690,8 @@ spec:
                   available:
                     format: int32
                     type: integer
+                  clusterName:
+                    type: string
                   current:
                     format: int32
                     type: integer
@@ -4705,6 +4711,9 @@ spec:
                   running:
                     format: int32
                     type: integer
+                  unAvailable:
+                    format: int32
+                    type: integer
                   update:
                     format: int32
                     type: integer
@@ -4717,8 +4726,11 @@ spec:
                 - available
                 - desired
                 - name
+                - unAvailable
                 type: object
               type: array
+            status:
+              type: string
             updateRevision:
               description: updateRevision, if not empty, indicates the version of
                 the workload used to generate Pods in the sequence [replicas-updatedReplicas,replicas)

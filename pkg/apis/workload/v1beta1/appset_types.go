@@ -21,6 +21,7 @@ func init() {
 // +kubebuilder:printcolumn:name="DESIRED",type="integer",JSONPath=".spec.desired",description="The desired number of pods."
 // +kubebuilder:printcolumn:name="AVAILABEL",type="integer",JSONPath=".status.available",description="The number of pods ready."
 // +kubebuilder:printcolumn:name="VERSION",type="string",JSONPath=".status.version",description="The image version."
+// +kubebuilder:printcolumn:name="STATUS",type="string",JSONPath=".status.status",description="The app run status."
 // +kubebuilder:printcolumn:name="AGE",type="date",JSONPath=".metadata.creationTimestamp",description="CreationTimestamp is a timestamp representing the server time when this object was created. "
 type AppSet struct {
 	metav1.TypeMeta   `json:",inline"`
@@ -158,7 +159,6 @@ const (
 
 // ClusterAppActual
 type ClusterAppActual struct {
-	Name      string            `json:"name"`
 	Desired   int32             `json:"desired"`
 	Available int32             `json:"available"`
 	PodSets   []PodSetSatusInfo `json:"podSets,omitempty"`
