@@ -33,7 +33,7 @@ type Cluster struct {
 	Meta          map[string]string
 	RestConfig    *rest.Config
 	client        client.Client
-	Kubecli       kubernetes.Interface
+	KubeCli       kubernetes.Interface
 	dynamicClient dynamic.Interface
 
 	log             logr.Logger
@@ -85,7 +85,7 @@ func (c *Cluster) initK8SClients() error {
 		return errors.Wrapf(err, "could not new kubecli name:%s", c.Name)
 	}
 
-	c.Kubecli = kubecli
+	c.KubeCli = kubecli
 	rp := time.Minute * 5
 	o := manager.Options{
 		Scheme:     k8sclient.GetScheme(),
@@ -104,7 +104,7 @@ func (c *Cluster) initK8SClients() error {
 }
 
 func (c *Cluster) healthCheck() bool {
-	body, err := c.Kubecli.Discovery().RESTClient().Get().AbsPath("/healthz").Do().Raw()
+	body, err := c.KubeCli.Discovery().RESTClient().Get().AbsPath("/healthz").Do().Raw()
 	if err != nil {
 		runtime.HandleError(errors.Wrapf(err, "Failed to do cluster health check for cluster %q", c.Name))
 		c.Status = ClusterOffline

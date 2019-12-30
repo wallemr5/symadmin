@@ -5,6 +5,8 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
+const AppSetNameStr = "AppSet"
+
 func init() {
 	SchemeBuilder.Register(&AppSet{}, &AppSetList{})
 }

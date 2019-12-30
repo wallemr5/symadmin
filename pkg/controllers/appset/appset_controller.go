@@ -17,21 +17,16 @@ limitations under the License.
 package appset
 
 import (
-	"fmt"
-	"sync"
-	"time"
-
 	"context"
-
-	pkgmanager "gitlab.dmall.com/arch/sym-admin/pkg/manager"
-	"k8s.io/apimachinery/pkg/util/wait"
-
+	"fmt"
 	"github.com/go-logr/logr"
 	"github.com/gofrs/uuid"
 	workloadv1beta1 "gitlab.dmall.com/arch/sym-admin/pkg/apis/workload/v1beta1"
 	"gitlab.dmall.com/arch/sym-admin/pkg/customctrl"
 	"gitlab.dmall.com/arch/sym-admin/pkg/labels"
+	pkgmanager "gitlab.dmall.com/arch/sym-admin/pkg/manager"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
+	"k8s.io/apimachinery/pkg/util/wait"
 	"k8s.io/client-go/tools/record"
 	"k8s.io/klog"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -41,6 +36,8 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 	logf "sigs.k8s.io/controller-runtime/pkg/runtime/log"
 	"sigs.k8s.io/controller-runtime/pkg/source"
+	"sync"
+	"time"
 )
 
 const (
@@ -51,6 +48,8 @@ const (
 type AppSetReconciler struct {
 	manager.Manager
 	controller.Controller
+	client.Client
+
 	DksMgr            *pkgmanager.DksManager
 	SymServerRlsPath  string
 	SymServerCfgPath  string
@@ -59,9 +58,9 @@ type AppSetReconciler struct {
 	MigrateParallel   int
 	recorder          record.EventRecorder
 	Mx                sync.RWMutex
-	client.Client
-	Log        logr.Logger
-	CustomImpl *customctrl.Impl
+	Log               logr.Logger
+	CustomImpl        *customctrl.Impl
+	Namespace         string
 }
 
 func Add(mgr manager.Manager, cMgr *pkgmanager.DksManager) error {
@@ -104,18 +103,11 @@ func (p *PolicyTrigger) Start(stop <-chan struct{}) error {
 
 func NewAppSetController(mgr manager.Manager, cMgr *pkgmanager.DksManager) (*AppSetReconciler, *customctrl.Impl) {
 	c := &AppSetReconciler{
-		DksMgr:  cMgr,
-		Manager: mgr,
-		Log:     logf.KBLog.WithName("appset-controller"),
-		// recorder: mgr.GetEventRecorderFor(controllerName),
+		DksMgr:    cMgr,
+		Manager:   mgr,
+		Log:       logf.KBLog.WithName("appset-controller"),
+		Namespace: "default",
 	}
-
-	// cacher := mgr.GetCache()
-	// appSetInformer, err := cacher.GetInformer(&workloadv1beta1.AppSet{})
-	// if err != nil {
-	// 	klog.Errorf("cacher get informer err:%+v", err)
-	// 	return nil, nil
-	// }
 
 	// Create a new controller
 	ctl, err := controller.New(controllerName, mgr, controller.Options{Reconciler: c})
@@ -163,9 +155,56 @@ func (r *AppSetReconciler) Reconcile(req reconcile.Request) (reconcile.Result, e
 		return reconcile.Result{}, err
 	}
 
+	for _, v := range as.Spec.ClusterTopology.Clusters {
+		if err := r.createAdvInfo(as.Name, &v); err != nil {
+			// return reconcile.Result{}, err
+			klog.V(3).Infof("error:%+v", err)
+			return reconcile.Result{}, nil
+		}
+		klog.V(3).Infof("pod info:+%v", v)
+	}
+
 	klog.V(3).Infof("get appset, name: %s", as.Name)
 	return reconcile.Result{
 		Requeue:      true,
 		RequeueAfter: 30 * time.Second,
 	}, nil
+}
+
+func (r *AppSetReconciler) createAdvInfo(info *workloadv1beta1.AppSet, clusterTopology *workloadv1beta1.TargetCluster) error {
+	client, err := r.DksMgr.K8sMgr.Get(clusterTopology.Name)
+	if err != nil {
+		return err
+	}
+
+	advDeployment := &workloadv1beta1.AdvDeployment{}
+	e := client.KubeCli.Discovery().RESTClient().
+		Get().
+		Namespace(r.Namespace).
+		Resource(workloadv1beta1.AdvDeploymentNameStr).
+		Name(info.spec.Name).
+		Do().
+		Into(advDeployment)
+
+	if e != nil {
+		if !apierrors.IsNotFound(e) {
+			return e
+		}
+	}
+	klog.V(3).Infof("advDeloyment info:%+v", advDeployment)
+
+	// replicas := 0
+	// advDeployment.Spec.Replicas =
+
+	return nil
+
+	// build AdvDeployment with AppSet cluster topology info
+	// advDeployment.Spec.Replicas = clusterTopology
+
+	// return client.KubeCli.Discovery().RESTClient().Post().
+	// 	Namespace(r.Namespace).
+	// 	Resource(workloadv1beta1.AdvDeploymentNameStr).
+	// 	Body(advDeployment).
+	// 	Do().
+	// 	Error()
 }
