@@ -1,10 +1,6 @@
 package manager
 
 import (
-	"time"
-
-	"strings"
-
 	"github.com/go-logr/logr"
 	"github.com/goph/emperror"
 	"github.com/pkg/errors"
@@ -13,10 +9,11 @@ import (
 	"k8s.io/client-go/dynamic"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
-	"k8s.io/client-go/tools/clientcmd"
 	"sigs.k8s.io/controller-runtime/pkg/cache"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
+	"strings"
+	"time"
 )
 
 type ClusterStatusType string
@@ -42,7 +39,7 @@ type Cluster struct {
 	log             logr.Logger
 	mgr             manager.Manager
 	cache           cache.Cache
-	internalStopper chan<- struct{}
+	internalStopper chan struct{}
 
 	Status ClusterStatusType
 	// Started is true if the Informers has been Started
@@ -70,33 +67,20 @@ func (c *Cluster) GetName() string {
 	return c.Name
 }
 
-func (c *Cluster) getRestConfig(kubeconfig []byte) (*rest.Config, error) {
-	clusterConfig, err := clientcmd.Load(kubeconfig)
-	if err != nil {
-		return nil, errors.Wrapf(err, "could not load kubeconfig name: %s", c.Name)
-	}
-
-	cfg, err := clientcmd.NewDefaultClientConfig(*clusterConfig, &clientcmd.ConfigOverrides{}).ClientConfig()
-	if err != nil {
-		return nil, errors.Wrap(err, "could not create k8s rest config")
-	}
-
-	return cfg, nil
-}
-
 func (c *Cluster) initK8SClients() error {
-	cfg, err := c.getRestConfig(c.RawKubeconfig)
+	cfg, err := k8sclient.NewClientConfig(c.RawKubeconfig)
 	if err != nil {
 		return errors.Wrapf(err, "could not get rest config name:%s", c.Name)
 	}
+	c.RestConfig = cfg
 
-	dynamicClient, err := dynamic.NewForConfig(cfg)
+	dynamicClient, err := dynamic.NewForConfig(c.RestConfig)
 	if err != nil {
 		return errors.Wrapf(err, "could not new dynamiccli name:%s", c.Name)
 	}
 	c.dynamicClient = dynamicClient
 
-	kubecli, err := kubernetes.NewForConfig(cfg)
+	kubecli, err := kubernetes.NewForConfig(c.RestConfig)
 	if err != nil {
 		return errors.Wrapf(err, "could not new kubecli name:%s", c.Name)
 	}
@@ -108,32 +92,29 @@ func (c *Cluster) initK8SClients() error {
 		SyncPeriod: &rp,
 	}
 
-	mgr, err := manager.New(cfg, o)
+	mgr, err := manager.New(c.RestConfig, o)
 	if err != nil {
 		return errors.Wrapf(err, "could not new manager name:%s", c.Name)
 	}
 
-	c.RestConfig = cfg
 	c.mgr = mgr
 	c.client = mgr.GetClient()
 	c.cache = mgr.GetCache()
 	return nil
 }
 
-func (c *Cluster) health_check() bool {
+func (c *Cluster) healthCheck() bool {
 	body, err := c.Kubecli.Discovery().RESTClient().Get().AbsPath("/healthz").Do().Raw()
 	if err != nil {
 		runtime.HandleError(errors.Wrapf(err, "Failed to do cluster health check for cluster %q", c.Name))
 		c.Status = ClusterOffline
 		return false
-	} else {
-		if !strings.EqualFold(string(body), "ok") {
-			c.Status = ClusterOffline
-			return false
-		} else {
-			c.Status = ClusterReady
-		}
 	}
 
+	if !strings.EqualFold(string(body), "ok") {
+		c.Status = ClusterOffline
+		return false
+	}
+	c.Status = ClusterReady
 	return true
 }
