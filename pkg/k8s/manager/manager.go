@@ -60,7 +60,7 @@ func NewManager(kubecli kubernetes.Interface, log logr.Logger, opt *ClusterManag
 
 			cluster, err := NewCluster(cm.Name, []byte(v), log)
 			if err != nil {
-				klog.Error("new cluster err: %v", err)
+				klog.Errorf("new cluster err: %v", err)
 				break
 			}
 
@@ -117,20 +117,18 @@ func (m *ClusterManager) Get(name string) (*Cluster, error) {
 	return cluster, nil
 }
 
-// init start Informers
+// InitStart init start Informers
 func (m *ClusterManager) InitStart(stopCh <-chan struct{}) error {
 	klog.Info("initStart cluster manager ... ")
-	for _, c := range m.clusters {
-		if !c.health_check() {
+	for name, c := range m.clusters {
+		if !c.healthCheck() {
 			break
 		}
 
 		if !c.Started {
-			klog.Infof("start cache Informers cluster name: %s", c.Name)
+			klog.Infof("start cache Informers cluster name: %s", name)
 			go func() {
-				klog.Infof("cluster name:%s start cache ... ", c.Name)
-				err := c.cache.Start(stopCh)
-				klog.Warningf("cluster name: %s stop cache err: %v... ", c.Name, err)
+				_ = c.cache.Start(c.internalStopper)
 			}()
 
 			c.cache.WaitForCacheSync(stopCh)
