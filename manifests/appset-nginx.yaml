@@ -21,11 +21,11 @@ spec:
     paused: false
   clusterTopology:
     clusters:
-      - name: tcc-bj5-dks-test-01
+      - name: tcc-bj4-dks-test-01
         meta:
           area: beijing
           az: bj4
-          ldc: TCC-BJ5-DKS-TEST-01
+          ldc: TCC_BJ4_DKS_TEST_01
         podSets:
           - name: nginx-gz01b-canary
             replicas: 1

@@ -264,16 +264,16 @@ func (c *Impl) EnqueueLabelOfClusterScopedResource(nameLabel string) func(obj in
 
 // isObserveNamespaces
 func (c *Impl) isObserveNamespaces(ns string) bool {
-	if len(c.Namespaces) > 0 {
-		for _, obNs := range c.Namespaces {
-			if obNs == ns {
-				return true
-			}
-		}
-		return false
-	} else {
+	if len(c.Namespaces) < 1 {
 		return true
 	}
+
+	for _, obNs := range c.Namespaces {
+		if obNs == ns {
+			return true
+		}
+	}
+	return false
 }
 
 // EnqueueKey takes a clusterName/namespace/name string and puts it onto the work queue.

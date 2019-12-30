@@ -26,8 +26,6 @@ import (
 	"k8s.io/klog"
 )
 
-const AdvDeploymentNameStr = "AdvDeployment"
-
 // PodUpdateStrategyType is a string enumeration type that enumerates
 // all possible ways we can update a Pod when updating application
 type PodUpdateStrategyType string
