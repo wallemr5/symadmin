@@ -37,7 +37,7 @@ func NewManager(kubecli kubernetes.Interface, log logr.Logger, opt *ClusterManag
 	lsel := opt.LabelSelector.AsSelector()
 	configMaps, err := kubecli.CoreV1().ConfigMaps(opt.Namespace).List(metav1.ListOptions{LabelSelector: lsel.String()})
 	if err != nil {
-		klog.Error("unable to get cluster configmap err: %v", err)
+		klog.Errorf("unable to get cluster configmap err: %v", err)
 	}
 
 	klog.Infof("find %d cluster form namespace: %s ls: %v ", len(configMaps.Items), opt.Namespace, opt.LabelSelector)
@@ -109,7 +109,7 @@ func (m *ClusterManager) Get(name string) (*Cluster, error) {
 
 	cluster := m.clusters[name]
 	if cluster == nil {
-		return nil, errors.New("cluster not found:" +name)
+		return nil, errors.New("cluster not found:" + name)
 	}
 
 	return cluster, nil
