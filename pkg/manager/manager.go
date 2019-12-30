@@ -58,7 +58,7 @@ func DefaultManagerOption() *ManagerOption {
 		EnableLeaderElection: false,
 		GinLogEnabled:        true,
 		PprofEnabled:         true,
-		MasterEnabled:        true,
+		MasterEnabled:        false,
 		WorkerEnabled:        false,
 		Repos: map[string]string{
 			"dmall": "http://chartmuseum.dmall.com",
