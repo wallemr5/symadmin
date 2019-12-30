@@ -41,6 +41,9 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 	logf "sigs.k8s.io/controller-runtime/pkg/runtime/log"
 	"sigs.k8s.io/controller-runtime/pkg/source"
+
+	appsv1 "k8s.io/api/apps/v1"
+	corev1 "k8s.io/api/core/v1"
 )
 
 const (
@@ -92,7 +95,7 @@ func NewPolicyTrigger(r *AppSetReconciler) *PolicyTrigger {
 }
 
 func (r *AppSetReconciler) PolicyEnqueueKey() {
-	klog.V(4).Infof("new time: %v", time.Now())
+	klog.V(5).Infof("new time: %v", time.Now())
 }
 
 // Start policy trigger loop
@@ -104,66 +107,125 @@ func (p *PolicyTrigger) Start(stop <-chan struct{}) error {
 
 func NewAppSetController(mgr manager.Manager, cMgr *pkgmanager.DksManager) (*AppSetReconciler, *customctrl.Impl) {
 	c := &AppSetReconciler{
-		DksMgr:  cMgr,
-		Manager: mgr,
-		Log:     logf.KBLog.WithName("appset-controller"),
-		// recorder: mgr.GetEventRecorderFor(controllerName),
+		DksMgr:   cMgr,
+		Manager:  mgr,
+		Log:      logf.KBLog.WithName("appset-controller"),
+		recorder: mgr.GetRecorder(controllerName),
 	}
 
-	// cacher := mgr.GetCache()
-	// appSetInformer, err := cacher.GetInformer(&workloadv1beta1.AppSet{})
-	// if err != nil {
-	// 	klog.Errorf("cacher get informer err:%+v", err)
-	// 	return nil, nil
-	// }
+	// Create a new custom controller
+	threadiness := 2
+	customImpl := customctrl.NewImpl(c, controllerName, nil, &threadiness, labels.ObservedNamespace...)
 
-	// Create a new controller
+	for _, cluster := range cMgr.K8sMgr.GetAll() {
+		advDeploymentInformer, err := cluster.Cache.GetInformer(&workloadv1beta1.AdvDeployment{})
+		if err != nil {
+			klog.Errorf("cluster name:%s can't add AdvDeployment InformerEntry, err: %+v", cluster.Name, err)
+			return nil, nil
+		}
+		advDeploymentInformer.AddEventHandler(customctrl.HandlerWraps(customImpl.EnqueueMulti))
+		klog.Infof("cluster name:%s AddEventHandler AdvDeployment key to queue", cluster.Name)
+
+		deploymentInformer, err := cluster.Cache.GetInformer(&appsv1.Deployment{})
+		if err != nil {
+			klog.Errorf("cluster name:%s can't add Deployment InformerEntry, err: %+v", cluster.Name, err)
+			return nil, nil
+		}
+		deploymentInformer.AddEventHandler(customctrl.HandlerWraps(customImpl.EnqueueMultiLabelOfCluster))
+		klog.Infof("cluster name:%s AddEventHandler Deployment key to queue", cluster.Name)
+
+		statefulSetInformer, err := cluster.Cache.GetInformer(&appsv1.StatefulSet{})
+		if err != nil {
+			klog.Errorf("cluster name:%s can't add StatefulSet InformerEntry, err: %+v", cluster.Name, err)
+			return nil, nil
+		}
+		statefulSetInformer.AddEventHandler(customctrl.HandlerWraps(customImpl.EnqueueMultiLabelOfCluster))
+		klog.Infof("cluster name:%s AddEventHandler StatefulSet key to queue", cluster.Name)
+
+		cluster.Cache.GetInformer(&corev1.Pod{})
+		cluster.Cache.GetInformer(&corev1.Service{})
+	}
+
+	// Create a new runtime controller
 	ctl, err := controller.New(controllerName, mgr, controller.Options{Reconciler: c})
 	if err != nil {
 		return nil, nil
 	}
 
-	// Watch for changes to AppSet
+	// Watch for changes to AppSet for runtime controller
 	err = ctl.Watch(&source.Kind{Type: &workloadv1beta1.AppSet{}}, &handler.EnqueueRequestForObject{})
 	if err != nil {
 		return nil, nil
 	}
 
-	threadiness := 2
-	customImpl := customctrl.NewImpl(c, controllerName, nil, &threadiness, labels.ObservedNamespace...)
-
+	// Add policy trigger for same custom Enqueue
 	err = mgr.Add(NewPolicyTrigger(c))
 	if err != nil {
 		klog.Fatal("Can't add runnable for PolicyTrigger")
 	}
 
-	// cMgr.Router.AddRoutes(controllerName, c.Routes())
 	c.Controller = ctl
 	c.CustomImpl = customImpl
 	c.Client = mgr.GetClient()
 	return c, customImpl
 }
 
+// CustomReconcile for multi cluster reconcile
 func (r *AppSetReconciler) CustomReconcile(ctx context.Context, req customctrl.CustomRequest) (reconcile.Result, error) {
+	logger := r.Log.WithValues("cluster", req.ClusterName, "key", req.NamespacedName, "id", uuid.Must(uuid.NewV4()).String())
+
+	as := &workloadv1beta1.AppSet{}
+	err := r.Client.Get(ctx, req.NamespacedName, as)
+	if err != nil {
+		if apierrors.IsNotFound(err) {
+			return reconcile.Result{}, nil
+		}
+
+		logger.Error(err, "failed to get AppSet")
+		return reconcile.Result{}, err
+	}
+
+	logger.Info("AppSet", "ResourceVersion", as.GetResourceVersion())
 	return reconcile.Result{}, nil
 }
 
+// Reconcile
 func (r *AppSetReconciler) Reconcile(req reconcile.Request) (reconcile.Result, error) {
+	// ctx := context.Background()
+	// logger := r.Log.WithValues("key", req.NamespacedName, "id", uuid.Must(uuid.NewV4()).String())
+	//
+	// as := &workloadv1beta1.AppSet{}
+	// err := r.Client.Get(ctx, req.NamespacedName, as)
+	// if err != nil {
+	// 	logger.Error(err, "failed to get AppSet", "req", req)
+	// 	if apierrors.IsNotFound(err) {
+	// 		return reconcile.Result{}, nil
+	// 	}
+	//
+	// 	return reconcile.Result{}, err
+	// }
+	//
+	// klog.V(3).Infof("get appset, name: %s", as.Name)
+	// return reconcile.Result{
+	// 	Requeue:      true,
+	// 	RequeueAfter: 30 * time.Second,
+	// }, nil
+
 	ctx := context.Background()
 	logger := r.Log.WithValues("key", req.NamespacedName, "id", uuid.Must(uuid.NewV4()).String())
 
 	as := &workloadv1beta1.AppSet{}
 	err := r.Client.Get(ctx, req.NamespacedName, as)
 	if err != nil {
-		logger.Error(err, "failed to get AppSet", "req", req)
 		if apierrors.IsNotFound(err) {
 			return reconcile.Result{}, nil
 		}
 
+		logger.Error(err, "failed to get AppSet")
 		return reconcile.Result{}, err
 	}
 
-	klog.V(3).Infof("get appset, name: %s", as.Name)
+	r.CustomImpl.EnqueueKeyRateLimited(as.Namespace, as.Name, "master")
 	return reconcile.Result{
 		Requeue:      true,
 		RequeueAfter: 30 * time.Second,

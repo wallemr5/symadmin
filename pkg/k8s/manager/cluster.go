@@ -5,7 +5,6 @@ import (
 	"time"
 
 	"github.com/go-logr/logr"
-	"github.com/goph/emperror"
 	"github.com/pkg/errors"
 	k8sclient "gitlab.dmall.com/arch/sym-admin/pkg/k8s/client"
 	"k8s.io/apimachinery/pkg/util/runtime"
@@ -59,7 +58,7 @@ func NewCluster(name string, kubeconfig []byte, log logr.Logger) (*Cluster, erro
 
 	err := cluster.initK8SClients()
 	if err != nil {
-		return nil, emperror.Wrap(err, "could not re-init k8s clients")
+		return nil, errors.Wrapf(err, "could not re-init k8s clients name:%s", name)
 	}
 
 	return cluster, nil
