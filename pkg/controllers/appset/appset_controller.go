@@ -245,7 +245,7 @@ func (r *AppSetReconciler) createAdvInfo(info *workloadv1beta1.AppSet, clusterTo
 		isExist = false
 	}
 
-	// TODO: build AdvDeployment info with AppSet TargetCluster
+	// build AdvDeployment info with AppSet TargetCluster
 	replica := 0
 	for _, v := range clusterTopology.PodSets {
 		replica += v.Replicas.IntValue()
