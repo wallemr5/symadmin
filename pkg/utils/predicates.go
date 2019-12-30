@@ -2,6 +2,7 @@ package utils
 
 import (
 	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/client-go/util/workqueue"
 	"k8s.io/klog"
 	"sigs.k8s.io/controller-runtime/pkg/event"
 	"sigs.k8s.io/controller-runtime/pkg/handler"
@@ -72,6 +73,9 @@ func GetWatchPredicateForApp() predicate.Funcs {
 		UpdateFunc: func(e event.UpdateEvent) bool {
 			return isObserveApp(e.MetaNew.GetLabels())
 		},
+		GenericFunc: func(e event.GenericEvent) bool {
+			return isObserveApp(e.Meta.GetLabels())
+		},
 	}
 }
 
@@ -86,4 +90,33 @@ func GetEnqueueRequestsMapper() handler.Mapper {
 			},
 		}
 	})
+}
+
+func GetEnqueueRequestsFucs() handler.EventHandler {
+	return handler.Funcs{
+		CreateFunc: func(e event.CreateEvent, queue workqueue.RateLimitingInterface) {
+			queue.AddRateLimited(reconcile.Request{NamespacedName: types.NamespacedName{
+				Name:      getObserveApp(e.Meta.GetLabels()),
+				Namespace: e.Meta.GetNamespace(),
+			}})
+		},
+		UpdateFunc: func(e event.UpdateEvent, queue workqueue.RateLimitingInterface) {
+			queue.AddRateLimited(reconcile.Request{NamespacedName: types.NamespacedName{
+				Name:      getObserveApp(e.MetaNew.GetLabels()),
+				Namespace: e.MetaNew.GetNamespace(),
+			}})
+		},
+		DeleteFunc: func(e event.DeleteEvent, queue workqueue.RateLimitingInterface) {
+			queue.AddRateLimited(reconcile.Request{NamespacedName: types.NamespacedName{
+				Name:      getObserveApp(e.Meta.GetLabels()),
+				Namespace: e.Meta.GetNamespace(),
+			}})
+		},
+		GenericFunc: func(e event.GenericEvent, queue workqueue.RateLimitingInterface) {
+			queue.AddRateLimited(reconcile.Request{NamespacedName: types.NamespacedName{
+				Name:      getObserveApp(e.Meta.GetLabels()),
+				Namespace: e.Meta.GetNamespace(),
+			}})
+		},
+	}
 }

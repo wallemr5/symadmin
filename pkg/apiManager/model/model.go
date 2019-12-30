@@ -5,6 +5,13 @@ type ClusterStatus struct {
 	Status string `json:"status,omitempty"`
 }
 
+type Pod struct {
+	Name         string `json:"name,omitempty"`
+	NodeIp       string `json:"nodeIp,omitempty"`
+	PodIp        string `json:"nodeIp,omitempty"`
+	ImageVersion string `json:"imageVersion,omitempty"`
+}
+
 // ErrorResponse describes responses when an error occurred
 type ErrorResponse struct {
 	Code    int    `json:"code,omitempty"`

@@ -21,7 +21,6 @@ import (
 
 	"github.com/go-logr/logr"
 	"github.com/gofrs/uuid"
-	"github.com/pkg/errors"
 	workloadv1beta1 "gitlab.dmall.com/arch/sym-admin/pkg/apis/workload/v1beta1"
 	helmv2 "gitlab.dmall.com/arch/sym-admin/pkg/helm/v2"
 	pkgmanager "gitlab.dmall.com/arch/sym-admin/pkg/manager"
@@ -37,11 +36,17 @@ import (
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
-	// "sigs.k8s.io/controller-runtime/pkg/controller"
-	// "sigs.k8s.io/controller-runtime/pkg/handler"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
-	// "sigs.k8s.io/controller-runtime/pkg/source"
+
+	"gitlab.dmall.com/arch/sym-admin/pkg/utils"
+	"sigs.k8s.io/controller-runtime/pkg/controller"
+	"sigs.k8s.io/controller-runtime/pkg/handler"
+	"sigs.k8s.io/controller-runtime/pkg/source"
+)
+
+const (
+	controllerName = "advDeployment-controller"
 )
 
 // AdvDeploymentReconciler reconciles a AdvDeployment object
@@ -53,41 +58,71 @@ type AdvDeploymentReconciler struct {
 	Helmv2env *helmenv.EnvSettings
 }
 
-func (r *AdvDeploymentReconciler) SetupWithManager(mgr ctrl.Manager) error {
-	// return ctrl.NewControllerManagedBy(mgr).
-	// 	For(&workloadv1beta1.AdvDeployment{}).
-	// 	Owns(&appsv1.Deployment{}).
-	// 	Owns(&appsv1.StatefulSet{}).
-	// 	// Owns(&kruisev1alpha1.StatefulSet{}).
-	// 	Owns(&corev1.Service{}).
-	// 	WithOptions(controller.Options{MaxConcurrentReconciles: 3}).
-	// 	WithEventFilter(utils.GetWatchPredicateForNs()).
-	// 	WithEventFilter(utils.GetWatchPredicateForApp()).
-	// 	// Watches(&source.Kind{Type: &corev1.Pod{}}, &handler.Funcs{}).
-	// 	Watches(&source.Kind{Type: &corev1.Pod{}}, &handler.EnqueueRequestsFromMapFunc{ToRequests: utils.GetEnqueueRequestsMapper()}).
-	// 	Complete(r)
-
-	return nil
-}
+// func (r *AdvDeploymentReconciler) SetupWithManager(mgr ctrl.Manager) error {
+// 	// return ctrl.NewControllerManagedBy(mgr).
+// 	// 	For(&workloadv1beta1.AdvDeployment{}).
+// 	// 	Owns(&appsv1.Deployment{}).
+// 	// 	Owns(&appsv1.StatefulSet{}).
+// 	// 	// Owns(&kruisev1alpha1.StatefulSet{}).
+// 	// 	Owns(&corev1.Service{}).
+// 	// 	WithOptions(controller.Options{MaxConcurrentReconciles: 3}).
+// 	// 	WithEventFilter(utils.GetWatchPredicateForNs()).
+// 	// 	WithEventFilter(utils.GetWatchPredicateForApp()).
+// 	// 	// Watches(&source.Kind{Type: &corev1.Pod{}}, &handler.Funcs{}).
+// 	// 	Watches(&source.Kind{Type: &corev1.Pod{}}, &handler.EnqueueRequestsFromMapFunc{ToRequests: utils.GetEnqueueRequestsMapper()}).
+// 	// 	Complete(r)
+//
+// 	return nil
+// }
 
 func Add(mgr manager.Manager, cMgr *pkgmanager.DksManager) error {
-	reconciler := &AdvDeploymentReconciler{
+	r := &AdvDeploymentReconciler{
 		Name:   "AdvDeployment-controllers",
 		Client: mgr.GetClient(),
 		Mgr:    mgr,
 		Log:    ctrl.Log.WithName("controllers").WithName("AdvDeployment"),
 	}
 
-	err := reconciler.SetupWithManager(mgr)
+	// Create a new runtime controller
+	ctl, err := controller.New(controllerName, mgr, controller.Options{Reconciler: r})
 	if err != nil {
-		return errors.Wrapf(err, "unable to create AdvDeployment controller")
+		r.Log.Error(err, "controller new err")
+		return err
+	}
+
+	// Watch for changes to Deployment for runtime controller
+	err = ctl.Watch(&source.Kind{Type: &workloadv1beta1.AdvDeployment{}}, &handler.EnqueueRequestForObject{})
+	if err != nil {
+		r.Log.Error(err, "Watch AdvDeployment err")
+		return err
+	}
+
+	// Watch for changes to Deployment for runtime controller
+	err = ctl.Watch(&source.Kind{Type: &appsv1.Deployment{}}, utils.GetEnqueueRequestsFucs(), utils.GetWatchPredicateForNs(), utils.GetWatchPredicateForApp())
+	if err != nil {
+		r.Log.Error(err, "Watch Deployment err")
+		return err
+	}
+
+	// Watch for changes to StatefulSet for runtime controller
+	err = ctl.Watch(&source.Kind{Type: &appsv1.StatefulSet{}}, utils.GetEnqueueRequestsFucs(), utils.GetWatchPredicateForNs(), utils.GetWatchPredicateForApp())
+	if err != nil {
+		r.Log.Error(err, "Watch StatefulSet err")
+		return err
+	}
+
+	// Watch for changes to Pod for runtime controller
+	err = ctl.Watch(&source.Kind{Type: &corev1.Pod{}}, utils.GetEnqueueRequestsFucs(), utils.GetWatchPredicateForNs(), utils.GetWatchPredicateForApp())
+	if err != nil {
+		r.Log.Error(err, "Watch Pod err")
+		return err
 	}
 
 	helmv2env, err := helmv2.InitHelmRepoEnv("dmall", cMgr.Opt.Repos)
 	if err != nil {
 		klog.Errorf("InitHelmRepoEnv err:%v", err)
 	}
-	reconciler.Helmv2env = helmv2env
+	r.Helmv2env = helmv2env
 	return nil
 }
 
@@ -101,11 +136,11 @@ func (r *AdvDeploymentReconciler) Reconcile(req ctrl.Request) (ctrl.Result, erro
 	advDeploy := &workloadv1beta1.AdvDeployment{}
 	err := r.Client.Get(ctx, req.NamespacedName, advDeploy)
 	if err != nil {
-		logger.Error(err, "failed to get AdvDeployment")
 		if apierrors.IsNotFound(err) {
 			return reconcile.Result{}, nil
 		}
 
+		logger.Error(err, "failed to get AdvDeployment")
 		return reconcile.Result{}, err
 	}
 

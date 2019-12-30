@@ -12,8 +12,11 @@ import (
 	"gitlab.dmall.com/arch/sym-admin/pkg/healthcheck"
 	k8smanager "gitlab.dmall.com/arch/sym-admin/pkg/k8s/manager"
 	"gitlab.dmall.com/arch/sym-admin/pkg/router"
+	corev1 "k8s.io/api/core/v1"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/klog"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 type ApiManagerOption struct {
@@ -87,6 +90,7 @@ func (m *ApiManager) Routes() []*router.Route {
 
 	apiRoutes := []*router.Route{
 		{"GET", "/api/cluster/:name", m.GetClusters, ""},
+		{"GET", "/api/cluster/:name/appPod/:appName", m.GetPod, ""},
 	}
 
 	routes = append(routes, apiRoutes...)
@@ -106,4 +110,49 @@ func (m *ApiManager) GetClusters(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusOK, stas)
+}
+
+// GetClusters
+func (m *ApiManager) GetPod(c *gin.Context) {
+	// clusterNmae := c.Param("name")
+
+	appNmae := c.Param("appName")
+
+	clusters := m.K8sMgr.GetAll()
+
+	ctx := context.Background()
+	pods := make([]*model.Pod, 0, 4)
+
+	listOptions := &client.ListOptions{}
+	listOptions.MatchingLabels(map[string]string{
+		"app": appNmae,
+	})
+	for _, cluster := range clusters {
+		if cluster.Status == k8smanager.ClusterOffline {
+			continue
+		}
+
+		podList := &corev1.PodList{}
+		err := cluster.Client.List(ctx, listOptions, podList)
+		if err != nil {
+
+			if apierrors.IsNotFound(err) {
+				continue
+			}
+			klog.Error(err, "failed to get pods")
+			break
+		}
+
+		for i := range podList.Items {
+			pod := &podList.Items[i]
+			pods = append(pods, &model.Pod{
+				Name:   pod.Name,
+				NodeIp: pod.Status.HostIP,
+				PodIp:  pod.Status.PodIP,
+			})
+		}
+
+	}
+
+	c.JSON(http.StatusOK, pods)
 }
