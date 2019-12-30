@@ -2,16 +2,14 @@ package manager
 
 import (
 	"errors"
-	"sync"
-
-	"time"
-
 	"github.com/go-logr/logr"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	kblabels "k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/util/wait"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/klog"
+	"sync"
+	"time"
 )
 
 type ClusterManagerOption struct {
@@ -111,7 +109,7 @@ func (m *ClusterManager) Get(name string) (*Cluster, error) {
 
 	cluster := m.clusters[name]
 	if cluster == nil {
-		return nil, errors.New("cluster not found")
+		return nil, errors.New("cluster not found:" +name)
 	}
 
 	return cluster, nil

@@ -25,7 +25,11 @@ import (
 	"gitlab.dmall.com/arch/sym-admin/pkg/customctrl"
 	"gitlab.dmall.com/arch/sym-admin/pkg/labels"
 	pkgmanager "gitlab.dmall.com/arch/sym-admin/pkg/manager"
+	"gitlab.dmall.com/arch/sym-admin/pkg/utils"
+	appsv1 "k8s.io/api/apps/v1"
+	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/wait"
 	"k8s.io/client-go/tools/record"
 	"k8s.io/klog"
@@ -38,8 +42,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/source"
 	"sync"
 	"time"
-	appsv1 "k8s.io/api/apps/v1"
-	corev1 "k8s.io/api/core/v1"
 )
 
 const (
@@ -185,12 +187,11 @@ func (r *AppSetReconciler) CustomReconcile(ctx context.Context, req customctrl.C
 	}
 
 	for _, v := range as.Spec.ClusterTopology.Clusters {
-		if err := r.createAdvInfo(as, &v); err != nil {
-			// return reconcile.Result{}, err
+		if err := r.createAdvInfo(as, &v, req); err != nil {
 			klog.V(3).Infof("error:%+v", err)
 			return reconcile.Result{}, nil
 		}
-		klog.V(3).Infof("pod info:+%v", v)
+		klog.V(3).Infof("pod info:%+v", v)
 	}
 
 	logger.Info("AppSet", "ResourceVersion", as.GetResourceVersion())
@@ -222,6 +223,45 @@ func (r *AppSetReconciler) Reconcile(req reconcile.Request) (reconcile.Result, e
 	}, nil
 }
 
-func (r *AppSetReconciler) createAdvInfo(info *workloadv1beta1.AppSet, clusterTopology *workloadv1beta1.TargetCluster) error {
-	return nil
+func (r *AppSetReconciler) createAdvInfo(info *workloadv1beta1.AppSet, clusterTopology *workloadv1beta1.TargetCluster, req customctrl.CustomRequest) error {
+	cluster, err := r.DksMgr.K8sMgr.Get(clusterTopology.Name)
+	if err != nil {
+		return err
+	}
+
+	advDeployment := &workloadv1beta1.AdvDeployment{
+		ObjectMeta: metav1.ObjectMeta{
+			Name: info.Name,
+		},
+	}
+	isExist := true
+
+	err = cluster.Client.Get(context.TODO(), req.NamespacedName, advDeployment)
+	if err != nil {
+		if !apierrors.IsNotFound(err) {
+			klog.V(4).Infof("found err:%+v", err)
+			return err
+		}
+		isExist = false
+	}
+
+	// TODO: build AdvDeployment info with AppSet TargetCluster
+	replica := 0
+	for _, v := range clusterTopology.PodSets {
+		replica += v.Replicas.IntValue()
+	}
+	advDeployment.Spec.ServiceName = info.Spec.ServiceName
+	advDeployment.Spec.PodSpec = info.Spec.PodSpec
+	advDeployment.Spec.Replicas = utils.IntPointer(int32(replica))
+	advDeployment.Spec.Topology = workloadv1beta1.Topology{
+		PodSets: clusterTopology.PodSets,
+	}
+	advDeployment.Namespace = info.Namespace
+	advDeployment.Name = info.Name
+
+	if isExist {
+		return cluster.Client.Update(context.TODO(), advDeployment)
+	}
+
+	return cluster.Client.Create(context.TODO(), advDeployment)
 }
