@@ -2,8 +2,9 @@ package utils
 
 import (
 	"fmt"
-	"k8s.io/apimachinery/pkg/util/intstr"
 	"strings"
+
+	"k8s.io/apimachinery/pkg/util/intstr"
 )
 
 var ObservedNamespace = []string{
@@ -128,4 +129,8 @@ func SplitMetaLdcGroupKey(key string) (ldcName, groupName string, err error) {
 	}
 
 	return "", "", fmt.Errorf("unexpected key format: %q", key)
+}
+
+func ToClusterCrName(name string) string {
+	return strings.ToLower(strings.ReplaceAll(name, "_", "-"))
 }

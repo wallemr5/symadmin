@@ -14,6 +14,8 @@ import (
 	"time"
 
 	"gitlab.dmall.com/arch/sym-admin/pkg/labels"
+	"gitlab.dmall.com/arch/sym-admin/pkg/utils"
+	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/util/workqueue"
 	"k8s.io/klog"
 	ctrl "sigs.k8s.io/controller-runtime"
@@ -87,22 +89,22 @@ func NewImpl(r CustomReconciler, name string, maxRetries, threadiness *int, name
 
 // EnqueueAfter takes a resource, converts it into a namespace/name string, and passes it to EnqueueKey.
 func (c *Impl) EnqueueAfter(obj interface{}, after time.Duration) {
-	key, err := cache.DeletionHandlingMetaNamespaceKeyFunc(obj)
+	object, err := DeletionHandlingAccessor(obj)
 	if err != nil {
-		klog.Errorf("Enqueue err: %#v", err)
+		klog.Errorf("DeletionHandlingAccessor err: %#v", err)
 		return
 	}
-	c.EnqueueKeyAfter(key, after)
+	c.EnqueueKeyAfter(object.GetNamespace(), object.GetName(), after)
 }
 
 // Enqueue takes a resource, converts it into a namespace/name string, and passes it to EnqueueKey.
 func (c *Impl) Enqueue(obj interface{}) {
-	key, err := cache.DeletionHandlingMetaNamespaceKeyFunc(obj)
+	object, err := DeletionHandlingAccessor(obj)
 	if err != nil {
-		klog.Errorf("Enqueue err: %#v", err)
+		klog.Errorf("DeletionHandlingAccessor err: %#v", err)
 		return
 	}
-	c.EnqueueKey(key)
+	c.EnqueueKey(object.GetNamespace(), object.GetName())
 }
 
 // get ClusterName from obj label
@@ -130,6 +132,7 @@ func (c *Impl) EnqueueMulti(obj interface{}) {
 		klog.Errorf("Enqueue err: %#v", err)
 		return
 	}
+
 	c.EnqueueKeyRateLimited(key, getClusterByLabels(obj))
 }
 
@@ -139,7 +142,13 @@ func (c *Impl) EnqueueMultiAfter(obj interface{}, after time.Duration) {
 		klog.Errorf("Enqueue err: %#v", err)
 		return
 	}
-	c.EnqueueKeyAfter(key, after, getClusterByLabels(obj))
+
+	ns, name, err := cache.SplitMetaNamespaceKey(key)
+	if err != nil {
+		klog.Errorf("SplitMetaNamespaceKey key:%s err: %#v", key, err)
+		return
+	}
+	c.EnqueueKeyAfter(ns, name, after, getClusterByLabels(obj))
 }
 
 // Enqueue takes a resource, converts it into a clusterName/namespace/name string, and passes it to EnqueueKey.
@@ -170,9 +179,8 @@ func (c *Impl) EnqueueMultiLabelOfCluster(obj interface{}) {
 		return
 	}
 
-	key := fmt.Sprintf("%s/%s", object.GetNamespace(), controllerKey)
-	klog.V(4).Infof("enqueue key:%s, by name:%s", key, object.GetName())
-	c.EnqueueKeyRateLimited(key, getClusterByLabels(obj))
+	klog.V(4).Infof("enqueue ns:%s, name:%s by name:%s", object.GetNamespace(), controllerKey, object.GetName())
+	c.EnqueueKeyRateLimited(object.GetNamespace(), controllerKey, getClusterByLabels(obj))
 }
 
 // EnqueueControllerOf takes a resource, identifies its controller resource,
@@ -187,7 +195,7 @@ func (c *Impl) EnqueueControllerOf(obj interface{}) {
 	// If we can determine the controller ref of this object, then
 	// add that object to our workqueue.
 	if owner := metav1.GetControllerOf(object); owner != nil {
-		c.EnqueueKey(object.GetNamespace() + "/" + owner.Name)
+		c.EnqueueKey(object.GetNamespace(), owner.Name)
 	}
 }
 
@@ -219,14 +227,14 @@ func (c *Impl) EnqueueLabelOfNamespaceScopedResource(namespaceLabel, nameLabel s
 				return
 			}
 
-			c.EnqueueKey(fmt.Sprintf("%s/%s", controllerNamespace, controllerKey))
+			c.EnqueueKey(controllerNamespace, controllerKey)
 			return
 		}
 
 		// Pass through namespace of the object itself if no namespace label specified.
 		// This is for the scenario that object and the parent resource are of same namespace,
 		// e.g. to enqueue the revision of an endpoint.
-		c.EnqueueKey(fmt.Sprintf("%s/%s", object.GetNamespace(), controllerKey))
+		c.EnqueueKey(object.GetNamespace(), controllerKey)
 	}
 }
 
@@ -250,14 +258,13 @@ func (c *Impl) EnqueueLabelOfClusterScopedResource(nameLabel string) func(obj in
 			return
 		}
 
-		c.EnqueueKey(controllerKey)
+		c.EnqueueKey(object.GetNamespace(), controllerKey)
 	}
 }
 
 // isObserveNamespaces
-func (c *Impl) isObserveNamespaces(key string) bool {
+func (c *Impl) isObserveNamespaces(ns string) bool {
 	if len(c.Namespaces) > 0 {
-		ns, _, _ := cache.SplitMetaNamespaceKey(key)
 		for _, obNs := range c.Namespaces {
 			if obNs == ns {
 				return true
@@ -270,51 +277,54 @@ func (c *Impl) isObserveNamespaces(key string) bool {
 }
 
 // EnqueueKey takes a clusterName/namespace/name string and puts it onto the work queue.
-func (c *Impl) EnqueueKey(key string, clusterName ...string) {
-	var keywarp string
-
-	if !c.isObserveNamespaces(key) {
+func (c *Impl) EnqueueKey(namespace, name string, clusterName ...string) {
+	req := c.GetCustomRequest(namespace, name, clusterName...)
+	if req == nil {
 		return
 	}
 
-	if len(clusterName) > 0 && clusterName[0] != "" {
-		keywarp = fmt.Sprintf("%s/%s", clusterName[0], key)
-	} else {
-		keywarp = key
-	}
-	c.WorkQueue.Add(keywarp)
+	c.WorkQueue.Add(*req)
 }
 
 // EnqueueKey takes a clusterName/namespace/name string and puts it onto the work queue.
-func (c *Impl) EnqueueKeyRateLimited(key string, clusterName ...string) {
-	var keywarp string
-
-	if !c.isObserveNamespaces(key) {
+func (c *Impl) EnqueueKeyRateLimited(namespace, name string, clusterName ...string) {
+	req := c.GetCustomRequest(namespace, name, clusterName...)
+	if req == nil {
 		return
 	}
 
-	if len(clusterName) > 0 && clusterName[0] != "" {
-		keywarp = fmt.Sprintf("%s/%s", clusterName[0], key)
-	} else {
-		keywarp = key
+	c.WorkQueue.AddRateLimited(*req)
+}
+
+func (c *Impl) GetCustomRequest(namespace, name string, clusterName ...string) *CustomRequest {
+	if !c.isObserveNamespaces(namespace) {
+		return nil
 	}
-	c.WorkQueue.AddRateLimited(keywarp)
+
+	req := &CustomRequest{
+		Request: reconcile.Request{
+			NamespacedName: types.NamespacedName{
+				Namespace: namespace,
+				Name:      name,
+			},
+		},
+	}
+
+	if len(clusterName) > 0 && clusterName[0] != "" {
+		req.ClusterName = utils.ToClusterCrName(clusterName[0])
+	}
+
+	return req
 }
 
 // EnqueueKeyAfter takes a clusterName/namespace/name string and schedules its execution in the work queue after given delay.
-func (c *Impl) EnqueueKeyAfter(key string, delay time.Duration, clusterName ...string) {
-	var keywarp string
-
-	if !c.isObserveNamespaces(key) {
+func (c *Impl) EnqueueKeyAfter(namespace, name string, delay time.Duration, clusterName ...string) {
+	req := c.GetCustomRequest(namespace, name, clusterName...)
+	if req == nil {
 		return
 	}
 
-	if len(clusterName) > 0 && clusterName[0] != "" {
-		keywarp = fmt.Sprintf("%s/%s", clusterName[0], key)
-	} else {
-		keywarp = key
-	}
-	c.WorkQueue.AddAfter(keywarp, delay)
+	c.WorkQueue.AddAfter(*req, delay)
 }
 
 // Run starts the controller's worker threads, the number of which is threadiness.
@@ -426,8 +436,9 @@ func (c *Impl) handleErr(err error, key string) {
 
 // GlobalResync enqueues all objects from the passed SharedInformer
 func (c *Impl) GlobalResync(si cache.SharedInformer) {
-	for _, key := range si.GetStore().ListKeys() {
-		c.EnqueueKey(key)
+	for _, rawReq := range si.GetStore().List() {
+		req := rawReq.(CustomRequest)
+		c.WorkQueue.AddRateLimited(req)
 	}
 }
 

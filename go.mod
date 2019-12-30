@@ -50,6 +50,7 @@ require (
 	github.com/microcosm-cc/bluemonday v1.0.2
 	github.com/mitchellh/copystructure v1.0.0 // indirect
 	github.com/mitchellh/go-wordwrap v1.0.0 // indirect
+	github.com/onsi/ginkgo v1.11.0 // indirect
 	github.com/opencontainers/go-digest v1.0.0-rc1 // indirect
 	github.com/openkruise/kruise v0.3.0 // indirect
 	github.com/pborman/uuid v1.2.0 // indirect

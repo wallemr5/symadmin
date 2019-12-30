@@ -5,7 +5,7 @@ import (
 )
 
 var ObservedNamespace = []string{
-	// "default",
+	"default",
 	"dmall-inner",
 	"dmall-outer",
 }
