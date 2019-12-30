@@ -142,7 +142,7 @@ type PodSetSatusInfo struct {
 	EndpointReady *int32 `json:"endpointReady,omitempty"`
 }
 
-// Subset defines the detail of a subset.
+// PodSet defines the detail of a PodSet.
 type PodSet struct {
 	// Indicates subset name as a DNS_LABEL, which will be used to generate
 	// subset workload name prefix in the format '<deployment-name>-<subset-name>-'.
