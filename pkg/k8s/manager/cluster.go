@@ -1,6 +1,9 @@
 package manager
 
 import (
+	"strings"
+	"time"
+
 	"github.com/go-logr/logr"
 	"github.com/goph/emperror"
 	"github.com/pkg/errors"
@@ -9,11 +12,10 @@ import (
 	"k8s.io/client-go/dynamic"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
+	"k8s.io/klog"
 	"sigs.k8s.io/controller-runtime/pkg/cache"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
-	"strings"
-	"time"
 )
 
 type ClusterStatusType string
@@ -32,13 +34,13 @@ type Cluster struct {
 	RawKubeconfig []byte
 	Meta          map[string]string
 	RestConfig    *rest.Config
-	client        client.Client
+	Client        client.Client
 	Kubecli       kubernetes.Interface
-	dynamicClient dynamic.Interface
+	DynamicClient dynamic.Interface
 
 	log             logr.Logger
-	mgr             manager.Manager
-	cache           cache.Cache
+	Mgr             manager.Manager
+	Cache           cache.Cache
 	internalStopper chan struct{}
 
 	Status ClusterStatusType
@@ -78,7 +80,7 @@ func (c *Cluster) initK8SClients() error {
 	if err != nil {
 		return errors.Wrapf(err, "could not new dynamiccli name:%s", c.Name)
 	}
-	c.dynamicClient = dynamicClient
+	c.DynamicClient = dynamicClient
 
 	kubecli, err := kubernetes.NewForConfig(c.RestConfig)
 	if err != nil {
@@ -97,9 +99,9 @@ func (c *Cluster) initK8SClients() error {
 		return errors.Wrapf(err, "could not new manager name:%s", c.Name)
 	}
 
-	c.mgr = mgr
-	c.client = mgr.GetClient()
-	c.cache = mgr.GetCache()
+	c.Mgr = mgr
+	c.Client = mgr.GetClient()
+	c.Cache = mgr.GetCache()
 	return nil
 }
 
@@ -117,4 +119,24 @@ func (c *Cluster) healthCheck() bool {
 	}
 	c.Status = ClusterReady
 	return true
+}
+
+func (c *Cluster) StartCache(stopCh <-chan struct{}) {
+	if c.Started {
+		klog.Infof("cluster name: %s cache Informers is already startd", c.Name)
+		return
+	}
+
+	klog.Infof("cluster name: %s start cache Informers ", c.Name)
+	go func() {
+		err := c.Cache.Start(c.internalStopper)
+		klog.Warningf("cluster name: %s cache Informers quit end err:%v", c.Name, err)
+	}()
+
+	c.Cache.WaitForCacheSync(stopCh)
+	c.Started = true
+}
+
+func (c *Cluster) Stop() {
+	close(c.internalStopper)
 }

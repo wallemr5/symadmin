@@ -120,20 +120,12 @@ func (m *ClusterManager) Get(name string) (*Cluster, error) {
 // InitStart init start Informers
 func (m *ClusterManager) InitStart(stopCh <-chan struct{}) error {
 	klog.Info("initStart cluster manager ... ")
-	for name, c := range m.clusters {
+	for _, c := range m.clusters {
 		if !c.healthCheck() {
 			break
 		}
 
-		if !c.Started {
-			klog.Infof("start cache Informers cluster name: %s", name)
-			go func() {
-				_ = c.cache.Start(c.internalStopper)
-			}()
-
-			c.cache.WaitForCacheSync(stopCh)
-			c.Started = true
-		}
+		c.StartCache(stopCh)
 	}
 	return nil
 }
@@ -142,7 +134,7 @@ func (m *ClusterManager) cluterCheck() {
 	klog.V(4).Infof("new time: %v", time.Now())
 }
 
-// Start timer check cluster headlth
+// Start timer check cluster health
 func (m *ClusterManager) Start(stopCh <-chan struct{}) error {
 	klog.Info("start cluster manager check loop ... ")
 	wait.Until(m.cluterCheck, time.Minute, stopCh)
