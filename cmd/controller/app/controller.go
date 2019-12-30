@@ -88,7 +88,7 @@ func NewControllerCmd(cli *DksCli) *cobra.Command {
 	}
 
 	cmd.PersistentFlags().IntVar(&opt.GoroutineThreshold, "goroutine-threshold", opt.GoroutineThreshold, "the max Goroutine Threshold")
-	cmd.PersistentFlags().StringVar(&opt.HttpAddr, "http-addr", opt.HttpAddr, "HttpAddr for some info")
+	cmd.PersistentFlags().StringVar(&opt.HTTPAddr, "http-addr", opt.HTTPAddr, "HTTPAddr for some info")
 	cmd.PersistentFlags().BoolVar(&opt.EnableLeaderElection, "enable-leader", opt.EnableLeaderElection,
 		"Enable leader election for controller manager. Enabling this will ensure there is only one active controller manager.")
 	cmd.PersistentFlags().BoolVar(&opt.GinLogEnabled, "enable-ginlog", opt.GinLogEnabled, "Enabled will open gin run log.")

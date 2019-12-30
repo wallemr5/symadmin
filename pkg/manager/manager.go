@@ -17,17 +17,14 @@ limitations under the License.
 package manager
 
 import (
-	"time"
-
-	"github.com/go-logr/logr"
-
 	"context"
-
+	"github.com/go-logr/logr"
 	"gitlab.dmall.com/arch/sym-admin/pkg/healthcheck"
 	k8smanager "gitlab.dmall.com/arch/sym-admin/pkg/k8s/manager"
 	"gitlab.dmall.com/arch/sym-admin/pkg/router"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/klog"
+	"time"
 )
 
 type ManagerOption struct {
@@ -38,7 +35,7 @@ type ManagerOption struct {
 	Repos              map[string]string
 
 	// use expose /metrics, /read, /live, /pprof.
-	HttpAddr             string
+	HTTPAddr             string
 	EnableLeaderElection bool
 	GinLogEnabled        bool
 	PprofEnabled         bool
@@ -56,7 +53,7 @@ type DksManager struct {
 
 func DefaultManagerOption() *ManagerOption {
 	return &ManagerOption{
-		HttpAddr:             ":8080",
+		HTTPAddr:             ":8080",
 		GoroutineThreshold:   1000,
 		EnableLeaderElection: false,
 		GinLogEnabled:        true,
@@ -74,7 +71,7 @@ func NewDksManager(kubecli kubernetes.Interface, opt *ManagerOption, logger logr
 		GinLogEnabled:    opt.GinLogEnabled,
 		MetricsEnabled:   true,
 		PprofEnabled:     opt.PprofEnabled,
-		Addr:             opt.HttpAddr,
+		Addr:             opt.HTTPAddr,
 		MetricsPath:      "metrics",
 		MetricsSubsystem: componentName,
 	}
