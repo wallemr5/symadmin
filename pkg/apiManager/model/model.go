@@ -8,7 +8,7 @@ type ClusterStatus struct {
 type Pod struct {
 	Name         string `json:"name,omitempty"`
 	NodeIp       string `json:"nodeIp,omitempty"`
-	PodIp        string `json:"nodeIp,omitempty"`
+	PodIp        string `json:"podIp,omitempty"`
 	ImageVersion string `json:"imageVersion,omitempty"`
 }
 
