@@ -31,6 +31,7 @@ test: generate fmt vet manifests
 # Build manager binary
 manager: generate fmt vet
 	go build -o bin/sym-admin-controller cmd/controller/main.go
+	go build -o bin/sym-admin-api cmd/sym-api/main.go
 
 # Run against the configured Kubernetes cluster in ~/.kube/config
 run: generate fmt vet manifests
