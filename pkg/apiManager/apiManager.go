@@ -114,9 +114,9 @@ func (m *ApiManager) GetClusters(c *gin.Context) {
 
 // GetClusters
 func (m *ApiManager) GetPod(c *gin.Context) {
-	// clusterNmae := c.Param("name")
+	// clusterName := c.Param("name")
 
-	appNmae := c.Param("appName")
+	appName := c.Param("appName")
 
 	clusters := m.K8sMgr.GetAll()
 
@@ -125,7 +125,7 @@ func (m *ApiManager) GetPod(c *gin.Context) {
 
 	listOptions := &client.ListOptions{}
 	listOptions.MatchingLabels(map[string]string{
-		"app": appNmae,
+		"app": appName,
 	})
 	for _, cluster := range clusters {
 		if cluster.Status == k8smanager.ClusterOffline {
