@@ -28,6 +28,7 @@ import (
 	"gitlab.dmall.com/arch/sym-admin/pkg/utils"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/api/equality"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/wait"
@@ -171,33 +172,6 @@ func NewAppSetController(mgr manager.Manager, cMgr *pkgmanager.DksManager) (*App
 	return c, customImpl
 }
 
-// CustomReconcile for multi cluster reconcile
-func (r *AppSetReconciler) CustomReconcile(ctx context.Context, req customctrl.CustomRequest) (reconcile.Result, error) {
-	logger := r.Log.WithValues("cluster", req.ClusterName, "key", req.NamespacedName, "id", uuid.Must(uuid.NewV4()).String())
-
-	as := &workloadv1beta1.AppSet{}
-	err := r.Client.Get(ctx, req.NamespacedName, as)
-	if err != nil {
-		if apierrors.IsNotFound(err) {
-			return reconcile.Result{}, nil
-		}
-
-		logger.Error(err, "failed to get AppSet")
-		return reconcile.Result{}, err
-	}
-
-	for _, v := range as.Spec.ClusterTopology.Clusters {
-		if err := r.createAdvInfo(as, v, req); err != nil {
-			klog.V(3).Infof("error:%+v", err)
-			return reconcile.Result{}, nil
-		}
-		klog.V(3).Infof("pod info:%+v", v)
-	}
-
-	logger.Info("AppSet", "ResourceVersion", as.GetResourceVersion())
-	return reconcile.Result{}, nil
-}
-
 // Reconcile xx
 func (r *AppSetReconciler) Reconcile(req reconcile.Request) (reconcile.Result, error) {
 	ctx := context.Background()
@@ -223,26 +197,46 @@ func (r *AppSetReconciler) Reconcile(req reconcile.Request) (reconcile.Result, e
 	}, nil
 }
 
-func (r *AppSetReconciler) createAdvInfo(info *workloadv1beta1.AppSet, clusterTopology *workloadv1beta1.TargetCluster, req customctrl.CustomRequest) error {
+// CustomReconcile for multi cluster reconcile
+func (r *AppSetReconciler) CustomReconcile(ctx context.Context, req customctrl.CustomRequest) (reconcile.Result, error) {
+	logger := r.Log.WithValues("cluster", req.ClusterName, "key", req.NamespacedName, "id", uuid.Must(uuid.NewV4()).String())
+
+	as := &workloadv1beta1.AppSet{}
+	err := r.Client.Get(ctx, req.NamespacedName, as)
+	if err != nil {
+		if apierrors.IsNotFound(err) {
+			return reconcile.Result{}, nil
+		}
+
+		logger.Error(err, "failed to get AppSet")
+		return reconcile.Result{}, err
+	}
+
+	// topology update events
+	modifyStatus := false
+	for _, v := range as.Spec.ClusterTopology.Clusters {
+		status, err := r.modifySpec(as, v, req)
+		if err != nil {
+			klog.V(3).Infof("error:%+v", err)
+			return reconcile.Result{}, nil
+		}
+		if !modifyStatus && status {
+			modifyStatus = true
+		}
+	}
+
+	if !modifyStatus {
+		// TODO: status update events or restart
+	}
+
+	logger.Info("AppSet", "ResourceVersion", as.GetResourceVersion())
+	return reconcile.Result{}, nil
+}
+
+func (r *AppSetReconciler) modifySpec(info *workloadv1beta1.AppSet, clusterTopology *workloadv1beta1.TargetCluster, req customctrl.CustomRequest) (modifyStatus bool, err error) {
 	cluster, err := r.DksMgr.K8sMgr.Get(clusterTopology.Name)
 	if err != nil {
-		return err
-	}
-
-	advDeployment := &workloadv1beta1.AdvDeployment{
-		ObjectMeta: metav1.ObjectMeta{
-			Name: info.Name,
-		},
-	}
-	isExist := true
-
-	err = cluster.Client.Get(context.TODO(), req.NamespacedName, advDeployment)
-	if err != nil {
-		if !apierrors.IsNotFound(err) {
-			klog.V(4).Infof("found err:%+v", err)
-			return err
-		}
-		isExist = false
+		return false, err
 	}
 
 	// build AdvDeployment info with AppSet TargetCluster
@@ -250,18 +244,61 @@ func (r *AppSetReconciler) createAdvInfo(info *workloadv1beta1.AppSet, clusterTo
 	for _, v := range clusterTopology.PodSets {
 		replica += v.Replicas.IntValue()
 	}
-	advDeployment.Spec.ServiceName = info.Spec.ServiceName
-	advDeployment.Spec.PodSpec = info.Spec.PodSpec
-	advDeployment.Spec.Replicas = utils.IntPointer(int32(replica))
-	advDeployment.Spec.Topology = workloadv1beta1.Topology{
+	new := &workloadv1beta1.AdvDeployment{}
+	new.Spec.ServiceName = info.Spec.ServiceName
+	new.Spec.PodSpec = info.Spec.PodSpec
+	new.Spec.Replicas = utils.IntPointer(int32(replica))
+	new.Spec.Topology = workloadv1beta1.Topology{
 		PodSets: clusterTopology.PodSets,
 	}
-	advDeployment.Namespace = info.Namespace
-	advDeployment.Name = info.Name
+	new.Namespace = info.Namespace
+	new.Name = info.Name
 
-	if isExist {
-		return cluster.Client.Update(context.TODO(), advDeployment)
+	old := &workloadv1beta1.AdvDeployment{
+		ObjectMeta: metav1.ObjectMeta{
+			Name: info.Name,
+		},
+	}
+	err = cluster.Client.Get(context.TODO(), req.NamespacedName, old)
+	if err != nil {
+		if apierrors.IsNotFound(err) {
+			return true, cluster.Client.Create(context.TODO(), new)
+		}
+		return false, err
 	}
 
-	return cluster.Client.Create(context.TODO(), advDeployment)
+	if r.needUpdate(old, new) {
+		return true, cluster.Client.Update(context.TODO(), r.coverAdvDeployment(old, new))
+	}
+
+	return false, nil
+}
+
+func (r *AppSetReconciler) needUpdate(old, new *workloadv1beta1.AdvDeployment) bool {
+	if *old.Spec.ServiceName != *new.Spec.ServiceName {
+		return true
+	}
+	if *old.Spec.Replicas != *new.Spec.Replicas {
+		return true
+	}
+	if old.Namespace != new.Namespace {
+		return true
+	}
+
+	if !equality.Semantic.DeepEqual(old.Spec.PodSpec, old.Spec.PodSpec) {
+		return true
+	}
+
+	return !equality.Semantic.DeepEqual(old.Spec.Topology.PodSets, new.Spec.Topology.PodSets)
+}
+
+func (r *AppSetReconciler) coverAdvDeployment(old, new *workloadv1beta1.AdvDeployment) *workloadv1beta1.AdvDeployment {
+
+	old.Spec.ServiceName = new.Spec.ServiceName
+	old.Spec.PodSpec = new.Spec.PodSpec
+	old.Spec.Replicas = new.Spec.Replicas
+	old.Spec.Topology = new.Spec.Topology
+	old.Namespace = new.Namespace
+
+	return old
 }
