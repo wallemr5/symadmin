@@ -187,7 +187,7 @@ func (r *AppSetReconciler) CustomReconcile(ctx context.Context, req customctrl.C
 	}
 
 	for _, v := range as.Spec.ClusterTopology.Clusters {
-		if err := r.createAdvInfo(as, &v, req); err != nil {
+		if err := r.createAdvInfo(as, v, req); err != nil {
 			klog.V(3).Infof("error:%+v", err)
 			return reconcile.Result{}, nil
 		}
