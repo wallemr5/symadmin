@@ -19,30 +19,25 @@ package appset
 import (
 	"context"
 	"fmt"
+	"sync"
+	"time"
+
 	"github.com/go-logr/logr"
 	"github.com/gofrs/uuid"
 	workloadv1beta1 "gitlab.dmall.com/arch/sym-admin/pkg/apis/workload/v1beta1"
 	"gitlab.dmall.com/arch/sym-admin/pkg/customctrl"
 	"gitlab.dmall.com/arch/sym-admin/pkg/labels"
 	pkgmanager "gitlab.dmall.com/arch/sym-admin/pkg/manager"
-	"gitlab.dmall.com/arch/sym-admin/pkg/utils"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
-	"k8s.io/apimachinery/pkg/api/equality"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/wait"
 	"k8s.io/client-go/tools/record"
 	"k8s.io/klog"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-	"sigs.k8s.io/controller-runtime/pkg/controller"
-	"sigs.k8s.io/controller-runtime/pkg/handler"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 	logf "sigs.k8s.io/controller-runtime/pkg/runtime/log"
-	"sigs.k8s.io/controller-runtime/pkg/source"
-	"sync"
-	"time"
 )
 
 const (
@@ -52,7 +47,6 @@ const (
 // Reconciler implements controller.Reconciler
 type AppSetReconciler struct {
 	manager.Manager
-	controller.Controller
 	client.Client
 
 	DksMgr            *pkgmanager.DksManager
@@ -148,17 +142,11 @@ func NewAppSetController(mgr manager.Manager, cMgr *pkgmanager.DksManager) (*App
 		cluster.Cache.GetInformer(&corev1.Service{})
 	}
 
-	// Create a new runtime controller
-	ctl, err := controller.New(controllerName, mgr, controller.Options{Reconciler: c})
+	appSetInformer, err := mgr.GetCache().GetInformer(&workloadv1beta1.AppSet{})
 	if err != nil {
-		return nil, nil
+		klog.Fatalf("master appset crd informer watch err:%+v", err)
 	}
-
-	// Watch for changes to AppSet for runtime controller
-	err = ctl.Watch(&source.Kind{Type: &workloadv1beta1.AppSet{}}, &handler.EnqueueRequestForObject{})
-	if err != nil {
-		return nil, nil
-	}
+	appSetInformer.AddEventHandler(customctrl.HandlerWraps(customImpl.Enqueue))
 
 	// Add policy trigger for same custom Enqueue
 	err = mgr.Add(NewPolicyTrigger(c))
@@ -166,15 +154,13 @@ func NewAppSetController(mgr manager.Manager, cMgr *pkgmanager.DksManager) (*App
 		klog.Fatal("Can't add runnable for PolicyTrigger")
 	}
 
-	c.Controller = ctl
 	c.CustomImpl = customImpl
 	c.Client = mgr.GetClient()
 	return c, customImpl
 }
 
-// Reconcile xx
-func (r *AppSetReconciler) Reconcile(req reconcile.Request) (reconcile.Result, error) {
-	ctx := context.Background()
+// CustomReconcile for multi cluster reconcile
+func (r *AppSetReconciler) CustomReconcile(ctx context.Context, req customctrl.CustomRequest) (reconcile.Result, error) {
 	logger := r.Log.WithValues("key", req.NamespacedName, "id", uuid.Must(uuid.NewV4()).String())
 
 	as := &workloadv1beta1.AppSet{}
@@ -188,36 +174,27 @@ func (r *AppSetReconciler) Reconcile(req reconcile.Request) (reconcile.Result, e
 		return reconcile.Result{}, err
 	}
 
-	klog.V(3).Infof("get appset, name: %s", as.Name)
-	r.CustomImpl.EnqueueKeyRateLimited(as.Namespace, as.Name, "master")
+	if as.ObjectMeta.DeletionTimestamp != nil {
+		logger.Info("delete event", "appset", as)
+		return reconcile.Result{}, r.Delete(as)
+	}
 
-	return reconcile.Result{
-		Requeue:      true,
-		RequeueAfter: 30 * time.Second,
-	}, nil
-}
-
-// CustomReconcile for multi cluster reconcile
-func (r *AppSetReconciler) CustomReconcile(ctx context.Context, req customctrl.CustomRequest) (reconcile.Result, error) {
-	logger := r.Log.WithValues("cluster", req.ClusterName, "key", req.NamespacedName, "id", uuid.Must(uuid.NewV4()).String())
-
-	as := &workloadv1beta1.AppSet{}
-	err := r.Client.Get(ctx, req.NamespacedName, as)
-	if err != nil {
-		if apierrors.IsNotFound(err) {
-			return reconcile.Result{}, nil
-		}
-
-		logger.Error(err, "failed to get AppSet")
-		return reconcile.Result{}, err
+	// if finalizers empty, full "sym-admin-finalizers" string
+	if as.ObjectMeta.Finalizers == nil {
+		as.ObjectMeta.Finalizers = []string{"sym-admin-finalizers"}
+		return reconcile.Result{}, r.Client.Update(ctx, as)
 	}
 
 	// topology update events
 	modifyStatus := false
 	for _, v := range as.Spec.ClusterTopology.Clusters {
-		status, err := r.modifySpec(as, v, req)
+		status, condition, err := r.ModifySpec(logger, as, v, req)
 		if err != nil {
-			klog.V(3).Infof("error:%+v", err)
+			// TODO: craete event
+			logger.Error(err, "topology update error")
+			if condition != nil {
+				// TODO: add condition
+			}
 			return reconcile.Result{}, nil
 		}
 		if !modifyStatus && status {
@@ -231,74 +208,4 @@ func (r *AppSetReconciler) CustomReconcile(ctx context.Context, req customctrl.C
 
 	logger.Info("AppSet", "ResourceVersion", as.GetResourceVersion())
 	return reconcile.Result{}, nil
-}
-
-func (r *AppSetReconciler) modifySpec(info *workloadv1beta1.AppSet, clusterTopology *workloadv1beta1.TargetCluster, req customctrl.CustomRequest) (modifyStatus bool, err error) {
-	cluster, err := r.DksMgr.K8sMgr.Get(clusterTopology.Name)
-	if err != nil {
-		return false, err
-	}
-
-	// build AdvDeployment info with AppSet TargetCluster
-	replica := 0
-	for _, v := range clusterTopology.PodSets {
-		replica += v.Replicas.IntValue()
-	}
-	new := &workloadv1beta1.AdvDeployment{}
-	new.Spec.ServiceName = info.Spec.ServiceName
-	new.Spec.PodSpec = info.Spec.PodSpec
-	new.Spec.Replicas = utils.IntPointer(int32(replica))
-	new.Spec.Topology = workloadv1beta1.Topology{
-		PodSets: clusterTopology.PodSets,
-	}
-	new.Namespace = info.Namespace
-	new.Name = info.Name
-
-	old := &workloadv1beta1.AdvDeployment{
-		ObjectMeta: metav1.ObjectMeta{
-			Name: info.Name,
-		},
-	}
-	err = cluster.Client.Get(context.TODO(), req.NamespacedName, old)
-	if err != nil {
-		if apierrors.IsNotFound(err) {
-			return true, cluster.Client.Create(context.TODO(), new)
-		}
-		return false, err
-	}
-
-	if r.needUpdate(old, new) {
-		return true, cluster.Client.Update(context.TODO(), r.coverAdvDeployment(old, new))
-	}
-
-	return false, nil
-}
-
-func (r *AppSetReconciler) needUpdate(old, new *workloadv1beta1.AdvDeployment) bool {
-	if *old.Spec.ServiceName != *new.Spec.ServiceName {
-		return true
-	}
-	if *old.Spec.Replicas != *new.Spec.Replicas {
-		return true
-	}
-	if old.Namespace != new.Namespace {
-		return true
-	}
-
-	if !equality.Semantic.DeepEqual(old.Spec.PodSpec, old.Spec.PodSpec) {
-		return true
-	}
-
-	return !equality.Semantic.DeepEqual(old.Spec.Topology.PodSets, new.Spec.Topology.PodSets)
-}
-
-func (r *AppSetReconciler) coverAdvDeployment(old, new *workloadv1beta1.AdvDeployment) *workloadv1beta1.AdvDeployment {
-
-	old.Spec.ServiceName = new.Spec.ServiceName
-	old.Spec.PodSpec = new.Spec.PodSpec
-	old.Spec.Replicas = new.Spec.Replicas
-	old.Spec.Topology = new.Spec.Topology
-	old.Namespace = new.Namespace
-
-	return old
 }

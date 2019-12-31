@@ -3,23 +3,19 @@ package customctrl
 import (
 	"context"
 	"fmt"
-
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/util/runtime"
-	"k8s.io/apimachinery/pkg/util/wait"
-
-	"k8s.io/client-go/tools/cache"
-
-	"sync"
-	"time"
-
 	"gitlab.dmall.com/arch/sym-admin/pkg/labels"
 	"gitlab.dmall.com/arch/sym-admin/pkg/utils"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/apimachinery/pkg/util/runtime"
+	"k8s.io/apimachinery/pkg/util/wait"
+	"k8s.io/client-go/tools/cache"
 	"k8s.io/client-go/util/workqueue"
 	"k8s.io/klog"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
+	"sync"
+	"time"
 )
 
 var (
@@ -31,8 +27,9 @@ var (
 )
 
 type CustomRequest struct {
-	ClusterName string
 	reconcile.Request
+
+	ClusterName string
 }
 
 // Reconciler is the interface that controller implementations are expected to implement
