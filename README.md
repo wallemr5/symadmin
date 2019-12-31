@@ -17,7 +17,7 @@ sym-controller controller --enable-master --kubeconfig=./manifests/kubeconfig_TC
 # sym-operator   可以配置worker集群 tcc-bj4-dks-test-01/tcc-bj5-dks-test-01
 sym-controller controller --enable-worker --kubeconfig=./manifests/kubeconfig_TCC_BJ4_DKS_TEST_01.yaml -v 4
 # sym-api        需要配置主集群tcc-bj5-dks-monit-01
-sym-api api --enable-master --kubeconfig=./manifests/kubeconfig_TCC_BJ5_DKS_MONIT_01.yaml -v 4
+sym-api api --kubeconfig=./manifests/kubeconfig_TCC_BJ5_DKS_MONIT_01.yaml -v 4
 ```
 
 # 发布
