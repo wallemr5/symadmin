@@ -155,7 +155,7 @@ type PodSet struct {
 	// pods provisioned could be distributed across multiple groups of nodes.
 	// A subset's nodeSelectorTerm is not allowed to be updated.
 	// +optional
-	NodeSelectorTerm corev1.NodeSelectorTerm `json:"nodeSelectorTerm,omitempty"`
+	NodeSelectorTerm *corev1.NodeSelectorTerm `json:"nodeSelectorTerm,omitempty"`
 
 	// Indicates the number of the pod to be created under this subset. Replicas could also be
 	// percentage like '10%', which means 10% of UnitedDeployment replicas of pods will be distributed
@@ -164,7 +164,7 @@ type PodSet struct {
 	// +optional
 	Replicas *intstr.IntOrString `json:"replicas,omitempty"`
 
-	//
+	// the images version
 	Version string `json:"version,omitempty"`
 
 	// use for helm

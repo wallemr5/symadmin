@@ -73,7 +73,7 @@ type AppSetUpdateStrategy struct {
 }
 
 type ClusterTopology struct {
-	Clusters []TargetCluster `json:"clusters,omitempty"`
+	Clusters []*TargetCluster `json:"clusters,omitempty"`
 }
 
 type TargetCluster struct {

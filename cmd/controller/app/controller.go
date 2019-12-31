@@ -79,7 +79,7 @@ func NewControllerCmd(cli *DksCli) *cobra.Command {
 				klog.Fatalf("unable to register controllers to the manager err: %v", err)
 			}
 
-			logger.WithValues("SyncPeriod", rp)
+			logger.Info("zap debug", "SyncPeriod", rp)
 			klog.Info("starting manager")
 			if err := mgr.Start(stopCh); err != nil {
 				klog.Fatalf("problem start running manager err: %v", err)

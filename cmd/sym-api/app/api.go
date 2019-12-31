@@ -71,7 +71,7 @@ func NewApiCmd(cli *DksCli) *cobra.Command {
 			// add k8s cluster manager Runnable
 			mgr.Add(apiMgr.K8sMgr)
 
-			logger.WithValues("SyncPeriod", rp)
+			logger.Info("zap debug", "SyncPeriod", rp)
 			klog.Info("starting manager")
 			if err := mgr.Start(stopCh); err != nil {
 				klog.Fatalf("problem start running manager err: %v", err)

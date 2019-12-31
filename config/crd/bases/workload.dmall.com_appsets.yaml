@@ -188,6 +188,7 @@ spec:
                                 subsets with nil replicas have average pods.
                               x-kubernetes-int-or-string: true
                             version:
+                              description: the images version
                               type: string
                           required:
                           - name

@@ -142,10 +142,6 @@ type AdvDeploymentCondition struct {
 	Message string `json:"message,omitempty"`
 }
 
-type PodSetStatus struct {
-	PodSets []PodSetSatusInfo `json:",inline"`
-}
-
 // AdvDeploymentStatus defines the observed state of AdvDeployment
 type AdvDeploymentStatus struct {
 	// observedGeneration is the most recent generation observed for this workload. It corresponds to the
