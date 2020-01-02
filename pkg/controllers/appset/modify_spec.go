@@ -30,18 +30,17 @@ func (r *AppSetReconciler) ModifySpec(logger logr.Logger, info *workloadv1beta1.
 	err = cluster.Client.Get(context.TODO(), req.NamespacedName, old)
 	if err != nil {
 		if apierrors.IsNotFound(err) {
-			logger.Info("create event", "cluster", clusterTopology.Name)
+			logger.Info("create spec event", "cluster", clusterTopology.Name)
 			return true, nil, cluster.Client.Create(context.TODO(), new)
 		}
 		return false, nil, err
 	}
 
 	if needUpdate(old, new) {
-		logger.Info("update event", "cluster", clusterTopology.Name)
+		logger.Info("update spec event", "cluster", clusterTopology.Name)
 		return true, nil, cluster.Client.Update(context.TODO(), coverAdvDeployment(old, new))
 	}
 
-	logger.Info("do nothing", "cluster", clusterTopology.Name)
 	return false, nil, nil
 }
 

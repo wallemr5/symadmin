@@ -129,8 +129,13 @@ func (c *Impl) EnqueueMulti(obj interface{}) {
 		klog.Errorf("Enqueue err: %#v", err)
 		return
 	}
+	ns, name, err := cache.SplitMetaNamespaceKey(key)
+	if err != nil {
+		klog.Errorf("SplitMetaNamespaceKey key:%s err: %#v", key, err)
+		return
+	}
 
-	c.EnqueueKeyRateLimited(key, getClusterByLabels(obj))
+	c.EnqueueKeyRateLimited(ns, name, getClusterByLabels(obj))
 }
 
 func (c *Impl) EnqueueMultiAfter(obj interface{}, after time.Duration) {

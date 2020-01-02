@@ -185,26 +185,21 @@ func (r *AppSetReconciler) CustomReconcile(ctx context.Context, req customctrl.C
 		return reconcile.Result{}, r.Client.Update(ctx, as)
 	}
 
-	// topology update events
-	modifyStatus := false
 	for _, v := range as.Spec.ClusterTopology.Clusters {
 		status, condition, err := r.ModifySpec(logger, as, v, req)
 		if err != nil {
-			// TODO: craete event
 			logger.Error(err, "topology update error")
 			if condition != nil {
-				// TODO: add condition
+				// TODO: craete condition
 			}
-			return reconcile.Result{}, nil
+			return reconcile.Result{}, err
 		}
-		if !modifyStatus && status {
-			modifyStatus = true
+		if status {
+			return reconcile.Result{}, err
 		}
 	}
 
-	if !modifyStatus {
-		// TODO: status update events or restart
-	}
+	r.ModifyStatus()
 
 	logger.Info("AppSet", "ResourceVersion", as.GetResourceVersion())
 	return reconcile.Result{}, nil
