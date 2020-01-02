@@ -1,0 +1,126 @@
+nameOverride: "aabb"
+fullnameOverride: "aabb-gz01b-blue"
+
+replicaCount: 1
+minReadySeconds: 5
+revisionHistoryLimit: 10
+
+strategy:
+  type: Recreate
+#  type: RollingUpdate
+#  rollingUpdate:
+#    maxUnavailable: 0
+#    maxSurge: 1
+
+imagePullSecrets: tencenthubkey
+
+service:
+  enabled: false
+  portName: http-tomcat
+  type: ClusterIP
+  clusterIP: None
+  externalPort: 80
+  internalPort: 8080
+
+sym:
+  env: {}
+#    - name: SYM_AVAILABLE_ZONE
+#      value: BJ5
+#    - name: SYM_CLUSTER_INFO
+#      value: tcc-bj5-dks-monit-01
+  labels: {}
+#    sym-group: blue
+#    sym-ldc: gz01b
+  lightningLabels:
+    lightningDomain0: outer.aabb.dmall.com
+  clusterLabels: {}
+#    sym-available-zone: BJ5
+#    sym-cluster-info: tcc-bj5-dks-monit-01
+
+  annotation: {}
+  #    buildNumber_0: v148
+  #    container_0: symphony-aabb
+  #    deployment.kubernetes.io/revision: "5"
+  #    gitCommit_0: 45aa409ee1220d0c1dbfc5efddb038d8512c6159
+
+container:
+  image:
+    repository: hub.tencentyun.com/dks01/symphony-aabb
+    tag: v148
+    pullPolicy: Always
+  ports:
+    - containerPort: 8080
+      name: http-tomcat
+      protocol: TCP
+  livenessProbe:
+    httpGet:
+      path: /health
+      port: 8080
+      scheme: HTTP
+    initialDelaySeconds: 30
+    periodSeconds: 60
+    successThreshold: 1
+    timeoutSeconds: 8
+    failureThreshold: 5
+  readinessProbe:
+    httpGet:
+      path: /ready
+      port: 8080
+      scheme: HTTP
+    periodSeconds: 30
+    successThreshold: 1
+    timeoutSeconds: 1
+    failureThreshold: 3
+    initialDelaySeconds: 30
+  resources:
+    limits:
+      cpu: "2"
+      memory: 2000Mi
+    requests:
+      cpu: 500m
+      memory: 2000Mi
+  securityContext: {}
+  lifecycle: {}
+  volumeMounts: {}
+#    - mountPath: /web/logs/app/logback/symphony-aabb
+#      name: log-path
+#    - mountPath: /web/logs/app/symphony/aabb
+#      name: new-log-path
+#    - mountPath: /web/logs/jvm/symphony-aabb
+#      name: jvm-path
+  env: {}
+#    - name: SYM_AVAILABLE_ZONE
+#      value: BJ5
+#    - name: SYM_CLUSTER_INFO
+#      value: tcc-bj5-dks-monit-01
+#    - name: SYM_ENABLE_SUBSTITUTE
+#      value: "true"
+#    - name: SYM_GROUP
+#      value: blue
+#    - name: SYM_LDC
+#      value: gz01b
+#    - name: AMP_APP_CODE
+#      value: aabb
+#    - name: AMP_PRO_CODE
+#      value: symphony
+#    - name: APP_CODE
+#      value: symphony-aabb
+#    - name: CUSTOM_VARIABLE
+#    - name: DSW_AGENT
+#      value: ' -javaagent:/web/servers/tomcat/webapps/ROOT/WEB-INF/classes/dsw-agent.jar'
+#    - name: MAX_PERM_SIZE
+#      value: 256m
+#    - name: NEED_JVM_LOG
+#      value: "true"
+#    - name: RESERVED_SPACE
+#      value: 700m
+
+hostAliases: {}
+
+affinity:
+  enabled: true
+  affinity:
+   topologyKey: kubernetes.io/hostname
+
+tolerations: {}
+

@@ -1,0 +1,12 @@
+apiVersion: v1
+appVersion: 0.0.1
+description: This is a template for creating for java jar use podAntiAffinity.
+keywords:
+  - springBoot
+  - app
+  - jar
+maintainers:
+  - email: kui.xue@dmall.com
+    name: xk
+name: springBoot
+version: 0.0.1

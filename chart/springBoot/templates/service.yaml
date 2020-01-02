@@ -1,0 +1,24 @@
+{{- if .Values.service.enabled -}}
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "springBoot.name" . }}-dmall.com
+  labels:
+  {{- include "springBoot.servicelabels" . | nindent 4 }}
+  {{- if .Values.sym.lightningLabels }}
+  {{- toYaml .Values.sym.lightningLabels | nindent 4 }}
+  {{- end }}
+  {{- if .Values.sym.clusterLabels }}
+  {{- toYaml .Values.sym.clusterLabels | nindent 4 }}
+  {{- end }}
+spec:
+  type: {{ .Values.service.type }}
+  clusterIP: {{ .Values.service.clusterIP }}
+  ports:
+    - port: {{ .Values.service.externalPort }}
+      targetPort: {{ .Values.service.internalPort }}
+      protocol: TCP
+      name: {{ .Values.service.portName }}
+  selector:
+    app: {{ include "springBoot.name" . }}
+{{- end -}}

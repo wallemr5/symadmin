@@ -1,0 +1,99 @@
+apiVersion: {{ template "deployment_api_version" . }}
+kind: Deployment
+metadata:
+  name: {{ include "springBoot.fullname" . }}
+  labels:
+    {{ include "springBoot.labels" . | nindent 4 }}
+    {{- if .Values.sym.labels }}
+    {{- toYaml .Values.sym.labels | nindent 4 }}
+    {{- end }}
+    {{- if .Values.sym.lightningLabels }}
+    {{- toYaml .Values.sym.lightningLabels | nindent 4 }}
+    {{- end }}
+    {{- if .Values.sym.clusterLabels }}
+    {{- toYaml .Values.sym.clusterLabels | nindent 4 }}
+    {{- end }}
+    version: {{ .Values.container.image.tag }}
+{{- with .Values.tolerations }}
+  annotations:
+{{ toYaml . | indent 4 }}
+{{- end }}
+spec:
+  replicas: {{ .Values.replicaCount }}
+  minReadySeconds: {{ .Values.minReadySeconds }}
+  revisionHistoryLimit: {{ .Values.revisionHistoryLimit }}
+  strategy:
+{{- toYaml .Values.strategy | nindent 4 }}
+  selector:
+    matchLabels:
+      app: {{ include "springBoot.name" . }}
+      app.kubernetes.io/instance: {{ .Release.Name }}
+      version: {{ .Values.container.image.tag }}
+  template:
+    metadata:
+      labels:
+        app: {{ include "springBoot.name" . }}
+        app.kubernetes.io/instance: {{ .Release.Name }}
+        version: {{ .Values.container.image.tag }}
+        {{- if .Values.sym.labels }}
+        {{- toYaml .Values.sym.labels | nindent 8 }}
+        {{- end }}
+        {{ if .Values.sym.lightningLabels }}
+        {{- toYaml .Values.sym.lightningLabels | nindent 8 }}
+        {{- end }}
+        {{ if .Values.sym.clusterLabels }}
+        {{- toYaml .Values.sym.clusterLabels | nindent 8 }}
+        {{- end }}
+    spec:
+      containers:
+        - name: {{ include "springBoot.name" . }}
+          image: "{{ .Values.container.image.repository }}:{{ .Values.container.image.tag }}"
+          imagePullPolicy: {{ .Values.container.image.pullPolicy }}
+          livenessProbe:
+            {{- toYaml .Values.container.livenessProbe | trim | nindent 12 }}
+          readinessProbe:
+            {{- toYaml .Values.container.readinessProbe | trim | nindent 12 }}
+          resources:
+            {{- toYaml .Values.container.resources | trim | nindent 12 }}
+          securityContext:
+            {{- toYaml .Values.container.securityContext | trim | nindent 12 }}
+          volumeMounts:
+            {{- toYaml .Values.container.volumeMounts | trim | nindent 12 }}
+          ports:
+            {{- toYaml .Values.container.ports | trim | nindent 12 }}
+          env:
+            {{- toYaml .Values.container.env | trim | nindent 12 }}
+            {{- if .Values.sym.env }}
+            {{- toYaml .Values.sym.env | trim | nindent 12 }}
+            {{- end }}
+          {{- with .Values.container.lifecycle }}
+          lifecycle:
+            {{- toYaml . | trim | nindent 12 }}
+          {{- end}}
+      imagePullSecrets:
+        - name: {{ .Values.imagePullSecrets }}
+      volumes:
+        {{- range $item := .Values.container.volumeMounts }}
+        - name: {{ $item.name }}
+          hostPath:
+            path: {{ $item.mountPath }}
+        {{- end }}
+{{- with .Values.hostAliases }}
+      hostAliases:
+{{- toYaml . | nindent 8 }}
+{{- end }}
+    {{- if .Values.affinity.enabled }}
+      affinity:
+        podAntiAffinity:
+          preferredDuringSchedulingIgnoredDuringExecution:
+          - weight: 80
+            podAffinityTerm:
+              labelSelector:
+                matchLabels:
+                  app: {{ include "springBoot.name" . }}
+              topologyKey: {{ .Values.affinity.affinity.topologyKey }}
+    {{- end }}
+  {{- with .Values.tolerations }}
+      tolerations:
+{{- toYaml . | nindent 8 }}
+    {{- end }}

@@ -1,0 +1,61 @@
+nameOverride: "bbcc"
+fullnameOverride: "bbcc-gz01b-blue"
+
+service:
+  enabled: true
+
+sym:
+  env:
+    - name: SYM_AVAILABLE_ZONE
+      value: BJ5
+    - name: SYM_CLUSTER_INFO
+      value: tcc-bj5-dks-monit-01
+  labels:
+    sym-group: blue
+    sym-ldc: gz01b
+  lightningLabels:
+    lightningDomain0: outer.bbcc.dmall.com
+  clusterLabels:
+    sym-available-zone: bj5
+    sym-cluster-info: tcc-bj5-dks-monit-01
+
+replicaCount: 2
+container:
+  image:
+    repository: registry.cn-hangzhou.aliyuncs.com/dmall/bbcc
+    tag: v1
+  env:
+    - name: SYM_AVAILABLE_ZONE
+      value:  bj5
+    - name: SYM_CLUSTER_INFO
+      value: tcc-bj5-dks-monit-01
+    - name: SYM_ENABLE_SUBSTITUTE
+      value: 'true'
+    - name: SYM_GROUP
+      value: blue
+    - name: SYM_LDC
+      value: gz01b
+    - name: AMP_APP_CODE
+      value: bbcc
+    - name: AMP_PRO_CODE
+      value: bbcc
+    - name: APP_CODE
+      value: bbcc
+    - name: MAX_PERM_SIZE
+      value: 256m
+    - name: RESERVED_SPACE
+      value: 50m
+  resources:
+    limits:
+      cpu: "1"
+      memory: 500Mi
+    requests:
+      cpu: 100m
+      memory: 500Mi
+  volumeMounts:
+    - mountPath: /web/logs/app/logback/bbcc
+      name: log-path
+    - mountPath: /web/logs/app/aabb/bbcc
+      name: new-log-path
+    - mountPath: /web/logs/jvm/bbcc
+      name: jvm-path
