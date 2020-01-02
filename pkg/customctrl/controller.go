@@ -3,6 +3,9 @@ package customctrl
 import (
 	"context"
 	"fmt"
+	"sync"
+	"time"
+
 	"gitlab.dmall.com/arch/sym-admin/pkg/labels"
 	"gitlab.dmall.com/arch/sym-admin/pkg/utils"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -14,8 +17,6 @@ import (
 	"k8s.io/klog"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
-	"sync"
-	"time"
 )
 
 var (
@@ -158,6 +159,10 @@ func (c *Impl) EnqueueMultiLabelOfCluster(obj interface{}) {
 	object, err := DeletionHandlingAccessor(obj)
 	if err != nil {
 		klog.Errorf("err: %#v", err)
+		return
+	}
+
+	if !c.isObserveNamespaces(object.GetNamespace()) {
 		return
 	}
 
