@@ -164,6 +164,8 @@ type PodSet struct {
 	// +optional
 	Replicas *intstr.IntOrString `json:"replicas,omitempty"`
 
+	Image string `json:"image,omitempty"`
+
 	// the images version
 	Version string `json:"version,omitempty"`
 

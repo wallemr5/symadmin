@@ -81,6 +81,8 @@ spec:
                         items:
                           description: PodSet defines the detail of a PodSet.
                           properties:
+                            image:
+                              type: string
                             meta:
                               additionalProperties:
                                 type: string
