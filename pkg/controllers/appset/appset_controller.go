@@ -185,10 +185,6 @@ func (r *AppSetReconciler) CustomReconcile(ctx context.Context, req customctrl.C
 		return reconcile.Result{}, r.Client.Update(ctx, as)
 	}
 
-	if req.Name != "bbcc" {
-		return reconcile.Result{}, nil
-	}
-
 	for _, v := range as.Spec.ClusterTopology.Clusters {
 		status, condition, err := r.ModifySpec(logger, as, v, req)
 		if err != nil {
