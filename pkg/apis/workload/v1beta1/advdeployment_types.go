@@ -142,18 +142,23 @@ type AdvDeploymentCondition struct {
 	Message string `json:"message,omitempty"`
 }
 
+type AdvDeploymentAggrStatus struct {
+	Status    string            `json:"status,omitempty"`
+	Version   string            `json:"version,omitempty"`
+	Desired   int32             `json:"desired"`
+	Available int32             `json:"available"`
+	PodSets   []PodSetSatusInfo `json:"podSets,omitempty"`
+}
+
 // AdvDeploymentStatus defines the observed state of AdvDeployment
 type AdvDeploymentStatus struct {
 	// observedGeneration is the most recent generation observed for this workload. It corresponds to the
 	// StatefulSet's generation, which is updated on mutation by the API Server.
 	// +optional
-	ObservedGeneration int64                    `json:"observedGeneration,omitempty"`
-	Status             string                   `json:"status,omitempty"`
-	Version            string                   `json:"version,omitempty"`
-	Desired            int32                    `json:"desired"`
-	Available          int32                    `json:"available"`
-	PodSets            []PodSetSatusInfo        `json:"podSets,omitempty"`
-	Conditions         []AdvDeploymentCondition `json:"conditions,omitempty"`
+	ObservedGeneration int64 `json:"observedGeneration,omitempty"`
+
+	//
+	Conditions []AdvDeploymentCondition `json:"conditions,omitempty"`
 
 	// currentRevision, if not empty, indicates the version of the workload used to generate Pods in the
 	// sequence [0,currentReplicas).
@@ -163,7 +168,10 @@ type AdvDeploymentStatus struct {
 	// [replicas-updatedReplicas,replicas)
 	UpdateRevision string `json:"updateRevision,omitempty"`
 
-	StartTime      *metav1.Time `json:"startTime,omitempty"`
+	//
+	StartTime *metav1.Time `json:"startTime,omitempty"`
+
+	//
 	LastUpdateTime *metav1.Time `json:"lastUpdateTime,omitempty"`
 
 	// collisionCount is the count of hash collisions for the workload. The workload controller
@@ -171,6 +179,9 @@ type AdvDeploymentStatus struct {
 	// newest ControllerRevision.
 	// +optional
 	CollisionCount *int32 `json:"collisionCount,omitempty"`
+
+	//
+	AggrStatus AdvDeploymentAggrStatus `json:"aggrStatus,omitempty"`
 }
 
 // +genclient

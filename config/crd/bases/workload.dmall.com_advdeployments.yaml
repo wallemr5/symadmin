@@ -4632,9 +4632,68 @@ spec:
         status:
           description: AdvDeploymentStatus defines the observed state of AdvDeployment
           properties:
-            available:
-              format: int32
-              type: integer
+            aggrStatus:
+              properties:
+                available:
+                  format: int32
+                  type: integer
+                desired:
+                  format: int32
+                  type: integer
+                podSets:
+                  items:
+                    description: PodSetSatusInfo
+                    properties:
+                      available:
+                        format: int32
+                        type: integer
+                      clusterName:
+                        type: string
+                      current:
+                        format: int32
+                        type: integer
+                      desired:
+                        format: int32
+                        type: integer
+                      endpointReady:
+                        format: int32
+                        type: integer
+                      haveDeploy:
+                        type: boolean
+                      name:
+                        type: string
+                      ready:
+                        format: int32
+                        type: integer
+                      running:
+                        format: int32
+                        type: integer
+                      unAvailable:
+                        format: int32
+                        type: integer
+                      update:
+                        format: int32
+                        type: integer
+                      version:
+                        type: string
+                      warnEvent:
+                        format: int32
+                        type: integer
+                    required:
+                    - available
+                    - desired
+                    - name
+                    - unAvailable
+                    type: object
+                  type: array
+                status:
+                  type: string
+                version:
+                  type: string
+              required:
+              - available
+              - desired
+              type: object
             collisionCount:
               description: collisionCount is the count of hash collisions for the
                 workload. The workload controller uses this field as a collision avoidance
@@ -4677,9 +4736,6 @@ spec:
               description: currentRevision, if not empty, indicates the version of
                 the workload used to generate Pods in the sequence [0,currentReplicas).
               type: string
-            desired:
-              format: int32
-              type: integer
             lastUpdateTime:
               format: date-time
               type: string
@@ -4689,66 +4745,13 @@ spec:
                 which is updated on mutation by the API Server.
               format: int64
               type: integer
-            podSets:
-              items:
-                description: PodSetSatusInfo
-                properties:
-                  available:
-                    format: int32
-                    type: integer
-                  clusterName:
-                    type: string
-                  current:
-                    format: int32
-                    type: integer
-                  desired:
-                    format: int32
-                    type: integer
-                  endpointReady:
-                    format: int32
-                    type: integer
-                  haveDeploy:
-                    type: boolean
-                  name:
-                    type: string
-                  ready:
-                    format: int32
-                    type: integer
-                  running:
-                    format: int32
-                    type: integer
-                  unAvailable:
-                    format: int32
-                    type: integer
-                  update:
-                    format: int32
-                    type: integer
-                  version:
-                    type: string
-                  warnEvent:
-                    format: int32
-                    type: integer
-                required:
-                - available
-                - desired
-                - name
-                - unAvailable
-                type: object
-              type: array
             startTime:
               format: date-time
-              type: string
-            status:
               type: string
             updateRevision:
               description: updateRevision, if not empty, indicates the version of
                 the workload used to generate Pods in the sequence [replicas-updatedReplicas,replicas)
               type: string
-            version:
-              type: string
-          required:
-          - available
-          - desired
           type: object
       type: object
   version: v1beta1

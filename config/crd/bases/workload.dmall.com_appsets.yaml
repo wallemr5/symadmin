@@ -4630,9 +4630,12 @@ spec:
         status:
           description: AppSetStatus contains AppSet status
           properties:
-            appActual:
+            aggrStatus:
               description: AppActual represent the app status
               properties:
+                available:
+                  format: int32
+                  type: integer
                 clusters:
                   items:
                     description: ClusterAppActual
@@ -4694,6 +4697,9 @@ spec:
                     - desired
                     type: object
                   type: array
+                desired:
+                  format: int32
+                  type: integer
                 pods:
                   items:
                     description: Pod info
@@ -4774,6 +4780,11 @@ spec:
                         options: ClusterIP, NodePort, LoadBalancer'
                       type: string
                   type: object
+                status:
+                  description: app status
+                  type: string
+                version:
+                  type: string
                 warnEvents:
                   items:
                     description: Event is a single event representation.
@@ -4818,9 +4829,6 @@ spec:
                     type: object
                   type: array
               type: object
-            available:
-              format: int32
-              type: integer
             conditions:
               description: Represents the latest available observations of a UnitedDeployment's
                 current state.
@@ -4848,9 +4856,6 @@ spec:
                     type: string
                 type: object
               type: array
-            desired:
-              format: int32
-              type: integer
             lastUpdateTime:
               format: date-time
               type: string
@@ -4862,11 +4867,6 @@ spec:
               type: integer
             startTime:
               format: date-time
-              type: string
-            status:
-              description: app status
-              type: string
-            version:
               type: string
           type: object
       type: object
