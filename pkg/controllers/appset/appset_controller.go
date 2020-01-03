@@ -177,11 +177,11 @@ func (r *AppSetReconciler) CustomReconcile(ctx context.Context, req customctrl.C
 	}
 
 	if app.ObjectMeta.DeletionTimestamp != nil {
-		logger.Info("delete AppSet event", "info", req.NamespacedName)
 		return reconcile.Result{}, r.DeleteAll(ctx, req, app)
 	}
 
 	if app.ObjectMeta.Finalizers == nil {
+		logger.Info("finalizers not set, set now", "app", app.Name)
 		app.ObjectMeta.Finalizers = []string{labels.ControllerFinalizersName}
 		return reconcile.Result{}, r.Client.Update(ctx, app)
 	}
@@ -195,6 +195,7 @@ func (r *AppSetReconciler) CustomReconcile(ctx context.Context, req customctrl.C
 		return reconcile.Result{}, nil
 	}
 
+	logger.Info("aggregate status", "app", app.Name)
 	r.ModifyStatus()
 
 	logger.Info("AppSet", "ResourceVersion", app.GetResourceVersion())
