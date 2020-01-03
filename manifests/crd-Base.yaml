@@ -5,19 +5,19 @@ metadata:
   name: advdeployments.workload.dmall.com
 spec:
   additionalPrinterColumns:
-    - JSONPath: .spec.desired
+    - JSONPath: .status.aggrStatus.desired
       description: The desired number of pods.
       name: DESIRED
       type: integer
-    - JSONPath: .status.available
+    - JSONPath: .status.aggrStatus.available
       description: The number of pods ready.
       name: AVAILABEL
       type: integer
-    - JSONPath: .status.version
+    - JSONPath: .status.aggrStatus.version
       description: The image version.
       name: VERSION
       type: string
-    - JSONPath: .status.status
+    - JSONPath: .status.aggrStatus.status
       description: The app run status.
       name: STATUS
       type: string
@@ -52,19 +52,19 @@ metadata:
   name: appsets.workload.dmall.com
 spec:
   additionalPrinterColumns:
-    - JSONPath: .spec.desired
+    - JSONPath: .status.aggrStatus.desired
       description: The desired number of pods.
       name: DESIRED
       type: integer
-    - JSONPath: .status.available
+    - JSONPath: .status.aggrStatus.available
       description: The number of pods ready.
       name: AVAILABEL
       type: integer
-    - JSONPath: .status.version
+    - JSONPath: .status.aggrStatus.version
       description: The image version.
       name: VERSION
       type: string
-    - JSONPath: .status.status
+    - JSONPath: .status.aggrStatus.status
       description: The app run status.
       name: STATUS
       type: string

@@ -7,19 +7,19 @@ metadata:
   name: advdeployments.workload.dmall.com
 spec:
   additionalPrinterColumns:
-  - JSONPath: .spec.desired
+  - JSONPath: .status.aggrStatus.desired
     description: The desired number of pods.
     name: DESIRED
     type: integer
-  - JSONPath: .status.available
+  - JSONPath: .status.aggrStatus.available
     description: The number of pods ready.
     name: AVAILABEL
     type: integer
-  - JSONPath: .status.version
+  - JSONPath: .status.aggrStatus.version
     description: The image version.
     name: VERSION
     type: string
-  - JSONPath: .status.status
+  - JSONPath: .status.aggrStatus.status
     description: The app run status.
     name: STATUS
     type: string
@@ -4630,9 +4630,68 @@ spec:
         status:
           description: AdvDeploymentStatus defines the observed state of AdvDeployment
           properties:
-            available:
-              format: int32
-              type: integer
+            aggrStatus:
+              properties:
+                available:
+                  format: int32
+                  type: integer
+                desired:
+                  format: int32
+                  type: integer
+                podSets:
+                  items:
+                    description: PodSetSatusInfo
+                    properties:
+                      available:
+                        format: int32
+                        type: integer
+                      clusterName:
+                        type: string
+                      current:
+                        format: int32
+                        type: integer
+                      desired:
+                        format: int32
+                        type: integer
+                      endpointReady:
+                        format: int32
+                        type: integer
+                      haveDeploy:
+                        type: boolean
+                      name:
+                        type: string
+                      ready:
+                        format: int32
+                        type: integer
+                      running:
+                        format: int32
+                        type: integer
+                      unAvailable:
+                        format: int32
+                        type: integer
+                      update:
+                        format: int32
+                        type: integer
+                      version:
+                        type: string
+                      warnEvent:
+                        format: int32
+                        type: integer
+                    required:
+                    - available
+                    - desired
+                    - name
+                    - unAvailable
+                    type: object
+                  type: array
+                status:
+                  type: string
+                version:
+                  type: string
+              required:
+              - available
+              - desired
+              type: object
             collisionCount:
               description: collisionCount is the count of hash collisions for the
                 workload. The workload controller uses this field as a collision avoidance
@@ -4675,9 +4734,6 @@ spec:
               description: currentRevision, if not empty, indicates the version of
                 the workload used to generate Pods in the sequence [0,currentReplicas).
               type: string
-            desired:
-              format: int32
-              type: integer
             lastUpdateTime:
               format: date-time
               type: string
@@ -4687,66 +4743,13 @@ spec:
                 which is updated on mutation by the API Server.
               format: int64
               type: integer
-            podSets:
-              items:
-                description: PodSetSatusInfo
-                properties:
-                  available:
-                    format: int32
-                    type: integer
-                  clusterName:
-                    type: string
-                  current:
-                    format: int32
-                    type: integer
-                  desired:
-                    format: int32
-                    type: integer
-                  endpointReady:
-                    format: int32
-                    type: integer
-                  haveDeploy:
-                    type: boolean
-                  name:
-                    type: string
-                  ready:
-                    format: int32
-                    type: integer
-                  running:
-                    format: int32
-                    type: integer
-                  unAvailable:
-                    format: int32
-                    type: integer
-                  update:
-                    format: int32
-                    type: integer
-                  version:
-                    type: string
-                  warnEvent:
-                    format: int32
-                    type: integer
-                required:
-                - available
-                - desired
-                - name
-                - unAvailable
-                type: object
-              type: array
             startTime:
               format: date-time
-              type: string
-            status:
               type: string
             updateRevision:
               description: updateRevision, if not empty, indicates the version of
                 the workload used to generate Pods in the sequence [replicas-updatedReplicas,replicas)
               type: string
-            version:
-              type: string
-          required:
-          - available
-          - desired
           type: object
       type: object
   version: v1beta1
@@ -4770,19 +4773,19 @@ metadata:
   name: appsets.workload.dmall.com
 spec:
   additionalPrinterColumns:
-  - JSONPath: .spec.desired
+  - JSONPath: .status.aggrStatus.desired
     description: The desired number of pods.
     name: DESIRED
     type: integer
-  - JSONPath: .status.available
+  - JSONPath: .status.aggrStatus.available
     description: The number of pods ready.
     name: AVAILABEL
     type: integer
-  - JSONPath: .status.version
+  - JSONPath: .status.aggrStatus.version
     description: The image version.
     name: VERSION
     type: string
-  - JSONPath: .status.status
+  - JSONPath: .status.aggrStatus.status
     description: The app run status.
     name: STATUS
     type: string
@@ -9391,9 +9394,12 @@ spec:
         status:
           description: AppSetStatus contains AppSet status
           properties:
-            appActual:
+            aggrStatus:
               description: AppActual represent the app status
               properties:
+                available:
+                  format: int32
+                  type: integer
                 clusters:
                   items:
                     description: ClusterAppActual
@@ -9455,6 +9461,9 @@ spec:
                     - desired
                     type: object
                   type: array
+                desired:
+                  format: int32
+                  type: integer
                 pods:
                   items:
                     description: Pod info
@@ -9535,6 +9544,11 @@ spec:
                         options: ClusterIP, NodePort, LoadBalancer'
                       type: string
                   type: object
+                status:
+                  description: app status
+                  type: string
+                version:
+                  type: string
                 warnEvents:
                   items:
                     description: Event is a single event representation.
@@ -9579,9 +9593,6 @@ spec:
                     type: object
                   type: array
               type: object
-            available:
-              format: int32
-              type: integer
             conditions:
               description: Represents the latest available observations of a UnitedDeployment's
                 current state.
@@ -9609,9 +9620,6 @@ spec:
                     type: string
                 type: object
               type: array
-            desired:
-              format: int32
-              type: integer
             lastUpdateTime:
               format: date-time
               type: string
@@ -9623,11 +9631,6 @@ spec:
               type: integer
             startTime:
               format: date-time
-              type: string
-            status:
-              description: app status
-              type: string
-            version:
               type: string
           type: object
       type: object
