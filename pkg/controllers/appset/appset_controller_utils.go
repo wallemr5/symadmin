@@ -138,6 +138,10 @@ func makeContainerEnv(clusterMeta map[string]string, podSet *workloadv1beta1.Pod
 		"name":  "RESERVED_SPACE",
 		"value": "50m",
 	})
+	envs = append(envs, map[string]interface{}{
+		"name":  "IMAGE_VERSION",
+		"value": podSet.Version,
+	})
 	return envs
 }
 
