@@ -1169,9 +1169,13 @@ func (in *TargetCluster) DeepCopyInto(out *TargetCluster) {
 	}
 	if in.PodSets != nil {
 		in, out := &in.PodSets, &out.PodSets
-		*out = make([]PodSet, len(*in))
+		*out = make([]*PodSet, len(*in))
 		for i := range *in {
-			(*in)[i].DeepCopyInto(&(*out)[i])
+			if (*in)[i] != nil {
+				in, out := &(*in)[i], &(*out)[i]
+				*out = new(PodSet)
+				(*in).DeepCopyInto(*out)
+			}
 		}
 	}
 }
@@ -1191,9 +1195,13 @@ func (in *Topology) DeepCopyInto(out *Topology) {
 	*out = *in
 	if in.PodSets != nil {
 		in, out := &in.PodSets, &out.PodSets
-		*out = make([]PodSet, len(*in))
+		*out = make([]*PodSet, len(*in))
 		for i := range *in {
-			(*in)[i].DeepCopyInto(&(*out)[i])
+			if (*in)[i] != nil {
+				in, out := &(*in)[i], &(*out)[i]
+				*out = new(PodSet)
+				(*in).DeepCopyInto(*out)
+			}
 		}
 	}
 }
