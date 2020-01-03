@@ -28,7 +28,6 @@ spec:
     matchLabels:
       app: {{ include "springBoot.name" . }}
       app.kubernetes.io/instance: {{ .Release.Name }}
-      version: {{ .Values.container.image.tag }}
   template:
     metadata:
       labels:

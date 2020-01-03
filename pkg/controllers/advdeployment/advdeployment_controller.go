@@ -162,9 +162,11 @@ func (r *AdvDeploymentReconciler) Reconcile(req ctrl.Request) (ctrl.Result, erro
 		logger.Info("delete event", "advDeploy", advDeploy.Name)
 		err := r.CleanReleasesByName(advDeploy)
 		if err == nil {
+			klog.V(3).Infof("advDeploy: %s clean all helm Releases success")
 			advDeploy.ObjectMeta.Finalizers = nil
 			err = r.Client.Update(ctx, advDeploy)
 			if err == nil {
+				klog.V(3).Infof("advDeploy: %s Update delete Finalizers success")
 				return reconcile.Result{}, nil
 			}
 		}
@@ -179,12 +181,14 @@ func (r *AdvDeploymentReconciler) Reconcile(req ctrl.Request) (ctrl.Result, erro
 			logger.Error(err, "failed to get AdvDeployment")
 			return reconcile.Result{}, err
 		}
+		klog.V(3).Infof("advDeploy: %s Update add Finalizers success")
 		return reconcile.Result{
 			Requeue:      true,
 			RequeueAfter: time.Second * 5,
 		}, nil
 	}
 
+	// test only process bbcc
 	if advDeploy.Name != "bbcc" {
 		return reconcile.Result{}, nil
 	}
@@ -195,15 +199,23 @@ func (r *AdvDeploymentReconciler) Reconcile(req ctrl.Request) (ctrl.Result, erro
 			return reconcile.Result{}, nil
 		}
 
-		return reconcile.Result{}, r.ApplyPodSetReleases(advDeploy)
+		err := r.ApplyPodSetReleases(ctx, advDeploy)
+		if err != nil {
+			logger.Error(err, "faild ApplyPodSetReleases")
+			return reconcile.Result{}, err
+		}
+	}
+	aggrStatus, err := r.RecalculateAppSetStatus(ctx, advDeploy)
+	if err != nil {
+		logger.Error(err, "faild RecalculateAppSetStatus")
+		return reconcile.Result{}, err
 	}
 
-	// _, _ = r.reconcile(logger, advDeploy)
-	// logger.Info("Reconciling AdvDeployment")
-	// return ctrl.Result{
-	// 	Requeue:      true,
-	// 	RequeueAfter: 20 * time.Second,
-	// }, nil
+	err = r.updateAggrStatus(ctx, advDeploy, aggrStatus)
+	if err != nil {
+		logger.Error(err, "faild updateAggrStatus")
+		return reconcile.Result{}, err
+	}
 
 	return reconcile.Result{}, nil
 }

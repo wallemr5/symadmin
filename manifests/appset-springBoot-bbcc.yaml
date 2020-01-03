@@ -28,21 +28,21 @@ spec:
         podSets:
           - name: bbcc-gz01b-canary
             replicas: 1
-            version: v1
+            version: v3
             image: registry.cn-hangzhou.aliyuncs.com/dmall/bbcc
             meta:
               sym-group: canary
               sym-ldc: gz01b
           - name: bbcc-gz01b-blue
             replicas: 2
-            version: v1
+            version: v3
             image: registry.cn-hangzhou.aliyuncs.com/dmall/bbcc
             meta:
               sym-group: blue
               sym-ldc: gz01b
           - name: bbcc-gz01b-green
             replicas: 2
-            version: v1
+            version: v3
             image: registry.cn-hangzhou.aliyuncs.com/dmall/bbcc
             meta:
               sym-group: green
@@ -55,20 +55,20 @@ spec:
           - name: bbcc-gz01a-canary
             replicas: 1
             image: registry.cn-hangzhou.aliyuncs.com/dmall/bbcc
-            version: v1
+            version: v3
             meta:
               sym-group: canary
               sym-ldc: gz01a
           - name: bbcc-gz01a-blue
             replicas: 2
-            version: v1
+            version: v3
             image: registry.cn-hangzhou.aliyuncs.com/dmall/bbcc
             meta:
               sym-group: blue
               sym-ldc: gz01a
           - name: bbcc-gz01a-green
             replicas: 2
-            version: v1
+            version: v3
             image: registry.cn-hangzhou.aliyuncs.com/dmall/bbcc
             meta:
               sym-group: green

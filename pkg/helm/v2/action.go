@@ -289,7 +289,7 @@ func CreateRelease(rlsName, chartName, chartVersion string, chartPackage []byte,
 	}
 
 	if namespace == "" {
-		klog.Warning("Release namespace was not set failing back to default")
+		klog.Warningf("rlsName: %s namespace was not set failing back to default", rlsName)
 		namespace = DefaultNamespace
 	}
 
@@ -328,49 +328,39 @@ func DeleteRelease(rlsName string, hClient *Client) error {
 }
 
 func ApplyRelease(rlsName, chartUrlName, chartVersion string, chartPackage []byte, hClient *Client, env *helmenv.EnvSettings,
-	namespace string, vaByte []byte) (*hapirelease.Release, error) {
+	namespace string, objRls *hapirelease.Release, vaByte []byte) (*hapirelease.Release, error) {
 	var (
-		r   *hapirelease.Release
-		err error
+		appRls *hapirelease.Release
+		rlsErr error
 	)
 
-	listRep, err := ListReleases(rlsName, hClient)
-	if err != nil || listRep == nil || len(listRep.Releases) <= 0 {
+	if objRls == nil {
 		rep, err := CreateRelease(rlsName, chartUrlName, chartVersion, chartPackage, hClient, env, namespace, helm.ValueOverrides(vaByte))
-		if err == nil {
-			r = rep.GetRelease()
+		if err == nil && rep != nil {
+			appRls = rep.GetRelease()
 		}
+		rlsErr = err
 	} else {
 		var isNotSameNum int
-		tmpRls := listRep.Releases[0]
-
-		// lastedVersion, err := ChartGetLastedVersion(env, repo, chartName)
-		// if err != nil {
-		// 	return r, errors.WithMessagef(err, "repo:%s chartName:%s ChartGetLastedVersion", repo, chartName)
-		// }
-		// if lastedVersion != "" {
-		// 	klog.Infof("rlsName:%s, lastedVersion:%s", rlsName, lastedVersion)
-		// }
-
-		version := tmpRls.GetChart().GetMetadata().GetVersion()
+		version := objRls.GetChart().GetMetadata().GetVersion()
 		if chartVersion != "" {
-			klog.Infof("rlsName:%s chartVersion:%s", rlsName, chartVersion)
+			klog.V(4).Infof("rlsName:%s chartVersion:%s", rlsName, chartVersion)
 			if strings.Compare(chartVersion, version) != 0 {
-				klog.Infof("rlsName:%s chart version is changed, %s => %s", rlsName, version, chartVersion)
+				klog.V(3).Infof("rlsName:%s chart version is changed, %s => %s", rlsName, version, chartVersion)
 				isNotSameNum++
 			}
 		}
 
 		if isNotSameNum <= 0 {
-			raw := tmpRls.GetConfig().GetRaw()
+			raw := objRls.GetConfig().GetRaw()
 			if len(raw) < 10 && len(vaByte) < 10 {
-				return tmpRls, nil
+				return objRls, nil
 			}
 
 			isSame := equality.Semantic.DeepEqual(string(vaByte), raw)
 			if isSame {
-				klog.Infof("rlsName:%s overrideValue is same, ignore", rlsName)
-				return tmpRls, nil
+				klog.V(4).Infof("rlsName:%s overrideValue is same, ignore", rlsName)
+				return objRls, nil
 			} else {
 				isNotSameNum++
 			}
@@ -378,18 +368,19 @@ func ApplyRelease(rlsName, chartUrlName, chartVersion string, chartPackage []byt
 
 		if isNotSameNum > 0 {
 			rep, err := UpgradeRelease(rlsName, chartUrlName, chartVersion, chartPackage, hClient, env, vaByte, false)
-			if err == nil {
-				r = rep.GetRelease()
+			if err == nil && rep != nil {
+				appRls = rep.GetRelease()
 			}
+			rlsErr = err
 		} else {
-			r = tmpRls
+			appRls = objRls
 		}
 	}
 
-	if err == nil && r == nil {
-		return nil, errors.WithMessagef(err, "rlsName:%s err and rls all nil", rlsName)
+	if rlsErr == nil && appRls == nil {
+		return nil, errors.WithMessagef(rlsErr, "rlsName:%s err and rls all nil", rlsName)
 	}
-	return r, err
+	return appRls, rlsErr
 }
 
 // GetReleaseK8sResources returns K8s resources of a helm release

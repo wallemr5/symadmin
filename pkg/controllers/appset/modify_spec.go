@@ -85,7 +85,7 @@ func getCurrentDetailChoiceWorkflow(ctx context.Context, dksManger *k8smanager.C
 
 	// TODO: judge all current status complete, and delete unexpect cluster info
 	for _, info := range currentInfo {
-		if info.Status.Status != "Running" {
+		if info.Status.AggrStatus.Status != "Running" {
 			return MiddleStatus, nil
 		}
 	}

@@ -117,13 +117,13 @@ func (r *Router) Start(stopCh <-chan struct{}) error {
 	errCh := make(chan error)
 	go func() {
 		if r.CertFilePath != "" && r.KeyFilePath != "" {
-			klog.Infof("Listening on https://%s\n", r.Addr)
+			klog.Infof("Listening on %s, https://localhost%s\n", r.Addr, r.Addr)
 			if err := r.httpServer.ListenAndServeTLS(r.CertFilePath, r.KeyFilePath); err != nil && err != http.ErrServerClosed {
 				klog.Error("Https server error: ", err)
 				errCh <- err
 			}
 		} else {
-			klog.Infof("Listening on http://%s\n", r.Addr)
+			klog.Infof("Listening on %s, http://localhost%s\n", r.Addr, r.Addr)
 			if err := r.httpServer.ListenAndServe(); err != nil && err != http.ErrServerClosed {
 				klog.Error("Http server error: ", err)
 				errCh <- err
