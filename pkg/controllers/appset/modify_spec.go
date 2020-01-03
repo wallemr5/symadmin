@@ -5,7 +5,6 @@ import (
 
 	"fmt"
 
-	"github.com/go-logr/logr"
 	"github.com/pkg/errors"
 	workloadv1beta1 "gitlab.dmall.com/arch/sym-admin/pkg/apis/workload/v1beta1"
 	"gitlab.dmall.com/arch/sym-admin/pkg/customctrl"
@@ -18,11 +17,10 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	"k8s.io/client-go/util/retry"
-	"k8s.io/klog"
 )
 
 // ModifySpec modify spec handler
-func (r *AppSetReconciler) ModifySpec(logger logr.Logger, app *workloadv1beta1.AppSet, clusterTopology *workloadv1beta1.TargetCluster, req customctrl.CustomRequest) (modifyStatus bool, condition *workloadv1beta1.AppSetCondition, err error) {
+func (r *AppSetReconciler) ModifySpec(ctx context.Context, app *workloadv1beta1.AppSet, clusterTopology *workloadv1beta1.TargetCluster, req customctrl.CustomRequest) (isChanged bool, condition *workloadv1beta1.AppSetCondition, err error) {
 	cluster, err := r.DksMgr.K8sMgr.Get(clusterTopology.Name)
 	if err != nil {
 		return false, nil, err
@@ -31,8 +29,11 @@ func (r *AppSetReconciler) ModifySpec(logger logr.Logger, app *workloadv1beta1.A
 	// build AdvDeployment info with AppSet TargetCluster
 	newObj := buildAdvDeployment(app, clusterTopology)
 
-	_, err = applyAdvDeployment(app, cluster, newObj)
-	return false, nil, err
+	_, isChanged, err = applyAdvDeployment(ctx, app, cluster, newObj)
+	if err != nil {
+		return false, nil, err
+	}
+	return isChanged, nil, err
 }
 
 func buildAdvDeployment(app *workloadv1beta1.AppSet, clusterTopology *workloadv1beta1.TargetCluster) *workloadv1beta1.AdvDeployment {
@@ -68,51 +69,42 @@ func buildAdvDeployment(app *workloadv1beta1.AppSet, clusterTopology *workloadv1
 	return obj
 }
 
-func applyAdvDeployment(app *workloadv1beta1.AppSet, cluster *k8smanager.Cluster, advDeploy *workloadv1beta1.AdvDeployment) (*workloadv1beta1.AdvDeployment, error) {
+func applyAdvDeployment(ctx context.Context, app *workloadv1beta1.AppSet, cluster *k8smanager.Cluster, advDeploy *workloadv1beta1.AdvDeployment) (adv *workloadv1beta1.AdvDeployment, isChanged bool, err error) {
+	logger := utils.GetCtxLogger(ctx)
+
 	obj := &workloadv1beta1.AdvDeployment{}
-	err := cluster.Client.Get(context.TODO(), types.NamespacedName{
+	err = cluster.Client.Get(ctx, types.NamespacedName{
 		Name:      app.Name,
 		Namespace: app.Namespace,
 	}, obj)
 
 	if err != nil {
 		if apierrors.IsNotFound(err) {
-			klog.Infof("create spec cluster:%s ", cluster.Name)
+			logger.Info("create spec cluster", "clusterName", cluster.Name)
 			time := metav1.Now()
 			advDeploy.Status.StartTime = &time
-			err = cluster.Client.Create(context.TODO(), advDeploy)
+			err = cluster.Client.Create(ctx, advDeploy)
 			if err != nil {
-				return nil, errors.Wrapf(err, "cluster:%s create advDeploy", cluster.Name)
+				return nil, false, errors.Wrapf(err, "cluster:%s create advDeploy", cluster.Name)
 			}
-			return advDeploy, nil
+			return advDeploy, true, nil
 		}
-		return nil, err
+		return nil, false, err
 	}
 
-	var isChanged int
-	isEqual := equality.Semantic.DeepEqual(obj.Spec, advDeploy.Spec)
-	if !isEqual {
-		isChanged++
-	}
-
-	isEqual = equality.Semantic.DeepEqual(obj.ObjectMeta.Labels, advDeploy.ObjectMeta.Labels)
-	if !isEqual {
-		isChanged++
-	}
-
-	if isChanged > 0 {
+	if compare(obj, advDeploy) {
 		err := retry.RetryOnConflict(retry.DefaultRetry, func() error {
 			time := metav1.Now()
 			advDeploy.Spec.DeepCopyInto(&obj.Spec)
 			obj.Labels = advDeploy.ObjectMeta.Labels
 			obj.Status.LastUpdateTime = &time
-			updateErr := cluster.Client.Update(context.TODO(), obj)
+			updateErr := cluster.Client.Update(ctx, obj)
 			if updateErr == nil {
-				klog.V(3).Infof("advDeploy: [%s/%s] updated successfully", cluster.Name, advDeploy.Name)
+				logger.Info("advDeploy updated successfully", "clusterName", cluster.Name, "advName", advDeploy.Name)
 				return nil
 			}
 
-			getErr := cluster.Client.Get(context.TODO(), types.NamespacedName{
+			getErr := cluster.Client.Get(ctx, types.NamespacedName{
 				Name:      app.Name,
 				Namespace: app.Namespace,
 			}, obj)
@@ -122,8 +114,19 @@ func applyAdvDeployment(app *workloadv1beta1.AppSet, cluster *k8smanager.Cluster
 			}
 			return updateErr
 		})
-		return nil, err
+		return nil, true, err
 	}
 
-	return obj, nil
+	return obj, false, nil
+}
+
+func compare(new, old *workloadv1beta1.AdvDeployment) bool {
+	if !equality.Semantic.DeepEqual(new.Spec, old.Spec) {
+		return true
+	}
+
+	if !equality.Semantic.DeepEqual(new.ObjectMeta.Labels, old.ObjectMeta.Labels) {
+		return true
+	}
+	return false
 }

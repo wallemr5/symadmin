@@ -28,6 +28,7 @@ import (
 	"gitlab.dmall.com/arch/sym-admin/pkg/customctrl"
 	"gitlab.dmall.com/arch/sym-admin/pkg/labels"
 	pkgmanager "gitlab.dmall.com/arch/sym-admin/pkg/manager"
+	"gitlab.dmall.com/arch/sym-admin/pkg/utils"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
@@ -162,6 +163,7 @@ func NewAppSetController(mgr manager.Manager, cMgr *pkgmanager.DksManager) (*App
 // CustomReconcile for multi cluster reconcile
 func (r *AppSetReconciler) CustomReconcile(ctx context.Context, req customctrl.CustomRequest) (reconcile.Result, error) {
 	logger := r.Log.WithValues("key", req.NamespacedName, "id", uuid.Must(uuid.NewV4()).String())
+	ctx = utils.SetCtxLogger(ctx, logger)
 
 	as := &workloadv1beta1.AppSet{}
 	err := r.Client.Get(ctx, req.NamespacedName, as)
@@ -175,27 +177,26 @@ func (r *AppSetReconciler) CustomReconcile(ctx context.Context, req customctrl.C
 	}
 
 	if as.ObjectMeta.DeletionTimestamp != nil {
-		logger.Info("delete event", "appset", as)
-		return reconcile.Result{}, r.Delete(as)
+		logger.Info("delete AppSet event", "info", req.NamespacedName)
+		return reconcile.Result{}, r.DeleteAll(ctx, req, as)
 	}
 
-	// if finalizers empty, full "sym-admin-finalizers" string
 	if as.ObjectMeta.Finalizers == nil {
 		as.ObjectMeta.Finalizers = []string{labels.ControllerFinalizersName}
 		return reconcile.Result{}, r.Client.Update(ctx, as)
 	}
 
 	for _, v := range as.Spec.ClusterTopology.Clusters {
-		status, condition, err := r.ModifySpec(logger, as, v, req)
+		status, condition, err := r.ModifySpec(ctx, as, v, req)
 		if err != nil {
-			logger.Error(err, "topology update error")
+			logger.Error(err, "topology update error", "cluster", v.Mata[utils.ObserveMustLabelClusterName], "name", v.Name)
 			if condition != nil {
 				// TODO: craete condition
 			}
 			return reconcile.Result{}, err
 		}
 		if status {
-			return reconcile.Result{}, err
+			return reconcile.Result{}, nil
 		}
 	}
 
