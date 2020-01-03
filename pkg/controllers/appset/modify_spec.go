@@ -22,9 +22,10 @@ import (
 type workflow string
 
 const (
-	Update workflow = "Update"
-	Delete workflow = "OnlyDel"
-	Unknow workflow = "Unknow"
+	UpdateStatus workflow = "Update"
+	MiddleStatus workflow = "Middle"
+	DeleteStatus workflow = "Delete"
+	UnknowStatus workflow = "Unknow"
 )
 
 // ModifySpec modify spec handler
@@ -35,9 +36,11 @@ func (r *AppSetReconciler) ModifySpec(ctx context.Context, app *workloadv1beta1.
 	}
 
 	switch wf {
-	case Update:
+	case UpdateStatus:
 		return UpdateWorkFlow(ctx, r.DksMgr.K8sMgr, app, req)
-	case Delete:
+	case MiddleStatus:
+		return false, nil
+	case DeleteStatus:
 		return false, nil
 	default:
 		return false, fmt.Errorf("update spec unknow workflow:%s", wf)
@@ -45,17 +48,18 @@ func (r *AppSetReconciler) ModifySpec(ctx context.Context, app *workloadv1beta1.
 }
 
 func getCurrentDetailChoiceWorkflow(ctx context.Context, dksManger *k8smanager.ClusterManager, app *workloadv1beta1.AppSet, req customctrl.CustomRequest) (workflow, error) {
-	currentInfo := map[string]struct{}{}
+	currentInfo := map[string]*workloadv1beta1.AdvDeployment{}
 	for _, cluster := range dksManger.GetAll() {
-		err := cluster.Client.Get(ctx, req.NamespacedName, &workloadv1beta1.AdvDeployment{})
+		b := &workloadv1beta1.AdvDeployment{}
+		err := cluster.Client.Get(ctx, req.NamespacedName, b)
 		if err == nil {
-			currentInfo[cluster.GetName()] = struct{}{}
+			currentInfo[cluster.GetName()] = b
 			continue
 		}
 		if apierrors.IsNotFound(err) {
 			continue
 		}
-		return Unknow, err
+		return UnknowStatus, err
 	}
 	expectInfo := map[string]struct{}{}
 	for _, cluster := range app.Spec.ClusterTopology.Clusters {
@@ -71,14 +75,21 @@ func getCurrentDetailChoiceWorkflow(ctx context.Context, dksManger *k8smanager.C
 			addQueue[exp] = struct{}{}
 		}
 	}
+
 	if len(addQueue) > 0 {
-		return Update, nil
+		return UpdateStatus, nil
 	}
-	if len(delQueue) > 0 {
-		// TODO: judge all current status complete, and delete unexpect cluster info
-		// return Delete, nil
+	if len(delQueue) == 0 {
+		return UpdateStatus, nil
 	}
-	return Update, nil
+
+	// TODO: judge all current status complete, and delete unexpect cluster info
+	for _, info := range currentInfo {
+		if info.Status.Status != "Running" {
+			return MiddleStatus, nil
+		}
+	}
+	return DeleteStatus, nil
 }
 
 func UpdateWorkFlow(ctx context.Context, dksManger *k8smanager.ClusterManager, app *workloadv1beta1.AppSet, req customctrl.CustomRequest) (isChanged bool, err error) {

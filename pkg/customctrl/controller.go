@@ -402,7 +402,12 @@ func (c *Impl) processNextWorkItem() bool {
 	// Run Reconcile, passing it the namespaces/namespace/name string of the resource to be synced.
 	if res, err := c.Reconciler.CustomReconcile(context.TODO(), req); err != nil {
 		// c.handleErr(err, key)
-		c.WorkQueue.AddRateLimited(req)
+		if c.WorkQueue.NumRequeues(req) > c.MaxRetries {
+			klog.V(3).Infof("requeues override maxretry:cluster:%s namespacesname:%s", req.ClusterName, req.NamespacedName)
+			return true
+		}
+
+		c.WorkQueue.AddAfter(req, time.Second*5)
 		klog.V(3).Infof("Name: %s Reconcile failed. Time taken: %v. req: %v", c.Name, time.Since(startTime), req)
 		return true
 	} else if res.RequeueAfter > 0 {
