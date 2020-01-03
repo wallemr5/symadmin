@@ -70,7 +70,7 @@ func makeHelmOverrideValus(name string, clusterSpec *workloadv1beta1.TargetClust
 		},
 	}
 
-	klog.Infof("podSetName:%s overrideValueMap:%v", name, overrideValueMap)
+	klog.V(5).Infof("podSetName:%s overrideValueMap:%v", name, overrideValueMap)
 	vaByte, err := yaml.Marshal(overrideValueMap)
 	if err != nil {
 		klog.Errorf("Marshal overrideValueMap err:%+v", err)
