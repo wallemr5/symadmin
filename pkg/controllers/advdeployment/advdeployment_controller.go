@@ -34,6 +34,8 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
+	"time"
+
 	k8sclient "gitlab.dmall.com/arch/sym-admin/pkg/k8s/client"
 	"gitlab.dmall.com/arch/sym-admin/pkg/labels"
 	"gitlab.dmall.com/arch/sym-admin/pkg/utils"
@@ -85,12 +87,12 @@ func Add(mgr manager.Manager, cMgr *pkgmanager.DksManager) error {
 	}
 
 	r.Cfg = mgr.GetConfig()
-	client, err := k8sclient.NewClientFromConfig(mgr.GetConfig())
+	kubeCli, err := k8sclient.NewClientFromConfig(mgr.GetConfig())
 	if err != nil {
 		r.Log.Error(err, "Watch AdvDeployment err")
 		return err
 	}
-	r.KubeCli = client
+	r.KubeCli = kubeCli
 
 	// Create a new runtime controller
 	ctl, err := controller.New(controllerName, mgr, controller.Options{Reconciler: r})
@@ -172,7 +174,19 @@ func (r *AdvDeploymentReconciler) Reconcile(req ctrl.Request) (ctrl.Result, erro
 	// if finalizers empty, full "sym-admin-finalizers" string
 	if advDeploy.ObjectMeta.Finalizers == nil {
 		advDeploy.ObjectMeta.Finalizers = []string{labels.ControllerFinalizersName}
-		return reconcile.Result{}, r.Client.Update(ctx, advDeploy)
+		err = r.Client.Update(ctx, advDeploy)
+		if err != nil {
+			logger.Error(err, "failed to get AdvDeployment")
+			return reconcile.Result{}, err
+		}
+		return reconcile.Result{
+			Requeue:      true,
+			RequeueAfter: time.Second * 5,
+		}, nil
+	}
+
+	if advDeploy.Name != "bbcc" {
+		return reconcile.Result{}, nil
 	}
 
 	if advDeploy.Spec.PodSpec.DeployType == "helm" {
@@ -180,7 +194,10 @@ func (r *AdvDeploymentReconciler) Reconcile(req ctrl.Request) (ctrl.Result, erro
 			klog.Errorf("name: %s DeployType is helm, but no Chart spec", advDeploy.Name)
 			return reconcile.Result{}, nil
 		}
+
+		return reconcile.Result{}, r.ApplyPodSetReleases(advDeploy)
 	}
+
 	// _, _ = r.reconcile(logger, advDeploy)
 	// logger.Info("Reconciling AdvDeployment")
 	// return ctrl.Result{

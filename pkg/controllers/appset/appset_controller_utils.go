@@ -55,16 +55,16 @@ func makeHelmOverrideValus(name string, clusterSpec *workloadv1beta1.TargetClust
 			"resources": makeResources(podSet),
 			"volumeMounts": []map[string]interface{}{
 				{
-					"name":      fmt.Sprintf("/web/logs/app/logback/%s", app.Name),
-					"mountPath": "log-path",
+					"name":      "log-path",
+					"mountPath": fmt.Sprintf("/web/logs/app/logback/%s", app.Name),
 				},
 				{
-					"name":      fmt.Sprintf("/web/logs/app/aabb/%s", app.Name),
-					"mountPath": "new-log-path",
+					"name":      "new-log-path",
+					"mountPath": fmt.Sprintf("/web/logs/app/aabb/%s", app.Name),
 				},
 				{
-					"name":      fmt.Sprintf("/web/logs/jvm//%s", app.Name),
-					"mountPath": "jvm-path",
+					"name":      "jvm-path",
+					"mountPath": fmt.Sprintf("/web/logs/jvm//%s", app.Name),
 				},
 			},
 		},

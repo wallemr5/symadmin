@@ -49,5 +49,5 @@ func MakeHelmReleaseFilter(appName string) string {
 	if appName == "" || appName == "all" {
 		return ""
 	}
-	return fmt.Sprintf("^%s(-gz|-rz).*(-blue|-green)$", appName)
+	return fmt.Sprintf("^%s(-gz|-rz).*(-blue|-green|-canary)$", appName)
 }
