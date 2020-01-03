@@ -19,21 +19,86 @@ import (
 	"k8s.io/client-go/util/retry"
 )
 
+type workflow string
+
+const (
+	Update workflow = "Update"
+	Delete workflow = "OnlyDel"
+	Unknow workflow = "Unknow"
+)
+
 // ModifySpec modify spec handler
-func (r *AppSetReconciler) ModifySpec(ctx context.Context, app *workloadv1beta1.AppSet, clusterTopology *workloadv1beta1.TargetCluster, req customctrl.CustomRequest) (isChanged bool, condition *workloadv1beta1.AppSetCondition, err error) {
-	cluster, err := r.DksMgr.K8sMgr.Get(clusterTopology.Name)
+func (r *AppSetReconciler) ModifySpec(ctx context.Context, app *workloadv1beta1.AppSet, req customctrl.CustomRequest) (isChanged bool, err error) {
+	wf, err := getCurrentDetailChoiceWorkflow(ctx, r.DksMgr.K8sMgr, app, req)
 	if err != nil {
-		return false, nil, err
+		return false, err
 	}
 
-	// build AdvDeployment info with AppSet TargetCluster
-	newObj := buildAdvDeployment(app, clusterTopology)
-
-	_, isChanged, err = applyAdvDeployment(ctx, app, cluster, newObj)
-	if err != nil {
-		return false, nil, err
+	switch wf {
+	case Update:
+		return UpdateWorkFlow(ctx, r.DksMgr.K8sMgr, app, req)
+	case Delete:
+		return false, nil
+	default:
+		return false, fmt.Errorf("update spec unknow workflow:%s", wf)
 	}
-	return isChanged, nil, err
+}
+
+func getCurrentDetailChoiceWorkflow(ctx context.Context, dksManger *k8smanager.ClusterManager, app *workloadv1beta1.AppSet, req customctrl.CustomRequest) (workflow, error) {
+	currentInfo := map[string]struct{}{}
+	for _, cluster := range dksManger.GetAll() {
+		err := cluster.Client.Get(ctx, req.NamespacedName, &workloadv1beta1.AdvDeployment{})
+		if err == nil {
+			currentInfo[cluster.GetName()] = struct{}{}
+			continue
+		}
+		if apierrors.IsNotFound(err) {
+			continue
+		}
+		return Unknow, err
+	}
+	expectInfo := map[string]struct{}{}
+	for _, cluster := range app.Spec.ClusterTopology.Clusters {
+		expectInfo[cluster.Name] = struct{}{}
+	}
+
+	delQueue := currentInfo
+	addQueue := map[string]struct{}{}
+	for exp := range expectInfo {
+		if _, ok := currentInfo[exp]; ok {
+			delete(delQueue, exp)
+		} else {
+			addQueue[exp] = struct{}{}
+		}
+	}
+	if len(addQueue) > 0 {
+		return Update, nil
+	}
+	if len(delQueue) > 0 {
+		// TODO: judge all current status complete, and delete unexpect cluster info
+		// return Delete, nil
+	}
+	return Update, nil
+}
+
+func UpdateWorkFlow(ctx context.Context, dksManger *k8smanager.ClusterManager, app *workloadv1beta1.AppSet, req customctrl.CustomRequest) (isChanged bool, err error) {
+	for _, v := range app.Spec.ClusterTopology.Clusters {
+		cluster, err := dksManger.Get(v.Name)
+		if err != nil {
+			return false, err
+		}
+
+		newObj := buildAdvDeployment(app, v)
+		_, isChanged, err = applyAdvDeployment(ctx, cluster, app, newObj)
+		if err != nil {
+			return false, err
+		}
+		if isChanged {
+			return true, nil
+		}
+	}
+
+	return false, nil
 }
 
 func buildAdvDeployment(app *workloadv1beta1.AppSet, clusterTopology *workloadv1beta1.TargetCluster) *workloadv1beta1.AdvDeployment {
@@ -61,7 +126,7 @@ func buildAdvDeployment(app *workloadv1beta1.AppSet, clusterTopology *workloadv1
 
 	for _, set := range clusterTopology.PodSets {
 		podSet := set.DeepCopy()
-		if podSet.RawValues == "" {
+		if podSet.RawValues == "" && app.Name != "nginx" {
 			podSet.RawValues = makeHelmOverrideValus(podSet.Name, clusterTopology, app)
 		}
 		obj.Spec.Topology.PodSets = append(obj.Spec.Topology.PodSets, podSet)
@@ -69,7 +134,7 @@ func buildAdvDeployment(app *workloadv1beta1.AppSet, clusterTopology *workloadv1
 	return obj
 }
 
-func applyAdvDeployment(ctx context.Context, app *workloadv1beta1.AppSet, cluster *k8smanager.Cluster, advDeploy *workloadv1beta1.AdvDeployment) (adv *workloadv1beta1.AdvDeployment, isChanged bool, err error) {
+func applyAdvDeployment(ctx context.Context, cluster *k8smanager.Cluster, app *workloadv1beta1.AppSet, advDeploy *workloadv1beta1.AdvDeployment) (adv *workloadv1beta1.AdvDeployment, isChanged bool, err error) {
 	logger := utils.GetCtxLogger(ctx)
 
 	obj := &workloadv1beta1.AdvDeployment{}
@@ -80,7 +145,7 @@ func applyAdvDeployment(ctx context.Context, app *workloadv1beta1.AppSet, cluste
 
 	if err != nil {
 		if apierrors.IsNotFound(err) {
-			logger.Info("create spec cluster", "clusterName", cluster.Name)
+			logger.Info("create spec cluster", "cluster", cluster.Name)
 			time := metav1.Now()
 			advDeploy.Status.StartTime = &time
 			err = cluster.Client.Create(ctx, advDeploy)
@@ -100,7 +165,7 @@ func applyAdvDeployment(ctx context.Context, app *workloadv1beta1.AppSet, cluste
 			obj.Status.LastUpdateTime = &time
 			updateErr := cluster.Client.Update(ctx, obj)
 			if updateErr == nil {
-				logger.Info("advDeploy updated successfully", "clusterName", cluster.Name, "advName", advDeploy.Name)
+				logger.Info("advDeploy updated successfully", "cluster", cluster.Name)
 				return nil
 			}
 

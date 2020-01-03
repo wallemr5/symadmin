@@ -6,6 +6,7 @@ import (
 
 	workloadv1beta1 "gitlab.dmall.com/arch/sym-admin/pkg/apis/workload/v1beta1"
 	"gitlab.dmall.com/arch/sym-admin/pkg/customctrl"
+	k8smanager "gitlab.dmall.com/arch/sym-admin/pkg/k8s/manager"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
@@ -15,7 +16,11 @@ func (r *AppSetReconciler) DeleteAll(ctx context.Context, req customctrl.CustomR
 
 	// loop cluster delete advdeployment
 	for _, cluster := range r.DksMgr.K8sMgr.GetAll() {
-		isChanged, err := r.DeleteByCluster(ctx, req, cluster.GetName())
+		cluster, err := r.DksMgr.K8sMgr.Get(cluster.GetName())
+		if err != nil {
+			return err
+		}
+		isChanged, err := deleteByCluster(ctx, cluster, req)
 		if err != nil || isChanged {
 			return err
 		}
@@ -26,12 +31,8 @@ func (r *AppSetReconciler) DeleteAll(ctx context.Context, req customctrl.CustomR
 	return r.Client.Update(ctx, as)
 }
 
-func (r *AppSetReconciler) DeleteByCluster(ctx context.Context, req customctrl.CustomRequest, clusterName string) (bool, error) {
-	cluster, err := r.DksMgr.K8sMgr.Get(clusterName)
-	if err != nil {
-		return false, err
-	}
-	err = cluster.Client.Delete(ctx, &workloadv1beta1.AdvDeployment{
+func deleteByCluster(ctx context.Context, cluster *k8smanager.Cluster, req customctrl.CustomRequest) (bool, error) {
+	err := cluster.Client.Delete(ctx, &workloadv1beta1.AdvDeployment{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      req.Name,
 			Namespace: req.Namespace,
@@ -43,5 +44,5 @@ func (r *AppSetReconciler) DeleteByCluster(ctx context.Context, req customctrl.C
 	if apierrors.IsNotFound(err) {
 		return false, nil
 	}
-	return false, fmt.Errorf("delete cluster:%s AdvDeployment(%s) fail:%+v", clusterName, req.NamespacedName.String(), err)
+	return false, fmt.Errorf("delete cluster:%s AdvDeployment(%s) fail:%+v", cluster.GetName(), req.NamespacedName.String(), err)
 }

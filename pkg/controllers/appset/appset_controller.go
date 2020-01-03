@@ -165,8 +165,8 @@ func (r *AppSetReconciler) CustomReconcile(ctx context.Context, req customctrl.C
 	logger := r.Log.WithValues("key", req.NamespacedName, "id", uuid.Must(uuid.NewV4()).String())
 	ctx = utils.SetCtxLogger(ctx, logger)
 
-	as := &workloadv1beta1.AppSet{}
-	err := r.Client.Get(ctx, req.NamespacedName, as)
+	app := &workloadv1beta1.AppSet{}
+	err := r.Client.Get(ctx, req.NamespacedName, app)
 	if err != nil {
 		if apierrors.IsNotFound(err) {
 			return reconcile.Result{}, nil
@@ -176,32 +176,27 @@ func (r *AppSetReconciler) CustomReconcile(ctx context.Context, req customctrl.C
 		return reconcile.Result{}, err
 	}
 
-	if as.ObjectMeta.DeletionTimestamp != nil {
+	if app.ObjectMeta.DeletionTimestamp != nil {
 		logger.Info("delete AppSet event", "info", req.NamespacedName)
-		return reconcile.Result{}, r.DeleteAll(ctx, req, as)
+		return reconcile.Result{}, r.DeleteAll(ctx, req, app)
 	}
 
-	if as.ObjectMeta.Finalizers == nil {
-		as.ObjectMeta.Finalizers = []string{labels.ControllerFinalizersName}
-		return reconcile.Result{}, r.Client.Update(ctx, as)
+	if app.ObjectMeta.Finalizers == nil {
+		app.ObjectMeta.Finalizers = []string{labels.ControllerFinalizersName}
+		return reconcile.Result{}, r.Client.Update(ctx, app)
 	}
 
-	for _, v := range as.Spec.ClusterTopology.Clusters {
-		status, condition, err := r.ModifySpec(ctx, as, v, req)
-		if err != nil {
-			logger.Error(err, "topology update error", "cluster", v.Mata[utils.ObserveMustLabelClusterName], "name", v.Name)
-			if condition != nil {
-				// TODO: craete condition
-			}
-			return reconcile.Result{}, err
-		}
-		if status {
-			return reconcile.Result{}, nil
-		}
+	isChange, err := r.ModifySpec(ctx, app, req)
+	if err != nil {
+		logger.Error(err, "modify advdeployment info with spec")
+		return reconcile.Result{}, err
+	}
+	if isChange {
+		return reconcile.Result{}, nil
 	}
 
 	r.ModifyStatus()
 
-	logger.Info("AppSet", "ResourceVersion", as.GetResourceVersion())
+	logger.Info("AppSet", "ResourceVersion", app.GetResourceVersion())
 	return reconcile.Result{}, nil
 }
