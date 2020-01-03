@@ -71,10 +71,10 @@ func InstallLocalHelm(env *helmenv.EnvSettings, repoMap map[string]string) error
 }
 
 // DownloadChartFromRepo download a given chart
-func DownloadChartFromRepo(name, version string, env helmenv.EnvSettings) (string, error) {
+func DownloadChartFromRepo(name, version string, env *helmenv.EnvSettings) (string, error) {
 	dl := downloader.ChartDownloader{
 		HelmHome: env.Home,
-		Getters:  getter.All(env),
+		Getters:  getter.All(*env),
 	}
 	if _, err := os.Stat(env.Home.Archive()); os.IsNotExist(err) {
 		klog.Infof("Creating '%s' directory.", env.Home.Archive())

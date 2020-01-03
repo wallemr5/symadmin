@@ -29,9 +29,9 @@ import (
 
 func makeHelmOverrideValus(name string, clusterSpec *workloadv1beta1.TargetCluster, app *workloadv1beta1.AppSet) string {
 	var podSet *workloadv1beta1.PodSet
-	for i := range clusterSpec.PodSets {
-		if name == clusterSpec.PodSets[i].Name {
-			podSet = &clusterSpec.PodSets[i]
+	for _, set := range clusterSpec.PodSets {
+		if name == set.Name {
+			podSet = set
 			break
 		}
 	}

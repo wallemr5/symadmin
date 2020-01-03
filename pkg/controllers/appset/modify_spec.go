@@ -58,12 +58,12 @@ func buildAdvDeployment(app *workloadv1beta1.AppSet, clusterTopology *workloadv1
 	obj.Spec.Replicas = utils.IntPointer(int32(replica))
 	app.Spec.PodSpec.DeepCopyInto(&obj.Spec.PodSpec)
 
-	for i := range clusterTopology.PodSets {
-		podSet := clusterTopology.PodSets[i].DeepCopy()
+	for _, set := range clusterTopology.PodSets {
+		podSet := set.DeepCopy()
 		if podSet.RawValues == "" {
 			podSet.RawValues = makeHelmOverrideValus(podSet.Name, clusterTopology, app)
 		}
-		obj.Spec.Topology.PodSets = append(obj.Spec.Topology.PodSets, *podSet)
+		obj.Spec.Topology.PodSets = append(obj.Spec.Topology.PodSets, podSet)
 	}
 	return obj
 }

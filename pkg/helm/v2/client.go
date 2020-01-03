@@ -41,7 +41,7 @@ func NewClient(kubeConfig []byte) (*Client, error) {
 
 // NewClientFromConfig
 func NewClientFromConfig(config *rest.Config, client kubernetes.Interface, name string) (*Client, error) {
-	klog.V(4).Info("create kubernetes tunnel")
+	klog.V(4).Infof("create kubernetes tunnel name: %s", name)
 	tillerTunnel, err := portforwarder.New("kube-system", client, config)
 	if err != nil {
 		return nil, errors.Wrapf(err, "cluster:%s failed to create kubernetes tunnel", name)

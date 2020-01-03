@@ -96,7 +96,7 @@ type Topology struct {
 	// Contains the details of each subset. Each element in this array represents one subset
 	// which will be provisioned and managed by UnitedDeployment.
 	// +optional
-	PodSets []PodSet `json:"podSets,omitempty"`
+	PodSets []*PodSet `json:"podSets,omitempty"`
 }
 
 type AdvDeploymentConditionType string

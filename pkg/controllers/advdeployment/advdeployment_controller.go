@@ -24,14 +24,9 @@ import (
 	workloadv1beta1 "gitlab.dmall.com/arch/sym-admin/pkg/apis/workload/v1beta1"
 	helmv2 "gitlab.dmall.com/arch/sym-admin/pkg/helm/v2"
 	pkgmanager "gitlab.dmall.com/arch/sym-admin/pkg/manager"
-	"gitlab.dmall.com/arch/sym-admin/pkg/resources"
-	"gitlab.dmall.com/arch/sym-admin/pkg/resources/deployment"
-	"gitlab.dmall.com/arch/sym-admin/pkg/resources/svc"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
-	"k8s.io/apimachinery/pkg/types"
-	helmenv "k8s.io/helm/pkg/helm/environment"
 	"k8s.io/klog"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -39,7 +34,11 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
+	k8sclient "gitlab.dmall.com/arch/sym-admin/pkg/k8s/client"
+	"gitlab.dmall.com/arch/sym-admin/pkg/labels"
 	"gitlab.dmall.com/arch/sym-admin/pkg/utils"
+	"k8s.io/client-go/kubernetes"
+	"k8s.io/client-go/rest"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
 	"sigs.k8s.io/controller-runtime/pkg/handler"
 	"sigs.k8s.io/controller-runtime/pkg/source"
@@ -53,9 +52,11 @@ const (
 type AdvDeploymentReconciler struct {
 	Name string
 	client.Client
-	Log       logr.Logger
-	Mgr       manager.Manager
-	Helmv2env *helmenv.EnvSettings
+	Log     logr.Logger
+	Mgr     manager.Manager
+	KubeCli kubernetes.Interface
+	Cfg     *rest.Config
+	HelmEnv *HelmIndexSyncer
 }
 
 // func (r *AdvDeploymentReconciler) SetupWithManager(mgr ctrl.Manager) error {
@@ -82,6 +83,14 @@ func Add(mgr manager.Manager, cMgr *pkgmanager.DksManager) error {
 		Mgr:    mgr,
 		Log:    ctrl.Log.WithName("controllers").WithName("AdvDeployment"),
 	}
+
+	r.Cfg = mgr.GetConfig()
+	client, err := k8sclient.NewClientFromConfig(mgr.GetConfig())
+	if err != nil {
+		r.Log.Error(err, "Watch AdvDeployment err")
+		return err
+	}
+	r.KubeCli = client
 
 	// Create a new runtime controller
 	ctl, err := controller.New(controllerName, mgr, controller.Options{Reconciler: r})
@@ -122,7 +131,10 @@ func Add(mgr manager.Manager, cMgr *pkgmanager.DksManager) error {
 	if err != nil {
 		klog.Errorf("InitHelmRepoEnv err:%v", err)
 	}
-	r.Helmv2env = helmv2env
+	r.HelmEnv = NewDefaultHelmIndexSyncer(helmv2env)
+
+	klog.Infof("add helm index syncer")
+	mgr.Add(r.HelmEnv)
 	return nil
 }
 
@@ -144,47 +156,31 @@ func (r *AdvDeploymentReconciler) Reconcile(req ctrl.Request) (ctrl.Result, erro
 		return reconcile.Result{}, err
 	}
 
-	rSet := &appsv1.ReplicaSet{}
-
-	err = r.Client.Get(ctx, types.NamespacedName{Name: "sym-operator-5d8f9f7dcc", Namespace: "sym"}, rSet)
-	if err != nil {
-		logger.Error(err, "failed to get ReplicaSet")
-		if apierrors.IsNotFound(err) {
-			return reconcile.Result{}, nil
+	if advDeploy.ObjectMeta.DeletionTimestamp != nil {
+		logger.Info("delete event", "advDeploy", advDeploy.Name)
+		err := r.CleanReleasesByName(advDeploy)
+		if err == nil {
+			advDeploy.ObjectMeta.Finalizers = nil
+			err = r.Client.Update(ctx, advDeploy)
+			if err == nil {
+				return reconcile.Result{}, nil
+			}
 		}
-
 		return reconcile.Result{}, err
 	}
 
-	podall := make([]*corev1.Pod, 0, 8)
+	// if finalizers empty, full "sym-admin-finalizers" string
+	if advDeploy.ObjectMeta.Finalizers == nil {
+		advDeploy.ObjectMeta.Finalizers = []string{labels.ControllerFinalizersName}
+		return reconcile.Result{}, r.Client.Update(ctx, advDeploy)
+	}
 
-	pods := &corev1.PodList{}
-	err = r.Client.List(ctx, &client.ListOptions{Namespace: "dmall-innner"}, pods)
-	if err != nil {
-		logger.Error(err, "failed to get ReplicaSet")
-		if apierrors.IsNotFound(err) {
+	if advDeploy.Spec.PodSpec.DeployType == "helm" {
+		if advDeploy.Spec.PodSpec.Chart == nil || (advDeploy.Spec.PodSpec.Chart.ChartUrl == nil && advDeploy.Spec.PodSpec.Chart.RawChart == nil) {
+			klog.Errorf("name: %s DeployType is helm, but no Chart spec", advDeploy.Name)
 			return reconcile.Result{}, nil
 		}
-
-		return reconcile.Result{}, err
 	}
-
-	for i := range pods.Items {
-		podall = append(podall, &pods.Items[i])
-	}
-
-	events := &corev1.EventList{}
-	// err = r.Client.List(ctx, events)
-	if err != nil {
-		logger.Error(err, "failed to get events")
-		if apierrors.IsNotFound(err) {
-			return reconcile.Result{}, nil
-		}
-
-		return reconcile.Result{}, err
-	}
-	logger.Info("Reconciling get events", "num", len(events.Items))
-
 	// _, _ = r.reconcile(logger, advDeploy)
 	// logger.Info("Reconciling AdvDeployment")
 	// return ctrl.Result{
@@ -192,22 +188,5 @@ func (r *AdvDeploymentReconciler) Reconcile(req ctrl.Request) (ctrl.Result, erro
 	// 	RequeueAfter: 20 * time.Second,
 	// }, nil
 
-	return reconcile.Result{}, nil
-}
-
-func (r *AdvDeploymentReconciler) reconcile(logger logr.Logger, config *workloadv1beta1.AdvDeployment) (reconcile.Result, error) {
-	reconcilers := []resources.ComponentReconciler{
-		svc.New(r.Mgr, config, 8080),
-		deployment.New(r.Mgr, config),
-	}
-
-	for _, rec := range reconcilers {
-		err := rec.Reconcile(logger)
-		if err != nil {
-			return reconcile.Result{}, err
-		}
-	}
-
-	logger.Info("reconcile finished")
 	return reconcile.Result{}, nil
 }
