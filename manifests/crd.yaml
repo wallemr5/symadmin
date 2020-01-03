@@ -4678,6 +4678,9 @@ spec:
             desired:
               format: int32
               type: integer
+            lastUpdateTime:
+              format: date-time
+              type: string
             observedGeneration:
               description: observedGeneration is the most recent generation observed
                 for this workload. It corresponds to the StatefulSet's generation,
@@ -4730,6 +4733,9 @@ spec:
                 - unAvailable
                 type: object
               type: array
+            startTime:
+              format: date-time
+              type: string
             status:
               type: string
             updateRevision:
@@ -9606,12 +9612,18 @@ spec:
             desired:
               format: int32
               type: integer
+            lastUpdateTime:
+              format: date-time
+              type: string
             observedGeneration:
               description: ObservedGeneration is the most recent generation observed
                 for this worklod. It corresponds to the worklod's generation, which
                 is updated on mutation by the API Server.
               format: int64
               type: integer
+            startTime:
+              format: date-time
+              type: string
             status:
               description: app status
               type: string

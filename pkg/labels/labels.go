@@ -18,17 +18,20 @@ const (
 	LabelArea           = "area"
 	LabelId             = "id"
 	AnnotationsSpecHash = "SpecHash"
+	LabelKeyZone        = "sym-available-zone"
 )
 
 const (
 	ObserveMustLabelClusterName = "sym-cluster-info"
 	ObserveMustLabelLdcName     = "sym-ldc"
+	ObserveMustLabelGroupName   = "sym-group"
 	ObserveMustLabelAppName     = "app"
 	ObserveMustLabelVersion     = "version"
 )
 
 const (
-	ControllerName = "sym-controller"
+	ControllerName           = "sym-controller"
+	ControllerFinalizersName = "sym-admin-finalizers"
 )
 
 func GetLabels(clusterName string) map[string]string {

@@ -181,8 +181,12 @@ func (r *AppSetReconciler) CustomReconcile(ctx context.Context, req customctrl.C
 
 	// if finalizers empty, full "sym-admin-finalizers" string
 	if as.ObjectMeta.Finalizers == nil {
-		as.ObjectMeta.Finalizers = []string{"sym-admin-finalizers"}
+		as.ObjectMeta.Finalizers = []string{labels.ControllerFinalizersName}
 		return reconcile.Result{}, r.Client.Update(ctx, as)
+	}
+
+	if req.Name != "bbcc" {
+		return reconcile.Result{}, nil
 	}
 
 	for _, v := range as.Spec.ClusterTopology.Clusters {

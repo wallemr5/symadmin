@@ -163,6 +163,9 @@ type AdvDeploymentStatus struct {
 	// [replicas-updatedReplicas,replicas)
 	UpdateRevision string `json:"updateRevision,omitempty"`
 
+	StartTime      *metav1.Time `json:"startTime,omitempty"`
+	LastUpdateTime *metav1.Time `json:"lastUpdateTime,omitempty"`
+
 	// collisionCount is the count of hash collisions for the workload. The workload controller
 	// uses this field as a collision avoidance mechanism when it needs to create the name for the
 	// newest ControllerRevision.

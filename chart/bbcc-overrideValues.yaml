@@ -5,11 +5,6 @@ service:
   enabled: true
 
 sym:
-  env:
-    - name: SYM_AVAILABLE_ZONE
-      value: BJ5
-    - name: SYM_CLUSTER_INFO
-      value: tcc-bj5-dks-monit-01
   labels:
     sym-group: blue
     sym-ldc: gz01b
@@ -26,7 +21,7 @@ container:
     tag: v1
   env:
     - name: SYM_AVAILABLE_ZONE
-      value:  bj5
+      value: bj5
     - name: SYM_CLUSTER_INFO
       value: tcc-bj5-dks-monit-01
     - name: SYM_ENABLE_SUBSTITUTE

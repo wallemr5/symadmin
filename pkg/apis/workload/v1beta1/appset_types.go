@@ -117,6 +117,9 @@ type AppSetStatus struct {
 	// +optional
 	ObservedGeneration int64 `json:"observedGeneration,omitempty"`
 
+	StartTime      *metav1.Time `json:"startTime,omitempty"`
+	LastUpdateTime *metav1.Time `json:"lastUpdateTime,omitempty"`
+
 	//
 	Version string `json:"version,omitempty"`
 

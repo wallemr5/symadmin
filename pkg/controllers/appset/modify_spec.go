@@ -3,92 +3,127 @@ package appset
 import (
 	"context"
 
+	"fmt"
+
 	"github.com/go-logr/logr"
+	"github.com/pkg/errors"
 	workloadv1beta1 "gitlab.dmall.com/arch/sym-admin/pkg/apis/workload/v1beta1"
 	"gitlab.dmall.com/arch/sym-admin/pkg/customctrl"
+	k8smanager "gitlab.dmall.com/arch/sym-admin/pkg/k8s/manager"
+	"gitlab.dmall.com/arch/sym-admin/pkg/labels"
 	"gitlab.dmall.com/arch/sym-admin/pkg/utils"
 	"k8s.io/apimachinery/pkg/api/equality"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/types"
+	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
+	"k8s.io/client-go/util/retry"
+	"k8s.io/klog"
 )
 
 // ModifySpec modify spec handler
-func (r *AppSetReconciler) ModifySpec(logger logr.Logger, info *workloadv1beta1.AppSet, clusterTopology *workloadv1beta1.TargetCluster, req customctrl.CustomRequest) (modifyStatus bool, condition *workloadv1beta1.AppSetCondition, err error) {
+func (r *AppSetReconciler) ModifySpec(logger logr.Logger, app *workloadv1beta1.AppSet, clusterTopology *workloadv1beta1.TargetCluster, req customctrl.CustomRequest) (modifyStatus bool, condition *workloadv1beta1.AppSetCondition, err error) {
 	cluster, err := r.DksMgr.K8sMgr.Get(clusterTopology.Name)
 	if err != nil {
 		return false, nil, err
 	}
 
 	// build AdvDeployment info with AppSet TargetCluster
-	new := buildAdvDeployment(info, clusterTopology)
+	newObj := buildAdvDeployment(app, clusterTopology)
 
-	old := &workloadv1beta1.AdvDeployment{
-		ObjectMeta: metav1.ObjectMeta{
-			Name: info.Name,
-		},
-	}
-	err = cluster.Client.Get(context.TODO(), req.NamespacedName, old)
-	if err != nil {
-		if apierrors.IsNotFound(err) {
-			logger.Info("create spec event", "cluster", clusterTopology.Name)
-			return true, nil, cluster.Client.Create(context.TODO(), new)
-		}
-		return false, nil, err
-	}
-
-	if needUpdate(old, new) {
-		logger.Info("update spec event", "cluster", clusterTopology.Name)
-		return true, nil, cluster.Client.Update(context.TODO(), coverAdvDeployment(old, new))
-	}
-
-	return false, nil, nil
+	_, err = applyAdvDeployment(app, cluster, newObj)
+	return false, nil, err
 }
 
-func buildAdvDeployment(info *workloadv1beta1.AppSet, clusterTopology *workloadv1beta1.TargetCluster) *workloadv1beta1.AdvDeployment {
+func buildAdvDeployment(app *workloadv1beta1.AppSet, clusterTopology *workloadv1beta1.TargetCluster) *workloadv1beta1.AdvDeployment {
 	replica := 0
 	for _, v := range clusterTopology.PodSets {
 		replica += v.Replicas.IntValue()
 	}
 
-	obj := &workloadv1beta1.AdvDeployment{}
-	obj.Spec.ServiceName = info.Spec.ServiceName
-	obj.Spec.PodSpec = info.Spec.PodSpec
-	obj.Spec.Replicas = utils.IntPointer(int32(replica))
-	obj.Spec.Topology = workloadv1beta1.Topology{
-		PodSets: clusterTopology.PodSets,
+	obj := &workloadv1beta1.AdvDeployment{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:       app.Name,
+			Namespace:  app.Namespace,
+			Labels:     makeAdvDeploymentLabel(clusterTopology, app),
+			Finalizers: []string{labels.ControllerFinalizersName},
+		},
 	}
-	obj.Namespace = info.Namespace
-	obj.Name = info.Name
 
+	if app.Spec.ServiceName != nil {
+		svcName := *app.Spec.ServiceName
+		obj.Spec.ServiceName = &svcName
+	}
+
+	obj.Spec.Replicas = utils.IntPointer(int32(replica))
+	app.Spec.PodSpec.DeepCopyInto(&obj.Spec.PodSpec)
+
+	for i := range clusterTopology.PodSets {
+		podSet := clusterTopology.PodSets[i].DeepCopy()
+		if podSet.RawValues == "" {
+			podSet.RawValues = makeHelmOverrideValus(podSet.Name, clusterTopology, app)
+		}
+		obj.Spec.Topology.PodSets = append(obj.Spec.Topology.PodSets, *podSet)
+	}
 	return obj
 }
 
-func needUpdate(old, new *workloadv1beta1.AdvDeployment) bool {
-	// // TODO label
-	// for k := range new.ObjectMeta.Labels {
-	// 	if _, ok := new.ObjectMeta.Labels[k]; !ok {
-	// 		return true
-	// 	}
-	// }
+func applyAdvDeployment(app *workloadv1beta1.AppSet, cluster *k8smanager.Cluster, advDeploy *workloadv1beta1.AdvDeployment) (*workloadv1beta1.AdvDeployment, error) {
+	obj := &workloadv1beta1.AdvDeployment{}
+	err := cluster.Client.Get(context.TODO(), types.NamespacedName{
+		Name:      app.Name,
+		Namespace: app.Namespace,
+	}, obj)
 
-	if old.Namespace != new.Namespace {
-		return true
+	if err != nil {
+		if apierrors.IsNotFound(err) {
+			klog.Infof("create spec cluster:%s ", cluster.Name)
+			time := metav1.Now()
+			advDeploy.Status.StartTime = &time
+			err = cluster.Client.Create(context.TODO(), advDeploy)
+			if err != nil {
+				return nil, errors.Wrapf(err, "cluster:%s create advDeploy", cluster.Name)
+			}
+			return advDeploy, nil
+		}
+		return nil, err
 	}
 
-	return !equality.Semantic.DeepEqual(old.Spec, new.Spec)
-}
+	var isChanged int
+	isEqual := equality.Semantic.DeepEqual(obj.Spec, advDeploy.Spec)
+	if !isEqual {
+		isChanged++
+	}
 
-func coverAdvDeployment(old, new *workloadv1beta1.AdvDeployment) *workloadv1beta1.AdvDeployment {
-	// // TODO label
-	// for k, v := range new.ObjectMeta.Labels {
-	// 	old.ObjectMeta.Labels[k] = v
-	// }
+	isEqual = equality.Semantic.DeepEqual(obj.ObjectMeta.Labels, advDeploy.ObjectMeta.Labels)
+	if !isEqual {
+		isChanged++
+	}
 
-	old.Spec.ServiceName = new.Spec.ServiceName
-	old.Spec.PodSpec = new.Spec.PodSpec
-	old.Spec.Replicas = new.Spec.Replicas
-	old.Spec.Topology = new.Spec.Topology
-	old.Namespace = new.Namespace
+	if isChanged > 0 {
+		err := retry.RetryOnConflict(retry.DefaultRetry, func() error {
+			time := metav1.Now()
+			advDeploy.Spec.DeepCopyInto(&obj.Spec)
+			obj.Labels = advDeploy.ObjectMeta.Labels
+			obj.Status.LastUpdateTime = &time
+			updateErr := cluster.Client.Update(context.TODO(), obj)
+			if updateErr == nil {
+				klog.V(3).Infof("advDeploy: [%s/%s] updated successfully", cluster.Name, advDeploy.Name)
+				return nil
+			}
 
-	return old
+			getErr := cluster.Client.Get(context.TODO(), types.NamespacedName{
+				Name:      app.Name,
+				Namespace: app.Namespace,
+			}, obj)
+
+			if getErr != nil {
+				utilruntime.HandleError(fmt.Errorf("getting updated advDeploy: [%s/%s] err: %v", cluster.Name, advDeploy.Name, err))
+			}
+			return updateErr
+		})
+		return nil, err
+	}
+
+	return obj, nil
 }
