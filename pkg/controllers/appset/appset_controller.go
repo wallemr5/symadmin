@@ -213,7 +213,10 @@ func (r *AppSetReconciler) CustomReconcile(ctx context.Context, req customctrl.C
 	}
 
 	logger.Info("aggregate status", "app", app.Name)
-	r.ModifyStatus(ctx, req, app)
+	if err := r.ModifyStatus(ctx, req, app); err != nil {
+		logger.Error(err, "update AppSet.Status fail")
+		return reconcile.Result{}, err
+	}
 
 	logger.Info("AppSet", "ResourceVersion", app.GetResourceVersion())
 	return reconcile.Result{}, nil

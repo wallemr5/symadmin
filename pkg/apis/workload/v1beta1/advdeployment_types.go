@@ -143,7 +143,7 @@ type AdvDeploymentCondition struct {
 }
 
 type AdvDeploymentAggrStatus struct {
-	Status      string             `json:"status,omitempty"`
+	Status      AppStatus          `json:"status,omitempty"`
 	Version     string             `json:"version,omitempty"`
 	Desired     int32              `json:"desired"`
 	Available   int32              `json:"available"`

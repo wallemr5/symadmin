@@ -214,3 +214,28 @@ func makeAdvDeploymentLabel(clusterSpec *workloadv1beta1.TargetCluster, app *wor
 
 	return lb
 }
+
+func mergeVersion(v1, v2 string) string {
+	if v1 == "" {
+		return v2
+	}
+	if v2 == "" {
+		return v1
+	}
+
+	s1 := strings.Split(v1, "/")
+	s2 := strings.Split(v2, "/")
+	m := map[string]struct{}{}
+	for _, v := range s1 {
+		m[v] = struct{}{}
+	}
+	for _, v := range s2 {
+		m[v] = struct{}{}
+	}
+
+	s := make([]string, len(m))
+	for k := range m {
+		s = append(s, k)
+	}
+	return strings.Join(s, "/")
+}

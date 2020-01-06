@@ -17,6 +17,7 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	"k8s.io/client-go/util/retry"
+	"k8s.io/klog"
 )
 
 type workflow string
@@ -30,26 +31,35 @@ const (
 
 // ModifySpec modify spec handler
 func (r *AppSetReconciler) ModifySpec(ctx context.Context, req customctrl.CustomRequest, app *workloadv1beta1.AppSet) (isChanged bool, err error) {
-	wf, err := getCurrentDetailChoiceWorkflow(ctx, r.DksMgr.K8sMgr, app, req)
+	wf, delCluster, err := getCurrentDetailChoiceWorkflow(ctx, r.DksMgr.K8sMgr, app, req)
 	if err != nil {
 		return false, err
 	}
 
 	switch wf {
+
 	case UpdateStatus:
 		return UpdateWorkFlow(ctx, r.DksMgr.K8sMgr, app, req)
+
 	case MiddleStatus:
 		return false, nil
+
 	case DeleteStatus:
-		return false, nil
+		return true, DeleteWorkFlow(ctx, r.DksMgr.K8sMgr, delCluster, req)
+
 	default:
 		return false, fmt.Errorf("update spec unknow workflow:%s", wf)
 	}
 }
 
-func getCurrentDetailChoiceWorkflow(ctx context.Context, dksManger *k8smanager.ClusterManager, app *workloadv1beta1.AppSet, req customctrl.CustomRequest) (workflow, error) {
+func getCurrentDetailChoiceWorkflow(ctx context.Context, dksManger *k8smanager.ClusterManager, app *workloadv1beta1.AppSet, req customctrl.CustomRequest) (wf workflow, delCluster string, err error) {
+	// get current info
 	currentInfo := map[string]*workloadv1beta1.AdvDeployment{}
 	for _, cluster := range dksManger.GetAll() {
+		if cluster.Status == k8smanager.ClusterOffline {
+			continue
+		}
+
 		b := &workloadv1beta1.AdvDeployment{}
 		err := cluster.Client.Get(ctx, req.NamespacedName, b)
 		if err == nil {
@@ -59,8 +69,10 @@ func getCurrentDetailChoiceWorkflow(ctx context.Context, dksManger *k8smanager.C
 		if apierrors.IsNotFound(err) {
 			continue
 		}
-		return UnknowStatus, err
+		return UnknowStatus, "", err
 	}
+
+	// build expect info with app
 	expectInfo := map[string]struct{}{}
 	for _, cluster := range app.Spec.ClusterTopology.Clusters {
 		expectInfo[cluster.Name] = struct{}{}
@@ -76,20 +88,31 @@ func getCurrentDetailChoiceWorkflow(ctx context.Context, dksManger *k8smanager.C
 		}
 	}
 
-	if len(addQueue) > 0 {
-		return UpdateStatus, nil
-	}
-	if len(delQueue) == 0 {
-		return UpdateStatus, nil
+	// need add info or not exist del info, update workflow
+	if len(addQueue) > 0 || len(delQueue) == 0 {
+		return UpdateStatus, "nil", nil
 	}
 
-	// TODO: judge all current status complete, and delete unexpect cluster info
-	for _, info := range currentInfo {
-		if info.Status.AggrStatus.Status != "Running" {
-			return MiddleStatus, nil
+	// judge all expect status runing
+	for cluster, info := range currentInfo {
+		// except expect cluster
+		if _, ok := expectInfo[cluster]; !ok {
+			continue
+		}
+		if info.Status.AggrStatus.Status != workloadv1beta1.AppStatusRuning {
+			return MiddleStatus, "", nil
 		}
 	}
-	return DeleteStatus, nil
+
+	// delete unexpect cluster info
+	if app.Status.AggrStatus.Status == workloadv1beta1.AppStatusRuning {
+		// get first need del cluster info
+		for k := range delQueue {
+			return DeleteStatus, k, nil
+		}
+	}
+
+	return MiddleStatus, "", nil
 }
 
 func UpdateWorkFlow(ctx context.Context, dksManger *k8smanager.ClusterManager, app *workloadv1beta1.AppSet, req customctrl.CustomRequest) (isChanged bool, err error) {
@@ -203,4 +226,18 @@ func compare(new, old *workloadv1beta1.AdvDeployment) bool {
 		return true
 	}
 	return false
+}
+
+func DeleteWorkFlow(ctx context.Context, dksManger *k8smanager.ClusterManager, cluster string, req customctrl.CustomRequest) (err error) {
+	client, err := dksManger.Get(cluster)
+	if err != nil {
+		klog.V(4).Infof("%s:delete unexpect info, get cluster[%s] client fail:%+v", req.NamespacedName, cluster, err)
+		return err
+	}
+
+	_, err = deleteByCluster(ctx, client, req)
+	if err != nil {
+		return err
+	}
+	return nil
 }

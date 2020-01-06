@@ -19,7 +19,7 @@ import (
 
 // ModifyStatus modify status handler
 func (r *AppSetReconciler) ModifyStatus(ctx context.Context, req customctrl.CustomRequest, app *workloadv1beta1.AppSet) error {
-	as, err := buildAppSetStatus(ctx, r.DksMgr.K8sMgr, req)
+	as, err := buildAppSetStatus(ctx, r.DksMgr.K8sMgr, req, app)
 	if err != nil {
 		klog.V(4).Infof("%s:aggregate AppSet.Status faile:%+v", req.NamespacedName, err)
 		return err
@@ -32,12 +32,17 @@ func (r *AppSetReconciler) ModifyStatus(ctx context.Context, req customctrl.Cust
 	return nil
 }
 
-func buildAppSetStatus(ctx context.Context, dksManger *k8smanager.ClusterManager, req customctrl.CustomRequest) (*workloadv1beta1.AggrAppSetStatus, error) {
+func buildAppSetStatus(ctx context.Context, dksManger *k8smanager.ClusterManager, req customctrl.CustomRequest, app *workloadv1beta1.AppSet) (*workloadv1beta1.AggrAppSetStatus, error) {
 	as := &workloadv1beta1.AggrAppSetStatus{
 		Clusters: []*workloadv1beta1.ClusterAppActual{},
 	}
+	finalStatus := workloadv1beta1.AppStatusRuning
 
 	for _, cluster := range dksManger.GetAllSort() {
+		if cluster.Status == k8smanager.ClusterOffline {
+			continue
+		}
+
 		obj := &workloadv1beta1.AdvDeployment{}
 		if err := cluster.Cache.Get(ctx, req.NamespacedName, obj); err != nil {
 			if apierrors.IsNotFound(err) {
@@ -50,8 +55,11 @@ func buildAppSetStatus(ctx context.Context, dksManger *k8smanager.ClusterManager
 		as.Available += obj.Status.AggrStatus.Desired
 		as.UnAvailable += obj.Status.AggrStatus.UnAvailable
 		as.Desired += obj.Status.AggrStatus.Desired
+		if obj.Status.AggrStatus.Status != workloadv1beta1.AppStatusRuning {
+			finalStatus = workloadv1beta1.AppStatusInstalling
+		}
 		if !strings.Contains(as.Version, obj.Status.AggrStatus.Version) {
-			as.Version = obj.Status.AggrStatus.Version
+			as.Version = mergeVersion(as.Version, obj.Status.AggrStatus.Version)
 		}
 		as.Clusters = append(as.Clusters, &workloadv1beta1.ClusterAppActual{
 			Desired:     obj.Status.AggrStatus.Desired,
@@ -93,6 +101,11 @@ func buildAppSetStatus(ctx context.Context, dksManger *k8smanager.ClusterManager
 			as.WarnEvents = []*workloadv1beta1.Event{}
 		}
 		as.WarnEvents = evts
+	}
+
+	// final status aggregate
+	if finalStatus == workloadv1beta1.AppStatusRuning && as.Available == *app.Spec.Replicas {
+		as.Status = finalStatus
 	}
 
 	return as, nil

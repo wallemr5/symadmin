@@ -175,3 +175,16 @@ type PodSet struct {
 	// exp: bule/green, rz/gz
 	Mata map[string]string `json:"meta,omitempty"`
 }
+
+// app status
+type AppStatus string
+
+const (
+	AppStatusRuning       AppStatus = "Running"
+	AppStatusMigrating    AppStatus = "Migrating"
+	AppStatusWorkRatioing AppStatus = "WorkRatioing"
+	AppStatusScaling      AppStatus = "Scaling"
+	AppStatusUpdateing    AppStatus = "Updateing"
+	AppStatusInstalling   AppStatus = "Installing"
+	AppStatusUnknown      AppStatus = "Unknown"
+)
