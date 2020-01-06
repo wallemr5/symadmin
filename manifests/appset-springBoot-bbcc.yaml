@@ -28,7 +28,7 @@ spec:
         podSets:
           - name: bbcc-gz01b-canary
             replicas: 1
-            version: v3
+            version: v4
             image: registry.cn-hangzhou.aliyuncs.com/dmall/bbcc
             meta:
               sym-group: canary
@@ -55,7 +55,7 @@ spec:
           - name: bbcc-gz01a-canary
             replicas: 1
             image: registry.cn-hangzhou.aliyuncs.com/dmall/bbcc
-            version: v3
+            version: v4
             meta:
               sym-group: canary
               sym-ldc: gz01a
