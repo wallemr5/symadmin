@@ -186,7 +186,7 @@ func (r *AppSetReconciler) CustomReconcile(ctx context.Context, req customctrl.C
 		return reconcile.Result{}, r.Client.Update(ctx, app)
 	}
 
-	isChange, err := r.ModifySpec(ctx, app, req)
+	isChange, err := r.ModifySpec(ctx, req, app)
 	if err != nil {
 		logger.Error(err, "modify advdeployment info with spec")
 		return reconcile.Result{}, err
@@ -196,7 +196,7 @@ func (r *AppSetReconciler) CustomReconcile(ctx context.Context, req customctrl.C
 	}
 
 	logger.Info("aggregate status", "app", app.Name)
-	r.ModifyStatus()
+	r.ModifyStatus(ctx, req, app)
 
 	logger.Info("AppSet", "ResourceVersion", app.GetResourceVersion())
 	return reconcile.Result{}, nil

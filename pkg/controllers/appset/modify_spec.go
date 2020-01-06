@@ -29,7 +29,7 @@ const (
 )
 
 // ModifySpec modify spec handler
-func (r *AppSetReconciler) ModifySpec(ctx context.Context, app *workloadv1beta1.AppSet, req customctrl.CustomRequest) (isChanged bool, err error) {
+func (r *AppSetReconciler) ModifySpec(ctx context.Context, req customctrl.CustomRequest, app *workloadv1beta1.AppSet) (isChanged bool, err error) {
 	wf, err := getCurrentDetailChoiceWorkflow(ctx, r.DksMgr.K8sMgr, app, req)
 	if err != nil {
 		return false, err
