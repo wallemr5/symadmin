@@ -134,13 +134,13 @@ func (r *AdvDeploymentReconciler) RecalculateAppSetStatus(ctx context.Context, a
 	}
 
 	sort.Slice(status.PodSets, func(i, j int) bool {
-		return status.PodSets[i].Name > status.PodSets[i].Name
+		return status.PodSets[i].Name < status.PodSets[j].Name
 	})
 
 	status.Version = utils.FillDuplicatedVersion(status.PodSets)
 
 	if status.Desired == status.Available {
-
+		status.Status = "Running"
 	}
 	return status, nil
 }
