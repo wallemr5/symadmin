@@ -38,7 +38,7 @@ func getObserveApp(labels map[string]string) string {
 	}
 
 	if va, ok := labels[ObserveMustLabelAppName]; ok {
-		klog.V(4).Infof("Observe label app:%s", va)
+		klog.V(5).Infof("Observe label app:%s", va)
 		return va
 	}
 

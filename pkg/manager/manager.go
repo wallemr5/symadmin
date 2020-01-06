@@ -18,13 +18,14 @@ package manager
 
 import (
 	"context"
+	"time"
+
 	"github.com/go-logr/logr"
 	"gitlab.dmall.com/arch/sym-admin/pkg/healthcheck"
 	k8smanager "gitlab.dmall.com/arch/sym-admin/pkg/k8s/manager"
 	"gitlab.dmall.com/arch/sym-admin/pkg/router"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/klog"
-	"time"
 )
 
 type ManagerOption struct {
@@ -55,6 +56,7 @@ func DefaultManagerOption() *ManagerOption {
 	return &ManagerOption{
 		HTTPAddr:             ":8080",
 		GoroutineThreshold:   1000,
+		ResyncPeriod:         30 * time.Minute,
 		EnableLeaderElection: false,
 		GinLogEnabled:        true,
 		PprofEnabled:         true,

@@ -132,7 +132,7 @@ type PodSetSatusInfo struct {
 	Name          string `json:"name"`
 	Desired       int32  `json:"desired"`
 	Available     int32  `json:"available"`
-	UnAvailable   int32  `json:"unAvailable"`
+	UnAvailable   int32  `json:"unAvailable,omitempty"`
 	Version       string `json:"version,omitempty"`
 	ClusterName   string `json:"clusterName,omitempty"`
 	HaveDeploy    *bool  `json:"haveDeploy,omitempty"`

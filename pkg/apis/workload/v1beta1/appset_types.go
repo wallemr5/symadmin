@@ -117,7 +117,6 @@ type AppSetStatus struct {
 	// +optional
 	ObservedGeneration int64 `json:"observedGeneration,omitempty"`
 
-	StartTime      *metav1.Time `json:"startTime,omitempty"`
 	LastUpdateTime *metav1.Time `json:"lastUpdateTime,omitempty"`
 
 	// Represents the latest available observations of a UnitedDeployment's current state.
@@ -153,24 +152,20 @@ const (
 
 // ClusterAppActual
 type ClusterAppActual struct {
-	Desired   int32             `json:"desired"`
-	Available int32             `json:"available"`
-	PodSets   []PodSetSatusInfo `json:"podSets,omitempty"`
+	Desired     int32              `json:"desired"`
+	Available   int32              `json:"available"`
+	UnAvailable int32              `json:"unAvailable,omitempty"`
+	PodSets     []*PodSetSatusInfo `json:"podSets,omitempty"`
 }
 
 // AppActual represent the app status
 type AggrAppSetStatus struct {
-	//
-	Version string `json:"version,omitempty"`
+	Status      AppSatus `json:"status,omitempty"`
+	Version     string   `json:"version,omitempty"`
+	Desired     int32    `json:"desired"`
+	Available   int32    `json:"available"`
+	UnAvailable int32    `json:"unAvailable,omitempty"`
 
-	//
-	Desired int32 `json:"desired,omitempty"`
-
-	//
-	Available int32 `json:"available,omitempty"`
-
-	//
-	Status     AppSatus            `json:"status,omitempty"`
 	Clusters   []*ClusterAppActual `json:"clusters,omitempty"`
 	Pods       []*Pod              `json:"pods,omitempty"`
 	WarnEvents []*Event            `json:"warnEvents,omitempty"`

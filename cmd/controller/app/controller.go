@@ -17,8 +17,6 @@ limitations under the License.
 package app
 
 import (
-	"time"
-
 	"github.com/spf13/cobra"
 	controller "gitlab.dmall.com/arch/sym-admin/pkg/controllers"
 	k8sclient "gitlab.dmall.com/arch/sym-admin/pkg/k8s/client"
@@ -48,13 +46,12 @@ func NewControllerCmd(cli *DksCli) *cobra.Command {
 				klog.Fatalf("unable to get kubeconfig err: %v", err)
 			}
 
-			rp := time.Second * 120
 			mgr, err := ctrlmanager.New(cfg, ctrlmanager.Options{
 				Scheme:             k8sclient.GetScheme(),
 				MetricsBindAddress: "0",
 				LeaderElection:     opt.EnableLeaderElection,
 				// Port:               9443,
-				SyncPeriod: &rp,
+				SyncPeriod: &opt.ResyncPeriod,
 			})
 			if err != nil {
 				klog.Fatalf("unable to new manager err: %v", err)
@@ -79,7 +76,7 @@ func NewControllerCmd(cli *DksCli) *cobra.Command {
 				klog.Fatalf("unable to register controllers to the manager err: %v", err)
 			}
 
-			logger.Info("zap debug", "SyncPeriod", rp)
+			logger.Info("zap debug", "ResyncPeriod", opt.ResyncPeriod)
 			klog.Info("starting manager")
 			if err := mgr.Start(stopCh); err != nil {
 				klog.Fatalf("problem start running manager err: %v", err)
@@ -88,6 +85,7 @@ func NewControllerCmd(cli *DksCli) *cobra.Command {
 	}
 
 	cmd.PersistentFlags().IntVar(&opt.GoroutineThreshold, "goroutine-threshold", opt.GoroutineThreshold, "the max Goroutine Threshold")
+	cmd.PersistentFlags().DurationVar(&opt.ResyncPeriod, "resync-period", opt.ResyncPeriod, "the max resync period to informer")
 	cmd.PersistentFlags().StringVar(&opt.HTTPAddr, "http-addr", opt.HTTPAddr, "HTTPAddr for some info")
 	cmd.PersistentFlags().BoolVar(&opt.EnableLeaderElection, "enable-leader", opt.EnableLeaderElection,
 		"Enable leader election for controller manager. Enabling this will ensure there is only one active controller manager.")

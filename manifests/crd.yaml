@@ -4681,11 +4681,13 @@ spec:
                     - available
                     - desired
                     - name
-                    - unAvailable
                     type: object
                   type: array
                 status:
                   type: string
+                unAvailable:
+                  format: int32
+                  type: integer
                 version:
                   type: string
               required:
@@ -4743,9 +4745,6 @@ spec:
                 which is updated on mutation by the API Server.
               format: int64
               type: integer
-            startTime:
-              format: date-time
-              type: string
             updateRevision:
               description: updateRevision, if not empty, indicates the version of
                 the workload used to generate Pods in the sequence [replicas-updatedReplicas,replicas)
@@ -9453,9 +9452,11 @@ spec:
                           - available
                           - desired
                           - name
-                          - unAvailable
                           type: object
                         type: array
+                      unAvailable:
+                        format: int32
+                        type: integer
                     required:
                     - available
                     - desired
@@ -9547,6 +9548,9 @@ spec:
                 status:
                   description: app status
                   type: string
+                unAvailable:
+                  format: int32
+                  type: integer
                 version:
                   type: string
                 warnEvents:
@@ -9592,6 +9596,9 @@ spec:
                         type: string
                     type: object
                   type: array
+              required:
+              - available
+              - desired
               type: object
             conditions:
               description: Represents the latest available observations of a UnitedDeployment's
@@ -9629,9 +9636,6 @@ spec:
                 is updated on mutation by the API Server.
               format: int64
               type: integer
-            startTime:
-              format: date-time
-              type: string
           type: object
       type: object
   version: v1beta1

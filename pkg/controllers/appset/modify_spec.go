@@ -157,8 +157,6 @@ func applyAdvDeployment(ctx context.Context, cluster *k8smanager.Cluster, app *w
 	if err != nil {
 		if apierrors.IsNotFound(err) {
 			logger.Info("create spec cluster", "cluster", cluster.Name)
-			time := metav1.Now()
-			advDeploy.Status.StartTime = &time
 			err = cluster.Client.Create(ctx, advDeploy)
 			if err != nil {
 				return nil, false, errors.Wrapf(err, "cluster:%s create advDeploy", cluster.Name)

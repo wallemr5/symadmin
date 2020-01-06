@@ -25,10 +25,10 @@ func (r *AdvDeploymentReconciler) CleanReleasesByName(advDeploy *workloadv1beta1
 		return err
 	}
 
-	for _, rls := range response.Releases {
-		err := helmv2.DeleteRelease(rls.Name, hClient)
+	for _, helmRls := range response.Releases {
+		err := helmv2.DeleteRelease(helmRls.Name, hClient)
 		if err != nil {
-			klog.Errorf("DeleteRelease name: %s, err:%+v", rls.Name, err)
+			klog.Errorf("DeleteRelease name: %s, err:%+v", helmRls.Name, err)
 			return err
 		}
 	}

@@ -25,7 +25,6 @@ import (
 	helmv2 "gitlab.dmall.com/arch/sym-admin/pkg/helm/v2"
 	pkgmanager "gitlab.dmall.com/arch/sym-admin/pkg/manager"
 	appsv1 "k8s.io/api/apps/v1"
-	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/klog"
 	ctrl "sigs.k8s.io/controller-runtime"
@@ -61,23 +60,7 @@ type AdvDeploymentReconciler struct {
 	HelmEnv *HelmIndexSyncer
 }
 
-// func (r *AdvDeploymentReconciler) SetupWithManager(mgr ctrl.Manager) error {
-// 	// return ctrl.NewControllerManagedBy(mgr).
-// 	// 	For(&workloadv1beta1.AdvDeployment{}).
-// 	// 	Owns(&appsv1.Deployment{}).
-// 	// 	Owns(&appsv1.StatefulSet{}).
-// 	// 	// Owns(&kruisev1alpha1.StatefulSet{}).
-// 	// 	Owns(&corev1.Service{}).
-// 	// 	WithOptions(controller.Options{MaxConcurrentReconciles: 3}).
-// 	// 	WithEventFilter(utils.GetWatchPredicateForNs()).
-// 	// 	WithEventFilter(utils.GetWatchPredicateForApp()).
-// 	// 	// Watches(&source.Kind{Type: &corev1.Pod{}}, &handler.Funcs{}).
-// 	// 	Watches(&source.Kind{Type: &corev1.Pod{}}, &handler.EnqueueRequestsFromMapFunc{ToRequests: utils.GetEnqueueRequestsMapper()}).
-// 	// 	Complete(r)
-//
-// 	return nil
-// }
-
+// Add add controller to runtime manager
 func Add(mgr manager.Manager, cMgr *pkgmanager.DksManager) error {
 	r := &AdvDeploymentReconciler{
 		Name:   "AdvDeployment-controllers",
@@ -101,7 +84,7 @@ func Add(mgr manager.Manager, cMgr *pkgmanager.DksManager) error {
 		return err
 	}
 
-	// Watch for changes to Deployment for runtime controller
+	// Watch for changes to AdvDeployment for runtime controller
 	err = ctl.Watch(&source.Kind{Type: &workloadv1beta1.AdvDeployment{}}, &handler.EnqueueRequestForObject{})
 	if err != nil {
 		r.Log.Error(err, "Watch AdvDeployment err")
@@ -122,12 +105,12 @@ func Add(mgr manager.Manager, cMgr *pkgmanager.DksManager) error {
 		return err
 	}
 
-	// Watch for changes to Pod for runtime controller
-	err = ctl.Watch(&source.Kind{Type: &corev1.Pod{}}, utils.GetEnqueueRequestsFucs(), utils.GetWatchPredicateForNs(), utils.GetWatchPredicateForApp())
-	if err != nil {
-		r.Log.Error(err, "Watch Pod err")
-		return err
-	}
+	// // Watch for changes to Pod for runtime controller
+	// err = ctl.Watch(&source.Kind{Type: &corev1.Pod{}}, utils.GetEnqueueRequestsFucs(), utils.GetWatchPredicateForNs(), utils.GetWatchPredicateForApp())
+	// if err != nil {
+	// 	r.Log.Error(err, "Watch Pod err")
+	// 	return err
+	// }
 
 	helmv2env, err := helmv2.InitHelmRepoEnv("dmall", cMgr.Opt.Repos)
 	if err != nil {
@@ -135,7 +118,7 @@ func Add(mgr manager.Manager, cMgr *pkgmanager.DksManager) error {
 	}
 	r.HelmEnv = NewDefaultHelmIndexSyncer(helmv2env)
 
-	klog.Infof("add helm index syncer")
+	klog.Infof("add helm repo index syncer Runnable")
 	mgr.Add(r.HelmEnv)
 	return nil
 }
@@ -158,22 +141,23 @@ func (r *AdvDeploymentReconciler) Reconcile(req ctrl.Request) (ctrl.Result, erro
 		return reconcile.Result{}, err
 	}
 
+	// before delete AdvDeployment, we will clean all installed helm releases
 	if advDeploy.ObjectMeta.DeletionTimestamp != nil {
 		logger.Info("delete event", "advDeploy", advDeploy.Name)
 		err := r.CleanReleasesByName(advDeploy)
 		if err == nil {
-			klog.V(3).Infof("advDeploy: %s clean all helm Releases success")
+			klog.V(3).Infof("advDeploy: %s clean all helm Releases success, than update Finalizers nil")
 			advDeploy.ObjectMeta.Finalizers = nil
 			err = r.Client.Update(ctx, advDeploy)
 			if err == nil {
-				klog.V(3).Infof("advDeploy: %s Update delete Finalizers success")
+				klog.V(3).Infof("advDeploy: %s Update Finalizers nil success")
 				return reconcile.Result{}, nil
 			}
 		}
 		return reconcile.Result{}, err
 	}
 
-	// if finalizers empty, full "sym-admin-finalizers" string
+	// if finalizers empty, full ControllerFinalizersName string
 	if advDeploy.ObjectMeta.Finalizers == nil {
 		advDeploy.ObjectMeta.Finalizers = []string{labels.ControllerFinalizersName}
 		err = r.Client.Update(ctx, advDeploy)
@@ -193,6 +177,7 @@ func (r *AdvDeploymentReconciler) Reconcile(req ctrl.Request) (ctrl.Result, erro
 		return reconcile.Result{}, nil
 	}
 
+	// at present, wo only process deploy type is helm
 	if advDeploy.Spec.PodSpec.DeployType == "helm" {
 		if advDeploy.Spec.PodSpec.Chart == nil || (advDeploy.Spec.PodSpec.Chart.ChartUrl == nil && advDeploy.Spec.PodSpec.Chart.RawChart == nil) {
 			klog.Errorf("name: %s DeployType is helm, but no Chart spec", advDeploy.Name)
@@ -205,6 +190,7 @@ func (r *AdvDeploymentReconciler) Reconcile(req ctrl.Request) (ctrl.Result, erro
 			return reconcile.Result{}, err
 		}
 	}
+
 	aggrStatus, err := r.RecalculateAppSetStatus(ctx, advDeploy)
 	if err != nil {
 		logger.Error(err, "faild RecalculateAppSetStatus")

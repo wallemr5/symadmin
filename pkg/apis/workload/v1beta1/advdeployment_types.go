@@ -143,11 +143,12 @@ type AdvDeploymentCondition struct {
 }
 
 type AdvDeploymentAggrStatus struct {
-	Status    string            `json:"status,omitempty"`
-	Version   string            `json:"version,omitempty"`
-	Desired   int32             `json:"desired"`
-	Available int32             `json:"available"`
-	PodSets   []PodSetSatusInfo `json:"podSets,omitempty"`
+	Status      string             `json:"status,omitempty"`
+	Version     string             `json:"version,omitempty"`
+	Desired     int32              `json:"desired"`
+	Available   int32              `json:"available"`
+	UnAvailable int32              `json:"unAvailable,omitempty"`
+	PodSets     []*PodSetSatusInfo `json:"podSets,omitempty"`
 }
 
 // AdvDeploymentStatus defines the observed state of AdvDeployment
@@ -167,9 +168,6 @@ type AdvDeploymentStatus struct {
 	// updateRevision, if not empty, indicates the version of the workload used to generate Pods in the sequence
 	// [replicas-updatedReplicas,replicas)
 	UpdateRevision string `json:"updateRevision,omitempty"`
-
-	//
-	StartTime *metav1.Time `json:"startTime,omitempty"`
 
 	//
 	LastUpdateTime *metav1.Time `json:"lastUpdateTime,omitempty"`

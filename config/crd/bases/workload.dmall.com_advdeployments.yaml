@@ -4683,11 +4683,13 @@ spec:
                     - available
                     - desired
                     - name
-                    - unAvailable
                     type: object
                   type: array
                 status:
                   type: string
+                unAvailable:
+                  format: int32
+                  type: integer
                 version:
                   type: string
               required:
@@ -4745,9 +4747,6 @@ spec:
                 which is updated on mutation by the API Server.
               format: int64
               type: integer
-            startTime:
-              format: date-time
-              type: string
             updateRevision:
               description: updateRevision, if not empty, indicates the version of
                 the workload used to generate Pods in the sequence [replicas-updatedReplicas,replicas)

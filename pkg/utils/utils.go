@@ -2,8 +2,11 @@ package utils
 
 import (
 	"fmt"
+	"sort"
 	"strings"
 
+	workloadv1beta1 "gitlab.dmall.com/arch/sym-admin/pkg/apis/workload/v1beta1"
+	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
 )
 
@@ -133,4 +136,44 @@ func SplitMetaLdcGroupKey(key string) (ldcName, groupName string, err error) {
 
 func ToClusterCrName(name string) string {
 	return strings.ToLower(strings.ReplaceAll(name, "_", "-"))
+}
+
+// FillImageVersion
+func FillImageVersion(name string, podSpec *corev1.PodSpec) string {
+	if podSpec == nil {
+		return ""
+	}
+
+	for i := range podSpec.Containers {
+		c := &podSpec.Containers[i]
+		if c.Name == name {
+			fullName := strings.Split(c.Image, ":")
+			if len(fullName) > 1 {
+				return fullName[1]
+			}
+		}
+	}
+
+	return ""
+}
+
+// FillDuplicatedVersion
+func FillDuplicatedVersion(infos []*workloadv1beta1.PodSetSatusInfo) string {
+	found := make(map[string]bool)
+	var foundSet []string
+	for i := range infos {
+		if infos[i].Version != "" {
+			found[infos[i].Version] = true
+		}
+	}
+
+	for k, _ := range found {
+		foundSet = append(foundSet, k)
+	}
+
+	sort.Slice(foundSet, func(i, j int) bool {
+		return foundSet[i] < foundSet[i]
+	})
+
+	return strings.Join(foundSet, "/")
 }

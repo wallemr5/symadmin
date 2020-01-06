@@ -70,6 +70,6 @@ func SaveChartByte(c *chart.Chart) ([]byte, error) {
 		return nil, errors.Wrap(err, "read tmp chart to byte fail")
 	}
 
-	klog.V(3).Infof("name:%s, filename:%s", c.GetMetadata().Name, filename)
+	klog.V(4).Infof("name:%s, filename:%s", c.GetMetadata().Name, filename)
 	return chartByte, nil
 }

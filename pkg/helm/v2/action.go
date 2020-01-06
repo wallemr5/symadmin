@@ -194,7 +194,7 @@ func ListReleases(filter string, hClient *Client) (*rls.ListReleasesResponse, er
 		// helm.ReleaseListNamespace(""),
 	}
 	if filter != "" {
-		klog.V(3).Infof("Apply filters: %s", filter)
+		klog.V(4).Infof("Apply filters: %s", filter)
 		ops = append(ops, helm.ReleaseListFilter(filter))
 	}
 
@@ -224,7 +224,7 @@ func getRequestedChart(rlsName, chartName, chartVersion string, chartPackage []b
 	if chartPackage != nil && len(chartPackage) != 0 {
 		requestedChart, err = chartutil.LoadArchive(bytes.NewReader(chartPackage))
 	} else {
-		klog.V(3).Infof("Deploying chart=%q, version=%q rlsName=%q", chartName, chartVersion, rlsName)
+		klog.V(4).Infof("Deploying chart=%q, version=%q rlsName=%q", chartName, chartVersion, rlsName)
 		var downloadedChartPath string
 		downloadedChartPath, err = DownloadChartFromRepo(chartName, chartVersion, env)
 		if err != nil {
@@ -232,7 +232,7 @@ func getRequestedChart(rlsName, chartName, chartVersion string, chartPackage []b
 		}
 
 		requestedChart, err = chartutil.Load(downloadedChartPath)
-		klog.V(3).Infof("downloadedChartPath:%s", downloadedChartPath)
+		klog.V(4).Infof("downloadedChartPath:%s", downloadedChartPath)
 	}
 
 	if err != nil {
