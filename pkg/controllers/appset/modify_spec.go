@@ -2,7 +2,6 @@ package appset
 
 import (
 	"context"
-
 	"fmt"
 
 	"github.com/pkg/errors"
@@ -195,6 +194,7 @@ func applyAdvDeployment(ctx context.Context, cluster *k8smanager.Cluster, app *w
 			advDeploy.Spec.DeepCopyInto(&obj.Spec)
 			obj.Labels = advDeploy.ObjectMeta.Labels
 			obj.Status.LastUpdateTime = &time
+			obj.Status.AggrStatus.Status = workloadv1beta1.AppStatusInstalling
 			updateErr := cluster.Client.Update(ctx, obj)
 			if updateErr == nil {
 				logger.Info("advDeploy updated successfully", "cluster", cluster.Name)

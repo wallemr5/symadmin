@@ -188,11 +188,11 @@ func (r *AppSetReconciler) CustomReconcile(ctx context.Context, req customctrl.C
 		if apierrors.IsNotFound(err) {
 			return reconcile.Result{}, nil
 		}
-
 		logger.Error(err, "failed to get AppSet")
 		return reconcile.Result{}, err
 	}
 
+	// delete crd event
 	if app.ObjectMeta.DeletionTimestamp != nil {
 		return reconcile.Result{}, r.DeleteAll(ctx, req, app)
 	}
