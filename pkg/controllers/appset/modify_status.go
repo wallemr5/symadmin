@@ -13,6 +13,7 @@ import (
 	"k8s.io/apimachinery/pkg/api/equality"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/client-go/util/retry"
 	"k8s.io/klog"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
@@ -114,21 +115,32 @@ func buildAppSetStatus(ctx context.Context, dksManger *k8smanager.ClusterManager
 func applyStatus(ctx context.Context, client client.Client, req customctrl.CustomRequest, as *workloadv1beta1.AggrAppSetStatus) error {
 	app := &workloadv1beta1.AppSet{}
 	if err := client.Get(ctx, req.NamespacedName, app); err != nil {
+		klog.V(4).Infof("%s:applyStatus get AppSet info fail:%+v", req.NamespacedName, err)
 		return err
 	}
 
 	if equality.Semantic.DeepEqual(&app.Status.AggrStatus, as) {
-		klog.V(4).Infof("%s:AppSet.Status not need change", req.NamespacedName)
+		klog.V(4).Infof("%s:applyStatus AppSet.Status not need change", req.NamespacedName)
 		return nil
 	}
 
-	as.DeepCopyInto(&app.Status.AggrStatus)
-	t := metav1.Now()
-	app.Status.LastUpdateTime = &t
-	if err := client.Status().Update(ctx, app); err != nil {
-		klog.V(4).Infof("%s:update AppSet.Status faile:%+v", req.NamespacedName, err)
-		return err
-	}
-	klog.V(4).Infof("%s:update AppSet.Status success", req.NamespacedName)
-	return nil
+	return retry.RetryOnConflict(retry.DefaultRetry, func() error {
+		as.DeepCopyInto(&app.Status.AggrStatus)
+		t := metav1.Now()
+		app.Status.LastUpdateTime = &t
+		updateErr := client.Status().Update(ctx, app)
+		if updateErr == nil {
+			klog.V(4).Infof("%s:applyStatus update AppSet.Status success", req.NamespacedName)
+			return nil
+		}
+
+		getErr := client.Get(ctx, req.NamespacedName, app)
+		if getErr != nil {
+			klog.V(4).Infof("%s:applyStatus reget AppSet info fail:%+v", req.NamespacedName, getErr)
+			return getErr
+		}
+
+		klog.V(4).Infof("%s:applyStatus update AppSet.Status faile:%+v", req.NamespacedName, updateErr)
+		return updateErr
+	})
 }
