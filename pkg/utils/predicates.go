@@ -1,6 +1,8 @@
 package utils
 
 import (
+	workloadv1beta1 "gitlab.dmall.com/arch/sym-admin/pkg/apis/workload/v1beta1"
+	"k8s.io/apimachinery/pkg/api/equality"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/util/workqueue"
 	"k8s.io/klog"
@@ -117,6 +119,48 @@ func GetEnqueueRequestsFucs() handler.EventHandler {
 				Name:      getObserveApp(e.Meta.GetLabels()),
 				Namespace: e.Meta.GetNamespace(),
 			}})
+		},
+	}
+}
+
+func GetWatchPredicateForAdvDeploymentSpec() predicate.Funcs {
+	return predicate.Funcs{
+		CreateFunc: func(e event.CreateEvent) bool {
+			return true
+		},
+		DeleteFunc: func(e event.DeleteEvent) bool {
+			return true
+		},
+		UpdateFunc: func(e event.UpdateEvent) bool {
+			oldObj := e.ObjectOld.(*workloadv1beta1.AdvDeployment)
+			newObj := e.ObjectNew.(*workloadv1beta1.AdvDeployment)
+			if !equality.Semantic.DeepEqual(oldObj.Spec, newObj.Spec) ||
+				oldObj.GetDeletionTimestamp() != newObj.GetDeletionTimestamp() ||
+				oldObj.GetGeneration() != newObj.GetGeneration() {
+				return true
+			}
+			return false
+		},
+	}
+}
+
+func GetWatchPredicateForAppetSpec() predicate.Funcs {
+	return predicate.Funcs{
+		CreateFunc: func(e event.CreateEvent) bool {
+			return true
+		},
+		DeleteFunc: func(e event.DeleteEvent) bool {
+			return true
+		},
+		UpdateFunc: func(e event.UpdateEvent) bool {
+			oldObj := e.ObjectOld.(*workloadv1beta1.AppSet)
+			newObj := e.ObjectNew.(*workloadv1beta1.AppSet)
+			if !equality.Semantic.DeepEqual(oldObj.Spec, newObj.Spec) ||
+				oldObj.GetDeletionTimestamp() != newObj.GetDeletionTimestamp() ||
+				oldObj.GetGeneration() != newObj.GetGeneration() {
+				return true
+			}
+			return false
 		},
 	}
 }
