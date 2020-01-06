@@ -70,10 +70,10 @@ func buildAppSetStatus(ctx context.Context, dksManger *k8smanager.ClusterManager
 		}
 
 		// aggregate events
-		var aevt evtlist = []*workloadv1beta1.Event{}
+		evts := []*workloadv1beta1.Event{}
 		for _, evt := range events.Items {
 			if strings.HasPrefix(evt.InvolvedObject.Name, req.Name) && evt.Type == corev1.EventTypeWarning {
-				aevt = append(aevt, &workloadv1beta1.Event{
+				evts = append(evts, &workloadv1beta1.Event{
 					Message:         evt.Message,
 					SourceComponent: evt.Source.Component,
 					Name:            evt.Name,
@@ -85,29 +85,17 @@ func buildAppSetStatus(ctx context.Context, dksManger *k8smanager.ClusterManager
 				})
 			}
 		}
-		sort.Sort(aevt)
+		sort.Slice(evts, func(i int, j int) bool {
+			return evts[i].Name > evts[j].Name && evts[i].Reason > evts[j].Reason
+		})
 
 		if as.WarnEvents == nil {
 			as.WarnEvents = []*workloadv1beta1.Event{}
 		}
-		as.WarnEvents = aevt
+		as.WarnEvents = evts
 	}
 
 	return as, nil
-}
-
-type evtlist []*workloadv1beta1.Event
-
-func (e evtlist) Len() int {
-	return len(e)
-}
-
-func (e evtlist) Less(i, j int) bool {
-	return e[i].Name > e[j].Name && e[i].Reason > e[j].Reason
-}
-
-func (e evtlist) Swap(i, j int) {
-	e[i], e[j] = e[j], e[i]
 }
 
 func applyStatus(ctx context.Context, client client.Client, req customctrl.CustomRequest, as *workloadv1beta1.AggrAppSetStatus) error {
