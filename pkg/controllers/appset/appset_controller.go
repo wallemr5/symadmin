@@ -31,8 +31,10 @@ import (
 	"gitlab.dmall.com/arch/sym-admin/pkg/utils"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/api/equality"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/util/wait"
+	"k8s.io/client-go/tools/cache"
 	"k8s.io/client-go/tools/record"
 	"k8s.io/klog"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -147,7 +149,22 @@ func NewAppSetController(mgr manager.Manager, cMgr *pkgmanager.DksManager) (*App
 	if err != nil {
 		klog.Fatalf("master appset crd informer watch err:%+v", err)
 	}
-	appSetInformer.AddEventHandler(customctrl.HandlerWraps(customImpl.Enqueue))
+
+	// filter owner update status
+	appSetInformer.AddEventHandler(cache.ResourceEventHandlerFuncs{
+		AddFunc: customImpl.Enqueue,
+		UpdateFunc: func(old, cur interface{}) {
+			newObj := cur.(*workloadv1beta1.AppSet)
+			oldObj := old.(*workloadv1beta1.AppSet)
+			if equality.Semantic.DeepEqual(oldObj.Spec, newObj.Spec) &&
+				oldObj.GetDeletionTimestamp() == newObj.GetDeletionTimestamp() &&
+				oldObj.GetGeneration() == newObj.GetGeneration() {
+				return
+			}
+			customImpl.Enqueue(cur)
+		},
+		DeleteFunc: customImpl.Enqueue,
+	})
 
 	// Add policy trigger for same custom Enqueue
 	err = mgr.Add(NewPolicyTrigger(c))

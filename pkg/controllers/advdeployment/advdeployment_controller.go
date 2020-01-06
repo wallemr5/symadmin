@@ -85,7 +85,7 @@ func Add(mgr manager.Manager, cMgr *pkgmanager.DksManager) error {
 	}
 
 	// Watch for changes to AdvDeployment for runtime controller
-	err = ctl.Watch(&source.Kind{Type: &workloadv1beta1.AdvDeployment{}}, &handler.EnqueueRequestForObject{})
+	err = ctl.Watch(&source.Kind{Type: &workloadv1beta1.AdvDeployment{}}, &handler.EnqueueRequestForObject{}, utils.GetWatchPredicateForAdvDeploymentSpec())
 	if err != nil {
 		r.Log.Error(err, "Watch AdvDeployment err")
 		return err

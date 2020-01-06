@@ -115,8 +115,9 @@ func (r *AdvDeploymentReconciler) RecalculateAppSetStatus(ctx context.Context, a
 		podSetStatus.Desired = deploy.Status.Replicas
 		podSetStatus.UnAvailable = deploy.Status.UnavailableReplicas
 
-		status.Available += deploy.Status.AvailableReplicas
-		status.Desired += deploy.Status.Replicas
+		status.Available += podSetStatus.Available
+		status.Desired += podSetStatus.Desired
+		status.UnAvailable += podSetStatus.UnAvailable
 		status.PodSets = append(status.PodSets, podSetStatus)
 	}
 
@@ -127,9 +128,9 @@ func (r *AdvDeploymentReconciler) RecalculateAppSetStatus(ctx context.Context, a
 		podSetStatus.Available = set.Status.ReadyReplicas
 		podSetStatus.Desired = set.Status.Replicas
 
-		status.Available += set.Status.ReadyReplicas
-		status.Desired += set.Status.Replicas
-
+		status.Available += podSetStatus.Available
+		status.Desired += podSetStatus.Desired
+		status.UnAvailable += podSetStatus.UnAvailable
 		status.PodSets = append(status.PodSets, podSetStatus)
 	}
 
