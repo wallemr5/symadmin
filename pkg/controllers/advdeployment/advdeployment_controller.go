@@ -129,6 +129,19 @@ func Add(mgr manager.Manager, cMgr *pkgmanager.DksManager) error {
 func (r *AdvDeploymentReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error) {
 	ctx := context.Background()
 	logger := r.Log.WithValues("key", req.NamespacedName, "id", uuid.Must(uuid.NewV4()).String())
+	startTime := time.Now()
+	defer func() {
+		diffTime := time.Since(startTime)
+		var logLevel klog.Level
+		if diffTime > 2*time.Second {
+			logLevel = 2
+		} else if diffTime > 1*time.Second {
+			logLevel = 3
+		} else {
+			logLevel = 4
+		}
+		klog.V(logLevel).Infof("key: %v Reconcile end. Time taken: %v. ", req, diffTime)
+	}()
 
 	advDeploy := &workloadv1beta1.AdvDeployment{}
 	err := r.Client.Get(ctx, req.NamespacedName, advDeploy)
@@ -146,11 +159,11 @@ func (r *AdvDeploymentReconciler) Reconcile(req ctrl.Request) (ctrl.Result, erro
 		logger.Info("delete event", "advDeploy", advDeploy.Name)
 		err := r.CleanReleasesByName(advDeploy)
 		if err == nil {
-			klog.V(3).Infof("advDeploy: %s clean all helm Releases success, than update Finalizers nil")
+			klog.V(3).Infof("advDeploy: %s clean all helm Releases success, than update Finalizers nil", advDeploy.Name)
 			advDeploy.ObjectMeta.Finalizers = nil
 			err = r.Client.Update(ctx, advDeploy)
 			if err == nil {
-				klog.V(3).Infof("advDeploy: %s Update Finalizers nil success")
+				klog.V(3).Infof("advDeploy: %s Update Finalizers nil success", advDeploy.Name)
 				return reconcile.Result{}, nil
 			}
 		}
