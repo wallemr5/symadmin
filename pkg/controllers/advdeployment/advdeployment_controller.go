@@ -79,7 +79,7 @@ func Add(mgr manager.Manager, cMgr *pkgmanager.DksManager) error {
 	r.KubeCli = kubeCli
 
 	// Create a new runtime controller for advDeployment
-	ctl, err := controller.New(controllerName, mgr, controller.Options{Reconciler: r})
+	ctl, err := controller.New(controllerName, mgr, controller.Options{Reconciler: r, MaxConcurrentReconciles: cMgr.Opt.Threadiness})
 	if err != nil {
 		r.Log.Error(err, "Creating a new AdvDeployment controller has an error")
 		return err
@@ -182,11 +182,6 @@ func (r *AdvDeploymentReconciler) Reconcile(req ctrl.Request) (ctrl.Result, erro
 			Requeue:      true,
 			RequeueAfter: time.Second * 5,
 		}, nil
-	}
-
-	// test only process bbcc
-	if advDeploy.Name != "bbcc" {
-		return reconcile.Result{}, nil
 	}
 
 	// at present, wo only process deploy type is helm
