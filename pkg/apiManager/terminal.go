@@ -110,10 +110,10 @@ func startProcess(cluster *k8smanager.Cluster, namespace, podName, container str
 	req.VersionedParams(&core_v1.PodExecOptions{
 		Command:   cmd,
 		Container: container,
-		Stdin:     false,
-		Stdout:    true,
-		Stderr:    true,
-		TTY:       true,
+		Stdin:     isStdin,
+		Stdout:    isStdout,
+		Stderr:    isStderr,
+		TTY:       tty,
 	}, parameterCodec)
 
 	exec, err := remotecommand.NewSPDYExecutor(cluster.RestConfig, "POST", req.URL())
@@ -129,7 +129,7 @@ func startProcess(cluster *k8smanager.Cluster, namespace, podName, container str
 			Stdin:  nil,
 			Stdout: &stdout,
 			Stderr: &stderr,
-			Tty:    true,
+			Tty:    tty,
 		})
 		if stderr.Len() != 0 {
 			klog.Errorf("exec steam error: %v", stderr)
