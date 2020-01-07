@@ -48,6 +48,7 @@ func (r *AdvDeploymentReconciler) RemoveFinalizers(ctx context.Context, req ctrl
 	return nil
 }
 
+// Delete all releases of this advDeployment
 func (r *AdvDeploymentReconciler) CleanAllReleases(advDeploy *workloadv1beta1.AdvDeployment) error {
 	hClient, err := helmv2.NewClientFromConfig(r.Cfg, r.KubeCli, "")
 	if err != nil {
@@ -74,17 +75,19 @@ func (r *AdvDeploymentReconciler) CleanAllReleases(advDeploy *workloadv1beta1.Ad
 	return nil
 }
 
-func (r *AdvDeploymentReconciler) ApplyPodSetReleases(ctx context.Context, advDeploy *workloadv1beta1.AdvDeployment) error {
+// We try to converge the advDeploy's status to that desired status.
+func (r *AdvDeploymentReconciler) ApplyReleases(ctx context.Context, advDeploy *workloadv1beta1.AdvDeployment) error {
+	// Initialize a new helm client
 	hClient, err := helmv2.NewClientFromConfig(r.Cfg, r.KubeCli, "")
 	if err != nil {
-		klog.Errorf("New helm Clinet err:%+v", err)
+		klog.Errorf("Initializing the new helm clinet has an error: %+v", err)
 		return err
 	}
 	defer hClient.Close()
 
 	response, err := helmv2.ListReleases(labels.MakeHelmReleaseFilter(advDeploy.Name), hClient)
 	if err != nil {
-		klog.Errorf("no find helm releases by name: %s, err: %v", advDeploy.Name, err)
+		klog.Errorf("Can not find releases with name: %s, err: %v", advDeploy.Name, err)
 		return err
 	}
 
@@ -95,14 +98,16 @@ func (r *AdvDeploymentReconciler) ApplyPodSetReleases(ctx context.Context, advDe
 				unUseReleasesName = append(unUseReleasesName, r.Name)
 			}
 
-			if r.Info.Status.GetCode() != hapirelease.Status_DEPLOYED {
-				klog.Infof("rlsName: %s deploy failed, Description:%s", r.Name, r.Info.Description)
+			if r.Info.Status.GetCode() == hapirelease.Status_DELETED || r.Info.Status.GetCode() == hapirelease.Status_FAILED || r.Info.Status.GetCode() == hapirelease.Status_UNKNOWN {
+				klog.Infof("Release: [%s]'s status mean there may be some problem, description: %s", r.Name, r.Info.Description)
+
+				// Delete this release with purge flag.
 				if err := helmv2.DeleteRelease(r.Name, hClient); err != nil {
-					klog.Errorf("DeleteRelease UNDEPLOYED rls name: %s, err:%+v", r.Name, err)
+					klog.Errorf("Delete the release due to its status, but has an error, rls name: %s, err: %+v", r.Name, err)
 					return err
 				}
 
-				klog.V(4).Infof("rlsName: %s delete undeployed successed", r.Name)
+				klog.V(4).Infof("rlsName: [%s], Delete the release due to its status", r.Name)
 			}
 		}
 	}

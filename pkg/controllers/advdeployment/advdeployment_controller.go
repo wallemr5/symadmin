@@ -18,6 +18,7 @@ package advdeployment
 
 import (
 	"context"
+	"gitlab.dmall.com/arch/sym-admin/pkg/labels"
 
 	"github.com/go-logr/logr"
 	"github.com/gofrs/uuid"
@@ -37,7 +38,6 @@ import (
 
 	"github.com/pkg/errors"
 	k8sclient "gitlab.dmall.com/arch/sym-admin/pkg/k8s/client"
-	"gitlab.dmall.com/arch/sym-admin/pkg/labels"
 	"gitlab.dmall.com/arch/sym-admin/pkg/utils"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
@@ -174,32 +174,43 @@ func (r *AdvDeploymentReconciler) Reconcile(req ctrl.Request) (ctrl.Result, erro
 		return reconcile.Result{}, r.RemoveFinalizers(ctx, req)
 	}
 
-	// if finalizers empty, full ControllerFinalizersName string
-	if len(advDeploy.ObjectMeta.Finalizers) == 0 {
-		advDeploy.ObjectMeta.Finalizers = []string{labels.ControllerFinalizersName}
+	// If you found that its finalizer list is empty or nil, we must append sym-admin's finalizer into this list if the deletionTimeStamp is nil.
+	if !utils.ContainsString(advDeploy.ObjectMeta.Finalizers, labels.ControllerFinalizersName) {
+		// This list may be nil if its owner isn't sym-admin.
+		if advDeploy.ObjectMeta.Finalizers == nil {
+			advDeploy.ObjectMeta.Finalizers = []string{}
+		}
+
+		advDeploy.ObjectMeta.Finalizers = append(advDeploy.ObjectMeta.Finalizers, labels.ControllerFinalizersName)
 		if err := r.Client.Update(ctx, advDeploy); err != nil {
 			logger.Error(err, "failed to get AdvDeployment")
-			return reconcile.Result{}, errors.Wrap(err, "could not add finalizer to AdvDeployment")
+			return reconcile.Result{}, errors.Wrap(err, "Can not add sym-admin's finalizer to AdvDeployment")
 		}
-		klog.V(3).Infof("advDeploy: %s Update add Finalizers success")
+		klog.V(3).Infof("advDeploy: [%s] Add add Finalizers success")
 		return reconcile.Result{
 			Requeue:      true,
 			RequeueAfter: time.Second * 5,
 		}, nil
 	}
 
-	// at present, wo only process deploy type is helm
+	// Until now, the advDeployment is not deleted by others, we must keep it right.
 	if advDeploy.Spec.PodSpec.DeployType == "helm" {
-		if advDeploy.Spec.PodSpec.Chart == nil || (advDeploy.Spec.PodSpec.Chart.ChartUrl == nil && advDeploy.Spec.PodSpec.Chart.RawChart == nil) {
-			klog.Errorf("name: %s DeployType is helm, but no Chart spec", advDeploy.Name)
+		if advDeploy.Spec.PodSpec.Chart == nil {
+			klog.Errorf("advDeploy [%s]'s chart is empty, can not reconcile it.", advDeploy.Name)
+			return reconcile.Result{}, nil
+		}
+		if advDeploy.Spec.PodSpec.Chart.ChartUrl == nil && advDeploy.Spec.PodSpec.Chart.RawChart == nil {
+			klog.Errorf("advDeploy [%s]: neither chart's url nor raw exist, can not reconcile it.", advDeploy.Name)
 			return reconcile.Result{}, nil
 		}
 
-		err := r.ApplyPodSetReleases(ctx, advDeploy)
+		err := r.ApplyReleases(ctx, advDeploy)
 		if err != nil {
-			logger.Error(err, "faild ApplyPodSetReleases")
+			logger.Error(err, "failed to apply releases")
 			return reconcile.Result{}, err
 		}
+	} else {
+		klog.Errorf("The deploy type %s don't be supported yet.", advDeploy.Name)
 	}
 
 	aggrStatus, err := r.RecalculateAppSetStatus(ctx, advDeploy)
