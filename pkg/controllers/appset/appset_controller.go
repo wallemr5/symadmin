@@ -192,13 +192,16 @@ func (r *AppSetReconciler) CustomReconcile(ctx context.Context, req customctrl.C
 	}
 
 	// delete crd event
-	if app.ObjectMeta.DeletionTimestamp != nil {
+	if !app.ObjectMeta.DeletionTimestamp.IsZero() {
 		return reconcile.Result{}, r.DeleteAll(ctx, req, app)
 	}
 
-	if app.ObjectMeta.Finalizers == nil {
-		logger.Info("finalizers not set, set now", "app", app.Name)
-		app.ObjectMeta.Finalizers = []string{labels.ControllerFinalizersName}
+	if !utils.ContainsString(app.ObjectMeta.Finalizers, labels.ControllerFinalizersName) {
+		klog.V(4).Infof("%s: finalizers not set:%s, set now", req.NamespacedName, labels.ControllerFinalizersName)
+		if app.ObjectMeta.Finalizers == nil {
+			app.ObjectMeta.Finalizers = []string{}
+		}
+		app.ObjectMeta.Finalizers = append(app.ObjectMeta.Finalizers, labels.ControllerFinalizersName)
 		return reconcile.Result{}, r.Client.Update(ctx, app)
 	}
 
@@ -211,12 +214,11 @@ func (r *AppSetReconciler) CustomReconcile(ctx context.Context, req customctrl.C
 		return reconcile.Result{}, nil
 	}
 
-	logger.Info("aggregate status", "app", app.Name)
+	klog.V(4).Infof("%s: aggregate status", req.NamespacedName)
 	if err := r.ModifyStatus(ctx, req, app); err != nil {
 		logger.Error(err, "update AppSet.Status fail")
 		return reconcile.Result{}, err
 	}
 
-	logger.Info("AppSet", "ResourceVersion", app.GetResourceVersion())
 	return reconcile.Result{}, nil
 }
