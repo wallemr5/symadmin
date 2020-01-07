@@ -2,14 +2,16 @@ package manager
 
 import (
 	"errors"
+	"sort"
+	"sync"
+	"time"
+
 	"github.com/go-logr/logr"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	kblabels "k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/util/wait"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/klog"
-	"sync"
-	"time"
 )
 
 type ClusterManagerOption struct {
@@ -22,6 +24,7 @@ type ClusterManager struct {
 	mu            *sync.RWMutex
 	MasterKubecli kubernetes.Interface
 	Opt           *ClusterManagerOption
+	sclusters     []*Cluster
 }
 
 func DefaultClusterManagerOption() *ClusterManagerOption {
@@ -77,11 +80,23 @@ func (m *ClusterManager) GetAll() map[string]*Cluster {
 	return m.clusters
 }
 
+func (m *ClusterManager) GetAllSort() []*Cluster {
+	m.mu.RLock()
+	defer m.mu.RUnlock()
+
+	return m.sclusters
+}
+
 func (m *ClusterManager) Add(cluster *Cluster) error {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 
 	m.clusters[cluster.GetName()] = cluster
+
+	m.sclusters = append(m.sclusters, cluster)
+	sort.Slice(m.sclusters, func(i int, j int) bool {
+		return m.sclusters[i].Name > m.sclusters[j].Name
+	})
 
 	return nil
 }

@@ -30,7 +30,7 @@ func NewDefaultHelmIndexSyncer(helmEnv *helmenv.EnvSettings) *HelmIndexSyncer {
 
 func (h *HelmIndexSyncer) Start(stop <-chan struct{}) error {
 	wait.Until(func() {
-		klog.V(4).Info("update helm repo index, time: %v", time.Now())
+		klog.V(4).Infof("update helm repo index, time: %v", time.Now())
 		entrys, err := helmv2.ReposGet(h.Helmv2env)
 		if err != nil {
 			klog.Errorf("get all repo err: %+v", err)
@@ -40,7 +40,7 @@ func (h *HelmIndexSyncer) Start(stop <-chan struct{}) error {
 		for _, e := range entrys {
 			err := helmv2.ReposUpdate(h.Helmv2env, e.Name)
 			if err != nil {
-				klog.Errorf("update repo: %s err: %+v", e.Name, err)
+				klog.Errorf("updatef repo: %s err: %+v", e.Name, err)
 				return
 			}
 

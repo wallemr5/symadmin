@@ -4,19 +4,12 @@ import (
 	"context"
 	"time"
 
-	"net/http"
-
-	"github.com/gin-gonic/gin"
 	"github.com/go-logr/logr"
-	"gitlab.dmall.com/arch/sym-admin/pkg/apiManager/model"
 	"gitlab.dmall.com/arch/sym-admin/pkg/healthcheck"
 	k8smanager "gitlab.dmall.com/arch/sym-admin/pkg/k8s/manager"
 	"gitlab.dmall.com/arch/sym-admin/pkg/router"
-	corev1 "k8s.io/api/core/v1"
-	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/klog"
-	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 type ApiManagerOption struct {
@@ -92,6 +85,10 @@ func (m *ApiManager) Routes() []*router.Route {
 		{"GET", "/api/cluster/:name", m.GetClusters, ""},
 		{"GET", "/api/cluster/:name/appPod/:appName", m.GetPod, ""},
 		{"GET", "/api/cluster/:name/terminal", m.GetTerminal, ""},
+		//{"GET", "/api/cluster/:name/podIp/:ip/", m.GetPodProject, ""},
+		{"GET", "/api/cluster/:name/nodeIp/:ip/", m.GetNodeProject, ""},
+		{"GET", "/api/cluster/:name/endpointName/:endpointName/", m.GetEndpoints, ""},
+		{"GET", "/api/cluster/:name/nodeName/:nodeName/", m.GetNodeInfo, ""},
 	}
 
 	routes = append(routes, apiRoutes...)
@@ -99,61 +96,3 @@ func (m *ApiManager) Routes() []*router.Route {
 }
 
 // GetClusters
-func (m *ApiManager) GetClusters(c *gin.Context) {
-	clusters := m.K8sMgr.GetAll()
-
-	stas := make([]*model.ClusterStatus, 0, 4)
-	for _, c := range clusters {
-		stas = append(stas, &model.ClusterStatus{
-			Name:   c.Name,
-			Status: string(c.Status),
-		})
-	}
-
-	c.JSON(http.StatusOK, stas)
-}
-
-// GetClusters
-func (m *ApiManager) GetPod(c *gin.Context) {
-	// clusterName := c.Param("name")
-
-	appName := c.Param("appName")
-
-	clusters := m.K8sMgr.GetAll()
-
-	ctx := context.Background()
-	pods := make([]*model.Pod, 0, 4)
-
-	listOptions := &client.ListOptions{}
-	listOptions.MatchingLabels(map[string]string{
-		"app": appName,
-	})
-	for _, cluster := range clusters {
-		if cluster.Status == k8smanager.ClusterOffline {
-			continue
-		}
-
-		podList := &corev1.PodList{}
-		err := cluster.Client.List(ctx, listOptions, podList)
-		if err != nil {
-
-			if apierrors.IsNotFound(err) {
-				continue
-			}
-			klog.Error(err, "failed to get pods")
-			break
-		}
-
-		for i := range podList.Items {
-			pod := &podList.Items[i]
-			pods = append(pods, &model.Pod{
-				Name:   pod.Name,
-				NodeIp: pod.Status.HostIP,
-				PodIp:  pod.Status.PodIP,
-			})
-		}
-
-	}
-
-	c.JSON(http.StatusOK, pods)
-}

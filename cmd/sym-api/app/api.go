@@ -17,6 +17,7 @@ limitations under the License.
 package app
 
 import (
+	"gitlab.dmall.com/arch/sym-admin/pkg/apiManager"
 	"time"
 
 	"github.com/spf13/cobra"
@@ -27,7 +28,6 @@ import (
 	ctrlmanager "sigs.k8s.io/controller-runtime/pkg/manager"
 	"sigs.k8s.io/controller-runtime/pkg/runtime/signals"
 
-	"gitlab.dmall.com/arch/sym-admin/pkg/apiManager"
 	logf "sigs.k8s.io/controller-runtime/pkg/runtime/log"
 )
 

@@ -126,19 +126,6 @@ type AppSetStatus struct {
 	AggrStatus AggrAppSetStatus `json:"aggrStatus,omitempty"`
 }
 
-// app status
-type AppSatus string
-
-const (
-	AppSatusRuning       AppSatus = "Running"
-	AppSatusMigrating    AppSatus = "Migrating"
-	AppSatusWorkRatioing AppSatus = "WorkRatioing"
-	AppSatusScaling      AppSatus = "Scaling"
-	AppSatusUpdateing    AppSatus = "Updateing"
-	AppSatusInstalling   AppSatus = "Installing"
-	AppSatusUnknown      AppSatus = "Unknown"
-)
-
 // type AppSetConditionType string
 //
 // type AppSetCondition struct {
@@ -160,11 +147,11 @@ type ClusterAppActual struct {
 
 // AppActual represent the app status
 type AggrAppSetStatus struct {
-	Status      AppSatus `json:"status,omitempty"`
-	Version     string   `json:"version,omitempty"`
-	Desired     int32    `json:"desired"`
-	Available   int32    `json:"available"`
-	UnAvailable int32    `json:"unAvailable,omitempty"`
+	Status      AppStatus `json:"status,omitempty"`
+	Version     string    `json:"version,omitempty"`
+	Desired     int32     `json:"desired"`
+	Available   int32     `json:"available"`
+	UnAvailable int32     `json:"unAvailable,omitempty"`
 
 	Clusters   []*ClusterAppActual `json:"clusters,omitempty"`
 	Pods       []*Pod              `json:"pods,omitempty"`

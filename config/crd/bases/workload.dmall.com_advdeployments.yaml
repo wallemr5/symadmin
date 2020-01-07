@@ -4686,6 +4686,7 @@ spec:
                     type: object
                   type: array
                 status:
+                  description: app status
                   type: string
                 unAvailable:
                   format: int32

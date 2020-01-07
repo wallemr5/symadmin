@@ -10,6 +10,7 @@ import (
 	"gitlab.dmall.com/arch/sym-admin/pkg/utils"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/klog"
 )
 
 // DeleteAll delete crd handler
@@ -35,8 +36,6 @@ func (r *AppSetReconciler) DeleteAll(ctx context.Context, req customctrl.CustomR
 }
 
 func deleteByCluster(ctx context.Context, cluster *k8smanager.Cluster, req customctrl.CustomRequest) (bool, error) {
-	logger := utils.GetCtxLogger(ctx)
-
 	err := cluster.Client.Delete(ctx, &workloadv1beta1.AdvDeployment{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      req.Name,
@@ -44,11 +43,14 @@ func deleteByCluster(ctx context.Context, cluster *k8smanager.Cluster, req custo
 		},
 	})
 	if err == nil {
-		logger.Info("delete Advdeployment event", "cluster", cluster.GetName())
+		klog.V(4).Infof("%s:delete cluster[%s] Advdeployment event success", req.NamespacedName, cluster.GetName())
 		return true, nil
 	}
 	if apierrors.IsNotFound(err) {
+		klog.V(4).Infof("%s:delete cluster[%s] Advdeployment event fail, not found", req.NamespacedName, cluster.GetName())
 		return false, nil
 	}
+
+	klog.V(4).Infof("%s:delete cluster[%s] Advdeployment event fail:%+v", req.NamespacedName, cluster.GetName(), err)
 	return false, fmt.Errorf("delete cluster:%s AdvDeployment(%s) fail:%+v", cluster.GetName(), req.NamespacedName.String(), err)
 }

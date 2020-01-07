@@ -188,11 +188,11 @@ func (r *AppSetReconciler) CustomReconcile(ctx context.Context, req customctrl.C
 		if apierrors.IsNotFound(err) {
 			return reconcile.Result{}, nil
 		}
-
 		logger.Error(err, "failed to get AppSet")
 		return reconcile.Result{}, err
 	}
 
+	// delete crd event
 	if app.ObjectMeta.DeletionTimestamp != nil {
 		return reconcile.Result{}, r.DeleteAll(ctx, req, app)
 	}
@@ -203,7 +203,7 @@ func (r *AppSetReconciler) CustomReconcile(ctx context.Context, req customctrl.C
 		return reconcile.Result{}, r.Client.Update(ctx, app)
 	}
 
-	isChange, err := r.ModifySpec(ctx, app, req)
+	isChange, err := r.ModifySpec(ctx, req, app)
 	if err != nil {
 		logger.Error(err, "modify advdeployment info with spec")
 		return reconcile.Result{}, err
@@ -213,7 +213,10 @@ func (r *AppSetReconciler) CustomReconcile(ctx context.Context, req customctrl.C
 	}
 
 	logger.Info("aggregate status", "app", app.Name)
-	r.ModifyStatus()
+	if err := r.ModifyStatus(ctx, req, app); err != nil {
+		logger.Error(err, "update AppSet.Status fail")
+		return reconcile.Result{}, err
+	}
 
 	logger.Info("AppSet", "ResourceVersion", app.GetResourceVersion())
 	return reconcile.Result{}, nil
