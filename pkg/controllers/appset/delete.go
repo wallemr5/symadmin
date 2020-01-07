@@ -3,11 +3,12 @@ package appset
 import (
 	"context"
 	"fmt"
+	"strings"
 
 	workloadv1beta1 "gitlab.dmall.com/arch/sym-admin/pkg/apis/workload/v1beta1"
 	"gitlab.dmall.com/arch/sym-admin/pkg/customctrl"
 	k8smanager "gitlab.dmall.com/arch/sym-admin/pkg/k8s/manager"
-	"gitlab.dmall.com/arch/sym-admin/pkg/utils"
+	"gitlab.dmall.com/arch/sym-admin/pkg/labels"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/klog"
@@ -15,8 +16,6 @@ import (
 
 // DeleteAll delete crd handler
 func (r *AppSetReconciler) DeleteAll(ctx context.Context, req customctrl.CustomRequest, app *workloadv1beta1.AppSet) error {
-	logger := utils.GetCtxLogger(ctx)
-
 	// loop cluster delete advdeployment
 	for _, cluster := range r.DksMgr.K8sMgr.GetAll() {
 		cluster, err := r.DksMgr.K8sMgr.Get(cluster.GetName())
@@ -30,8 +29,17 @@ func (r *AppSetReconciler) DeleteAll(ctx context.Context, req customctrl.CustomR
 		}
 	}
 
-	logger.Info("delete all AdvDeployment success,delete AppSet now", "app", app.Name)
-	app.ObjectMeta.Finalizers = nil
+	klog.V(4).Infof("%s:delete all AdvDeployment success,delete AppSet now", req.NamespacedName)
+	i := -1
+	for j := range app.ObjectMeta.Finalizers {
+		if strings.EqualFold(app.ObjectMeta.Finalizers[j], labels.ControllerFinalizersName) {
+			i = j
+			break
+		}
+	}
+	if i != -1 {
+		app.ObjectMeta.Finalizers = append(app.ObjectMeta.Finalizers[:i], app.ObjectMeta.Finalizers[i+1:]...)
+	}
 	return r.Client.Update(ctx, app)
 }
 
