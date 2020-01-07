@@ -216,13 +216,6 @@ func makeAdvDeploymentLabel(clusterSpec *workloadv1beta1.TargetCluster, app *wor
 }
 
 func mergeVersion(v1, v2 string) string {
-	if v1 == "" {
-		return v2
-	}
-	if v2 == "" {
-		return v1
-	}
-
 	s1 := strings.Split(v1, "/")
 	s2 := strings.Split(v2, "/")
 	m := map[string]struct{}{}
