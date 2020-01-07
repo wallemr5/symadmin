@@ -42,6 +42,7 @@ type ManagerOption struct {
 	PprofEnabled         bool
 	MasterEnabled        bool
 	WorkerEnabled        bool
+	Debug                bool
 }
 
 type DksManager struct {

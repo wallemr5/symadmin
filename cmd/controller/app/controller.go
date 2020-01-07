@@ -93,5 +93,6 @@ func NewControllerCmd(cli *DksCli) *cobra.Command {
 	cmd.PersistentFlags().BoolVar(&opt.PprofEnabled, "enable-pprof", opt.PprofEnabled, "Enabled will open endpoint for go pprof.")
 	cmd.PersistentFlags().BoolVar(&opt.MasterEnabled, "enable-master", opt.MasterEnabled, "Enable master controller")
 	cmd.PersistentFlags().BoolVar(&opt.WorkerEnabled, "enable-worker", opt.WorkerEnabled, "Enable worker controller")
+	cmd.PersistentFlags().BoolVar(&opt.Debug, "debug", opt.Debug, "Debug mode")
 	return cmd
 }

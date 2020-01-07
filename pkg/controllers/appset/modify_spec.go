@@ -16,112 +16,17 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	"k8s.io/client-go/util/retry"
-	"k8s.io/klog"
-)
-
-type workflow string
-
-const (
-	UpdateStatus workflow = "Update"
-	MiddleStatus workflow = "Middle"
-	DeleteStatus workflow = "Delete"
-	UnknowStatus workflow = "Unknow"
 )
 
 // ModifySpec modify spec handler
 func (r *AppSetReconciler) ModifySpec(ctx context.Context, req customctrl.CustomRequest, app *workloadv1beta1.AppSet) (isChanged bool, err error) {
-	wf, delCluster, err := getCurrentDetailChoiceWorkflow(ctx, r.DksMgr.K8sMgr, app, req)
-	if err != nil {
-		return false, err
-	}
-
-	switch wf {
-
-	case UpdateStatus:
-		return UpdateWorkFlow(ctx, r.DksMgr.K8sMgr, app, req)
-
-	case MiddleStatus:
-		return false, nil
-
-	case DeleteStatus:
-		return true, DeleteWorkFlow(ctx, r.DksMgr.K8sMgr, delCluster, req)
-
-	default:
-		return false, fmt.Errorf("update spec unknow workflow:%s", wf)
-	}
-}
-
-func getCurrentDetailChoiceWorkflow(ctx context.Context, dksManger *k8smanager.ClusterManager, app *workloadv1beta1.AppSet, req customctrl.CustomRequest) (wf workflow, delCluster string, err error) {
-	// get current info
-	currentInfo := map[string]*workloadv1beta1.AdvDeployment{}
-	for _, cluster := range dksManger.GetAll() {
-		if cluster.Status == k8smanager.ClusterOffline {
-			continue
-		}
-
-		b := &workloadv1beta1.AdvDeployment{}
-		err := cluster.Client.Get(ctx, req.NamespacedName, b)
-		if err == nil {
-			currentInfo[cluster.GetName()] = b
-			continue
-		}
-		if apierrors.IsNotFound(err) {
-			continue
-		}
-		return UnknowStatus, "", err
-	}
-
-	// build expect info with app
-	expectInfo := map[string]struct{}{}
-	for _, cluster := range app.Spec.ClusterTopology.Clusters {
-		expectInfo[cluster.Name] = struct{}{}
-	}
-
-	delQueue := currentInfo
-	addQueue := map[string]struct{}{}
-	for exp := range expectInfo {
-		if _, ok := currentInfo[exp]; ok {
-			delete(delQueue, exp)
-		} else {
-			addQueue[exp] = struct{}{}
-		}
-	}
-
-	// need add info or not exist del info, update workflow
-	if len(addQueue) > 0 || len(delQueue) == 0 {
-		return UpdateStatus, "nil", nil
-	}
-
-	// judge all expect status runing
-	for cluster, info := range currentInfo {
-		// except expect cluster
-		if _, ok := expectInfo[cluster]; !ok {
-			continue
-		}
-		if info.Status.AggrStatus.Status != workloadv1beta1.AppStatusRuning {
-			return MiddleStatus, "", nil
-		}
-	}
-
-	// delete unexpect cluster info
-	if app.Status.AggrStatus.Status == workloadv1beta1.AppStatusRuning {
-		// get first need del cluster info
-		for k := range delQueue {
-			return DeleteStatus, k, nil
-		}
-	}
-
-	return MiddleStatus, "", nil
-}
-
-func UpdateWorkFlow(ctx context.Context, dksManger *k8smanager.ClusterManager, app *workloadv1beta1.AppSet, req customctrl.CustomRequest) (isChanged bool, err error) {
 	for _, v := range app.Spec.ClusterTopology.Clusters {
-		cluster, err := dksManger.Get(v.Name)
+		cluster, err := r.DksMgr.K8sMgr.Get(v.Name)
 		if err != nil {
 			return false, err
 		}
 
-		newObj := buildAdvDeployment(app, v)
+		newObj := buildAdvDeployment(app, v, r.DksMgr.Opt.Debug)
 		_, isChanged, err = applyAdvDeployment(ctx, cluster, app, newObj)
 		if err != nil {
 			return false, err
@@ -134,7 +39,7 @@ func UpdateWorkFlow(ctx context.Context, dksManger *k8smanager.ClusterManager, a
 	return false, nil
 }
 
-func buildAdvDeployment(app *workloadv1beta1.AppSet, clusterTopology *workloadv1beta1.TargetCluster) *workloadv1beta1.AdvDeployment {
+func buildAdvDeployment(app *workloadv1beta1.AppSet, clusterTopology *workloadv1beta1.TargetCluster, debug bool) *workloadv1beta1.AdvDeployment {
 	replica := 0
 	for _, v := range clusterTopology.PodSets {
 		replica += v.Replicas.IntValue()
@@ -159,7 +64,7 @@ func buildAdvDeployment(app *workloadv1beta1.AppSet, clusterTopology *workloadv1
 
 	for _, set := range clusterTopology.PodSets {
 		podSet := set.DeepCopy()
-		if podSet.RawValues == "" && app.Name != "nginx" {
+		if debug && podSet.RawValues == "" {
 			podSet.RawValues = makeHelmOverrideValus(podSet.Name, clusterTopology, app)
 		}
 		obj.Spec.Topology.PodSets = append(obj.Spec.Topology.PodSets, podSet)
@@ -226,18 +131,4 @@ func compare(new, old *workloadv1beta1.AdvDeployment) bool {
 		return true
 	}
 	return false
-}
-
-func DeleteWorkFlow(ctx context.Context, dksManger *k8smanager.ClusterManager, cluster string, req customctrl.CustomRequest) (err error) {
-	client, err := dksManger.Get(cluster)
-	if err != nil {
-		klog.V(4).Infof("%s:delete unexpect info, get cluster[%s] client fail:%+v", req.NamespacedName, cluster, err)
-		return err
-	}
-
-	_, err = deleteByCluster(ctx, client, req)
-	if err != nil {
-		return err
-	}
-	return nil
 }
