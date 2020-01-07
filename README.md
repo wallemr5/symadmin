@@ -55,6 +55,6 @@ go get -v github.com/go-lintpack/lintpack/...
 
 ```cmd
 $ pre-commit uninstall
-``
+```
 
 *注：通过 UI 界面进行 `git` 操作的话会被隐藏至后台，无法查看。建议通过命令执行 `git commit`*
