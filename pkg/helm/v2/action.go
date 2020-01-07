@@ -338,6 +338,7 @@ func ApplyRelease(rlsName, chartUrlName, chartVersion string, chartPackage []byt
 		rep, err := CreateRelease(rlsName, chartUrlName, chartVersion, chartPackage, hClient, env, namespace, helm.ValueOverrides(vaByte))
 		if err == nil && rep != nil {
 			appRls = rep.GetRelease()
+			klog.V(4).Infof("rlsName: %s install successed, helm version: %d", rlsName, appRls.GetVersion())
 		}
 		rlsErr = err
 	} else {
@@ -370,6 +371,7 @@ func ApplyRelease(rlsName, chartUrlName, chartVersion string, chartPackage []byt
 			rep, err := UpgradeRelease(rlsName, chartUrlName, chartVersion, chartPackage, hClient, env, vaByte, false)
 			if err == nil && rep != nil {
 				appRls = rep.GetRelease()
+				klog.V(4).Infof("rlsName: %s upgrade successed, helm version: %d", rlsName, appRls.GetVersion())
 			}
 			rlsErr = err
 		} else {

@@ -26,11 +26,12 @@ func (r *AdvDeploymentReconciler) CleanReleasesByName(advDeploy *workloadv1beta1
 	}
 
 	for _, helmRls := range response.Releases {
-		err := helmv2.DeleteRelease(helmRls.Name, hClient)
-		if err != nil {
+		if err := helmv2.DeleteRelease(helmRls.Name, hClient); err != nil {
 			klog.Errorf("DeleteRelease name: %s, err:%+v", helmRls.Name, err)
 			return err
 		}
+
+		klog.V(4).Infof("rlsName: %s clean successed", r.Name)
 	}
 
 	return nil
@@ -59,11 +60,12 @@ func (r *AdvDeploymentReconciler) ApplyPodSetReleases(ctx context.Context, advDe
 
 			if r.Info.Status.GetCode() != hapirelease.Status_DEPLOYED {
 				klog.Infof("rlsName: %s deploy failed, Description:%s", r.Name, r.Info.Description)
-				err := helmv2.DeleteRelease(r.Name, hClient)
-				if err != nil {
+				if err := helmv2.DeleteRelease(r.Name, hClient); err != nil {
 					klog.Errorf("DeleteRelease UNDEPLOYED rls name: %s, err:%+v", r.Name, err)
 					return err
 				}
+
+				klog.V(4).Infof("rlsName: %s delete undeployed successed", r.Name)
 			}
 		}
 	}
@@ -97,11 +99,12 @@ func (r *AdvDeploymentReconciler) ApplyPodSetReleases(ctx context.Context, advDe
 	}
 
 	for _, rlsName := range unUseReleasesName {
-		err := helmv2.DeleteRelease(rlsName, hClient)
-		if err != nil {
+		if err := helmv2.DeleteRelease(rlsName, hClient); err != nil {
 			klog.Errorf("DeleteRelease name: %s, err:%+v", rlsName, err)
 			return err
 		}
+
+		klog.V(4).Infof("rlsName: %s delete unuse spec successed", r.Name)
 	}
 
 	return nil

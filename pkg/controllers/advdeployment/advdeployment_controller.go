@@ -35,6 +35,7 @@ import (
 
 	"time"
 
+	"github.com/pkg/errors"
 	k8sclient "gitlab.dmall.com/arch/sym-admin/pkg/k8s/client"
 	"gitlab.dmall.com/arch/sym-admin/pkg/labels"
 	"gitlab.dmall.com/arch/sym-admin/pkg/utils"
@@ -78,7 +79,7 @@ func Add(mgr manager.Manager, cMgr *pkgmanager.DksManager) error {
 	r.KubeCli = kubeCli
 
 	// Create a new runtime controller
-	ctl, err := controller.New(controllerName, mgr, controller.Options{Reconciler: r})
+	ctl, err := controller.New(controllerName, mgr, controller.Options{Reconciler: r, MaxConcurrentReconciles: cMgr.Opt.Threadiness})
 	if err != nil {
 		r.Log.Error(err, "controller new err")
 		return err
@@ -155,28 +156,26 @@ func (r *AdvDeploymentReconciler) Reconcile(req ctrl.Request) (ctrl.Result, erro
 	}
 
 	// before delete AdvDeployment, we will clean all installed helm releases
-	if advDeploy.ObjectMeta.DeletionTimestamp != nil {
+	if !advDeploy.ObjectMeta.DeletionTimestamp.IsZero() {
 		logger.Info("delete event", "advDeploy", advDeploy.Name)
-		err := r.CleanReleasesByName(advDeploy)
-		if err == nil {
-			klog.V(3).Infof("advDeploy: %s clean all helm Releases success, than update Finalizers nil", advDeploy.Name)
-			advDeploy.ObjectMeta.Finalizers = nil
-			err = r.Client.Update(ctx, advDeploy)
-			if err == nil {
-				klog.V(3).Infof("advDeploy: %s Update Finalizers nil success", advDeploy.Name)
-				return reconcile.Result{}, nil
-			}
+		if err := r.CleanReleasesByName(advDeploy); err != nil {
+			return reconcile.Result{}, errors.Wrap(err, "could not remove helm release to AdvDeployment")
 		}
-		return reconcile.Result{}, err
+		klog.V(3).Infof("advDeploy: %s clean all helm Releases success, than update Finalizers nil", advDeploy.Name)
+		advDeploy.ObjectMeta.Finalizers = []string{}
+		if err := r.Client.Update(ctx, advDeploy); err != nil {
+			return reconcile.Result{}, errors.Wrap(err, "could not remove finalizer to AdvDeployment")
+		}
+		klog.V(3).Infof("advDeploy: %s Update Finalizers nil success", advDeploy.Name)
+		return reconcile.Result{}, nil
 	}
 
 	// if finalizers empty, full ControllerFinalizersName string
-	if advDeploy.ObjectMeta.Finalizers == nil {
+	if len(advDeploy.ObjectMeta.Finalizers) == 0 {
 		advDeploy.ObjectMeta.Finalizers = []string{labels.ControllerFinalizersName}
-		err = r.Client.Update(ctx, advDeploy)
-		if err != nil {
+		if err := r.Client.Update(ctx, advDeploy); err != nil {
 			logger.Error(err, "failed to get AdvDeployment")
-			return reconcile.Result{}, err
+			return reconcile.Result{}, errors.Wrap(err, "could not add finalizer to AdvDeployment")
 		}
 		klog.V(3).Infof("advDeploy: %s Update add Finalizers success")
 		return reconcile.Result{
@@ -210,8 +209,7 @@ func (r *AdvDeploymentReconciler) Reconcile(req ctrl.Request) (ctrl.Result, erro
 		return reconcile.Result{}, err
 	}
 
-	err = r.updateAggrStatus(ctx, advDeploy, aggrStatus)
-	if err != nil {
+	if err := r.updateAggrStatus(ctx, advDeploy, aggrStatus); err != nil {
 		logger.Error(err, "faild updateAggrStatus")
 		return reconcile.Result{}, err
 	}

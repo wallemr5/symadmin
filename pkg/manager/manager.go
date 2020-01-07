@@ -55,6 +55,7 @@ type DksManager struct {
 func DefaultManagerOption() *ManagerOption {
 	return &ManagerOption{
 		HTTPAddr:             ":8080",
+		Threadiness:          1,
 		GoroutineThreshold:   1000,
 		ResyncPeriod:         30 * time.Minute,
 		EnableLeaderElection: false,

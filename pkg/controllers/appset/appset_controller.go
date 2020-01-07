@@ -113,8 +113,7 @@ func NewAppSetController(mgr manager.Manager, cMgr *pkgmanager.DksManager) (*App
 	}
 
 	// Create a new custom controller
-	threadiness := 2
-	customImpl := customctrl.NewImpl(c, controllerName, nil, &threadiness, labels.ObservedNamespace...)
+	customImpl := customctrl.NewImpl(c, controllerName, nil, &cMgr.Opt.Threadiness, labels.ObservedNamespace...)
 
 	for _, cluster := range cMgr.K8sMgr.GetAll() {
 		advDeploymentInformer, err := cluster.Cache.GetInformer(&workloadv1beta1.AdvDeployment{})

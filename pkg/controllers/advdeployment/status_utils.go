@@ -102,7 +102,7 @@ func (r *AdvDeploymentReconciler) RecalculateAppSetStatus(ctx context.Context, a
 	if len(deploys) == 0 {
 		statefulSets, err = r.GetStatefulSetByLabels(ctx, advDeploy, opts)
 		if err != nil {
-			return nil, errors.Wrapf(err, "app:%s get all statts err", advDeploy.Name)
+			return nil, errors.Wrapf(err, "app:%s get all statefulset err", advDeploy.Name)
 		}
 	}
 
@@ -173,7 +173,7 @@ func (r *AdvDeploymentReconciler) updateAggrStatus(ctx context.Context, advDeplo
 		aggrStatus.DeepCopyInto(&obj.Status.AggrStatus)
 		updateErr := r.Client.Status().Update(ctx, obj)
 		if updateErr == nil {
-			klog.Infof("advDeploy name: %s Status updated successfully", advDeploy.Name)
+			klog.V(3).Infof("advDeploy name: %s Status updated successfully", advDeploy.Name)
 			return nil
 		}
 

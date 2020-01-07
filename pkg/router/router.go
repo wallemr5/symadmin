@@ -62,7 +62,7 @@ func NewRouter(opt *RouterOptions) *Router {
 	engine := gin.New()
 	engine.Use(gin.Recovery())
 	// engine := gin.Default()
-	// engine.Use(limits.RequestSizeLimiter(int64(options.MaxUploadSize)))
+	// engine.Use(limits.RequestSizeLimiter(int64(opt.MaxUploadSize)))
 	if !opt.GinLogEnabled {
 		gin.SetMode(gin.ReleaseMode)
 	} else {
