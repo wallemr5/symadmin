@@ -72,36 +72,34 @@ func Add(mgr manager.Manager, cMgr *pkgmanager.DksManager) error {
 	r.Cfg = mgr.GetConfig()
 	kubeCli, err := k8sclient.NewClientFromConfig(mgr.GetConfig())
 	if err != nil {
-		r.Log.Error(err, "Watch AdvDeployment err")
+		r.Log.Error(err, "Creating a kube client for the reconciler has an error")
 		return err
 	}
 	r.KubeCli = kubeCli
 
-	// Create a new runtime controller
+	// Create a new runtime controller for advDeployment
 	ctl, err := controller.New(controllerName, mgr, controller.Options{Reconciler: r})
 	if err != nil {
-		r.Log.Error(err, "controller new err")
+		r.Log.Error(err, "Creating a new AdvDeployment controller has an error")
 		return err
 	}
 
-	// Watch for changes to AdvDeployment for runtime controller
+	// We set the objects which would to be watched by this controller.
 	err = ctl.Watch(&source.Kind{Type: &workloadv1beta1.AdvDeployment{}}, &handler.EnqueueRequestForObject{}, utils.GetWatchPredicateForAdvDeploymentSpec())
 	if err != nil {
-		r.Log.Error(err, "Watch AdvDeployment err")
+		r.Log.Error(err, "Watching AdvDeployment has an error")
 		return err
 	}
 
-	// Watch for changes to Deployment for runtime controller
 	err = ctl.Watch(&source.Kind{Type: &appsv1.Deployment{}}, utils.GetEnqueueRequestsFucs(), utils.GetWatchPredicateForNs(), utils.GetWatchPredicateForApp())
 	if err != nil {
-		r.Log.Error(err, "Watch Deployment err")
+		r.Log.Error(err, "Watching Deployment has an error")
 		return err
 	}
 
-	// Watch for changes to StatefulSet for runtime controller
 	err = ctl.Watch(&source.Kind{Type: &appsv1.StatefulSet{}}, utils.GetEnqueueRequestsFucs(), utils.GetWatchPredicateForNs(), utils.GetWatchPredicateForApp())
 	if err != nil {
-		r.Log.Error(err, "Watch StatefulSet err")
+		r.Log.Error(err, "Watching StatefulSet has an error")
 		return err
 	}
 
@@ -114,12 +112,12 @@ func Add(mgr manager.Manager, cMgr *pkgmanager.DksManager) error {
 
 	helmv2env, err := helmv2.InitHelmRepoEnv("dmall", cMgr.Opt.Repos)
 	if err != nil {
-		klog.Errorf("InitHelmRepoEnv err:%v", err)
+		klog.Errorf("Initializing a helm env has an error:%v", err)
 	}
 	r.HelmEnv = NewDefaultHelmIndexSyncer(helmv2env)
-
-	klog.Infof("add helm repo index syncer Runnable")
+	klog.Infof("Create a helm synchronizer and pass it to this reconciler")
 	mgr.Add(r.HelmEnv)
+
 	return nil
 }
 
