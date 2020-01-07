@@ -1,7 +1,10 @@
 package apiManager
 
 import (
+	"bytes"
 	"net/http"
+	"strconv"
+	"strings"
 	"sync"
 
 	"github.com/gin-gonic/gin"
@@ -51,6 +54,13 @@ type xtermMessage struct {
 func (m *ApiManager) GetTerminal(c *gin.Context) {
 	clusterName := c.Param("name")
 	namespace := c.DefaultQuery("namespace", "default")
+	tty, _ := strconv.ParseBool(c.DefaultQuery("tty", "true"))
+	isStdin, _ := strconv.ParseBool(c.DefaultQuery("stdin", "true"))
+	isStdout, _ := strconv.ParseBool(c.DefaultQuery("stdout", "true"))
+	isStderr, _ := strconv.ParseBool(c.DefaultQuery("stderr", "true"))
+	once, _ := strconv.ParseBool(c.DefaultQuery("once", "false"))
+	cmd := strings.Fields(c.Query("cmd"))
+
 	podName, ok := c.GetQuery("pod")
 	if !ok {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "can not get pod name."})
@@ -71,16 +81,16 @@ func (m *ApiManager) GetTerminal(c *gin.Context) {
 	if err != nil {
 		klog.Errorf("init websocket conn error: %+v", err)
 	}
-	defer ws.Close()
 
-	// TODO(haidong): support more shell,bash/powershell
-	err = startProcess(ws, cluster, podName, namespace, containerName, []string{"/bin/sh"})
+	err = startProcess(cluster, namespace, podName, containerName,
+		cmd, isStdin, isStdout, isStderr, tty, once, ws)
 	if err != nil {
 		klog.Errorf("error in startProcess: %v", err)
 	}
 }
 
-func startProcess(ws *WsConnection, cluster *k8smanager.Cluster, podName, namespace, container string, cmd []string) error {
+func startProcess(cluster *k8smanager.Cluster, namespace, podName, container string,
+	cmd []string, isStdin, isStdout, isStderr, tty, once bool, ws *WsConnection) error {
 	req := cluster.KubeCli.CoreV1().RESTClient().Post().
 		Resource("pods").
 		Name(podName).
@@ -92,40 +102,58 @@ func startProcess(ws *WsConnection, cluster *k8smanager.Cluster, podName, namesp
 		klog.Errorf("error adding to scheme: %v", err)
 	}
 
+	if !once {
+		cmd = []string{"/bin/sh"}
+	}
+
 	parameterCodec := runtime.NewParameterCodec(scheme)
 	req.VersionedParams(&core_v1.PodExecOptions{
-		Container: container,
 		Command:   cmd,
-		Stdin:     true,
-		Stdout:    true,
-		Stderr:    true,
-		TTY:       true,
+		Container: container,
+		Stdin:     isStdin,
+		Stdout:    isStdout,
+		Stderr:    isStderr,
+		TTY:       tty,
 	}, parameterCodec)
 
 	exec, err := remotecommand.NewSPDYExecutor(cluster.RestConfig, "POST", req.URL())
 	if err != nil {
-		ws.Close()
 		klog.Errorf("error while creating Executor: %+v", err)
 		return err
 
 	}
 
-	handler := &streamHandler{
-		ws:          ws,
-		resizeEvent: make(chan remotecommand.TerminalSize),
+	if once {
+		var stdout, stderr bytes.Buffer
+		err = exec.Stream(remotecommand.StreamOptions{
+			Stdin:  nil,
+			Stdout: &stdout,
+			Stderr: &stderr,
+			Tty:    tty,
+		})
+		if stderr.Len() != 0 {
+			klog.Errorf("exec steam error: %v", stderr)
+			ws.Write(websocket.TextMessage, stderr.Bytes())
+		} else {
+			ws.Write(websocket.TextMessage, stdout.Bytes())
+		}
+		ws.Close()
+	} else {
+		handler := &streamHandler{
+			ws:          ws,
+			resizeEvent: make(chan remotecommand.TerminalSize),
+		}
+		err = exec.Stream(remotecommand.StreamOptions{
+			Stdin:             handler,
+			Stdout:            handler,
+			Stderr:            handler,
+			TerminalSizeQueue: handler,
+			Tty:               tty,
+		})
 	}
-
-	err = exec.Stream(remotecommand.StreamOptions{
-		Stdin:             handler,
-		Stdout:            handler,
-		Stderr:            handler,
-		TerminalSizeQueue: handler,
-		Tty:               true,
-	})
 	if err != nil {
 		klog.Errorf("error in Stream: %+v", err)
 		return err
-
 	}
 
 	return err
@@ -189,8 +217,8 @@ func (ws *WsConnection) ReadLoop() {
 	for {
 		msgType, data, err := ws.conn.ReadMessage()
 		if err != nil {
-			klog.Errorf("error in read websocket message: %v", err)
-			continue
+			klog.Errorf("readloop error: %v", err)
+			break
 		}
 		ws.inChan <- &WsMessage{msgType, data}
 	}
@@ -202,9 +230,11 @@ func (ws *WsConnection) WriteLoop() {
 		case msg := <-ws.outChan:
 			if err := ws.conn.WriteMessage(msg.MessageType, msg.Data); err != nil {
 				klog.Errorf("error in write websocket message: %v", err)
+				continue
 			}
 		case <-ws.closeChan:
 			ws.Close()
+			break
 		}
 	}
 
@@ -214,8 +244,7 @@ func (ws *WsConnection) Write(messageType int, data []byte) (err error) {
 	select {
 	case ws.outChan <- &WsMessage{messageType, data}:
 	case <-ws.closeChan:
-		klog.Info("websocket closed in write")
-		break
+		ws.Close()
 	}
 	return nil
 }
@@ -225,17 +254,18 @@ func (ws *WsConnection) Read() (msg *WsMessage, err error) {
 	case msg := <-ws.inChan:
 		return msg, nil
 	case <-ws.closeChan:
-		klog.Info("websocket closed in read")
+		ws.Close()
 	}
 	return nil, nil
 }
 
 func (ws *WsConnection) Close() {
-	ws.conn.Close()
 	ws.mutex.Lock()
 	defer ws.mutex.Unlock()
 	if !ws.isClosed {
 		ws.isClosed = true
+		ws.closeChan <- 0
 		close(ws.closeChan)
+		ws.conn.Close()
 	}
 }
