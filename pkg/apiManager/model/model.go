@@ -1,5 +1,9 @@
 package model
 
+import (
+	corev1 "k8s.io/api/core/v1"
+)
+
 type ClusterStatus struct {
 	Name   string `json:"name,omitempty"`
 	Status string `json:"status,omitempty"`
@@ -45,4 +49,12 @@ type NodeInfo struct {
 	JoinDate      string `json:"joinDate,omitempty"`
 	System        string `json:"system,omitempty"`
 	DockerVersion string `json:"dockerVersion,omitempty"`
+}
+
+type ServiceInfo struct {
+	NameSpace string               `json:"namespace,omitempty"`
+	ClusterIP string               `json:"clusterIP,omitempty"`
+	Type      string               `json:"type,omitempty"`
+	Ports     []corev1.ServicePort `json:"ports,omitempty"`
+	Selector  map[string]string    `json:"selector,omitempty"`
 }
