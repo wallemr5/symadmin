@@ -15,11 +15,13 @@ import (
 	ctrl "sigs.k8s.io/controller-runtime"
 )
 
+// Remove the sym-admin's finalizer from the entry list.
 func (r *AdvDeploymentReconciler) RemoveFinalizers(ctx context.Context, req ctrl.Request) error {
 	obj := &workloadv1beta1.AdvDeployment{}
 	err := r.Client.Get(ctx, req.NamespacedName, obj)
 	if err != nil {
 		if apierrors.IsNotFound(err) {
+			klog.V(3).Infof("Can not find any advDeploy with name %s, ignore it.", req.NamespacedName)
 			return nil
 		}
 
@@ -28,16 +30,25 @@ func (r *AdvDeploymentReconciler) RemoveFinalizers(ctx context.Context, req ctrl
 	}
 
 	if utils.ContainsString(obj.ObjectMeta.Finalizers, labels.ControllerFinalizersName) {
-		obj.ObjectMeta.Finalizers = []string{}
-		if err := r.Client.Update(ctx, obj); err != nil {
-			return errors.Wrap(err, "could not remove finalizer to AdvDeployment")
+		var i int
+		for idx, fz := range obj.ObjectMeta.Finalizers {
+			if fz == labels.ControllerFinalizersName {
+				i = idx
+				break
+			}
 		}
-		klog.V(3).Infof("advDeploy: %s Update Finalizers nil success", obj.Name)
+		obj.ObjectMeta.Finalizers = append(obj.ObjectMeta.Finalizers[:i], obj.ObjectMeta.Finalizers[i+1:]...)
+		if err := r.Client.Update(ctx, obj); err != nil {
+			klog.Errorf("Can not remove the finalizer entry from the list, err: %v", err)
+			return errors.Wrap(err, "Can not remove the finalizer entry from the list")
+		}
+		klog.V(3).Infof("advDeploy: [%s], Remove the Finalizers and update it successfully", obj.Name)
 	}
+
 	return nil
 }
 
-func (r *AdvDeploymentReconciler) CleanReleasesByName(advDeploy *workloadv1beta1.AdvDeployment) error {
+func (r *AdvDeploymentReconciler) CleanAllReleases(advDeploy *workloadv1beta1.AdvDeployment) error {
 	hClient, err := helmv2.NewClientFromConfig(r.Cfg, r.KubeCli, "")
 	if err != nil {
 		klog.Errorf("New helm Clinet err:%+v", err)

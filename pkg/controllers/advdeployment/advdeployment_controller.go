@@ -130,6 +130,8 @@ func Add(mgr manager.Manager, cMgr *pkgmanager.DksManager) error {
 func (r *AdvDeploymentReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error) {
 	ctx := context.Background()
 	logger := r.Log.WithValues("key", req.NamespacedName, "id", uuid.Must(uuid.NewV4()).String())
+
+	// Calculating how long did the reconciling process take
 	startTime := time.Now()
 	defer func() {
 		diffTime := time.Since(startTime)
@@ -144,10 +146,12 @@ func (r *AdvDeploymentReconciler) Reconcile(req ctrl.Request) (ctrl.Result, erro
 		klog.V(logLevel).Infof("key: %v Reconcile end. Time taken: %v. ", req, diffTime)
 	}()
 
+	// At first, find the advDeployment with its namespaced name.
 	advDeploy := &workloadv1beta1.AdvDeployment{}
 	err := r.Client.Get(ctx, req.NamespacedName, advDeploy)
 	if err != nil {
 		if apierrors.IsNotFound(err) {
+			klog.V(3).Infof("Can not find any advDeploy with name [%s], don't care about it.", req.NamespacedName)
 			return reconcile.Result{}, nil
 		}
 
@@ -155,11 +159,16 @@ func (r *AdvDeploymentReconciler) Reconcile(req ctrl.Request) (ctrl.Result, erro
 		return reconcile.Result{}, err
 	}
 
-	// before delete AdvDeployment, we will clean all installed helm releases
+	/*
+		Before delete AdvDeployment, we will clean all installed helm releases,
+		if the deletionTimestamp is nil, it means this advDeploy has been deleted by someone.
+		it also mean that we have to delete all releases of this advDeploy immediately.
+	*/
 	if !advDeploy.ObjectMeta.DeletionTimestamp.IsZero() {
-		logger.Info("delete event", "advDeploy", advDeploy.Name)
-		if err := r.CleanReleasesByName(advDeploy); err != nil {
-			return reconcile.Result{}, errors.Wrap(err, "could not remove helm release to AdvDeployment")
+		logger.Info("Delete all releases of an advDeploy", "advDeploy", advDeploy.Name)
+		if err := r.CleanAllReleases(advDeploy); err != nil {
+			logger.Error(err, "Can not remove the helm releases which are related with this AdvDeployment")
+			return reconcile.Result{}, errors.Wrap(err, "Can not remove the helm releases which are related with this AdvDeployment")
 		}
 
 		return reconcile.Result{}, r.RemoveFinalizers(ctx, req)
