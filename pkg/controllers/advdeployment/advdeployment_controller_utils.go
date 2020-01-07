@@ -3,13 +3,39 @@ package advdeployment
 import (
 	"context"
 
+	"github.com/pkg/errors"
 	workloadv1beta1 "gitlab.dmall.com/arch/sym-admin/pkg/apis/workload/v1beta1"
 	helmv2 "gitlab.dmall.com/arch/sym-admin/pkg/helm/v2"
 	"gitlab.dmall.com/arch/sym-admin/pkg/labels"
+	"gitlab.dmall.com/arch/sym-admin/pkg/utils"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	hapirelease "k8s.io/helm/pkg/proto/hapi/release"
 	rls "k8s.io/helm/pkg/proto/hapi/services"
 	"k8s.io/klog"
+	ctrl "sigs.k8s.io/controller-runtime"
 )
+
+func (r *AdvDeploymentReconciler) RemoveFinalizers(ctx context.Context, req ctrl.Request) error {
+	obj := &workloadv1beta1.AdvDeployment{}
+	err := r.Client.Get(ctx, req.NamespacedName, obj)
+	if err != nil {
+		if apierrors.IsNotFound(err) {
+			return nil
+		}
+
+		klog.Errorf("failed to get AdvDeployment, err: %v", err)
+		return err
+	}
+
+	if utils.ContainsString(obj.ObjectMeta.Finalizers, labels.ControllerFinalizersName) {
+		obj.ObjectMeta.Finalizers = []string{}
+		if err := r.Client.Update(ctx, obj); err != nil {
+			return errors.Wrap(err, "could not remove finalizer to AdvDeployment")
+		}
+		klog.V(3).Infof("advDeploy: %s Update Finalizers nil success", obj.Name)
+	}
+	return nil
+}
 
 func (r *AdvDeploymentReconciler) CleanReleasesByName(advDeploy *workloadv1beta1.AdvDeployment) error {
 	hClient, err := helmv2.NewClientFromConfig(r.Cfg, r.KubeCli, "")
@@ -31,7 +57,7 @@ func (r *AdvDeploymentReconciler) CleanReleasesByName(advDeploy *workloadv1beta1
 			return err
 		}
 
-		klog.V(4).Infof("rlsName: %s clean successed", r.Name)
+		klog.V(4).Infof("rlsName: %s clean successed", helmRls.Name)
 	}
 
 	return nil

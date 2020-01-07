@@ -161,13 +161,8 @@ func (r *AdvDeploymentReconciler) Reconcile(req ctrl.Request) (ctrl.Result, erro
 		if err := r.CleanReleasesByName(advDeploy); err != nil {
 			return reconcile.Result{}, errors.Wrap(err, "could not remove helm release to AdvDeployment")
 		}
-		klog.V(3).Infof("advDeploy: %s clean all helm Releases success, than update Finalizers nil", advDeploy.Name)
-		advDeploy.ObjectMeta.Finalizers = []string{}
-		if err := r.Client.Update(ctx, advDeploy); err != nil {
-			return reconcile.Result{}, errors.Wrap(err, "could not remove finalizer to AdvDeployment")
-		}
-		klog.V(3).Infof("advDeploy: %s Update Finalizers nil success", advDeploy.Name)
-		return reconcile.Result{}, nil
+
+		return reconcile.Result{}, r.RemoveFinalizers(ctx, req)
 	}
 
 	// if finalizers empty, full ControllerFinalizersName string
