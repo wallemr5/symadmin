@@ -1,13 +1,14 @@
 package apiManager
 
 import (
+	"context"
 	"net/http"
 
 	"github.com/gin-gonic/gin"
 	"gitlab.dmall.com/arch/sym-admin/pkg/apiManager/model"
-	k8smanager "gitlab.dmall.com/arch/sym-admin/pkg/k8s/manager"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	appv1 "k8s.io/api/apps/v1"
 	"k8s.io/klog"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 // GetDeployments get all deployments in assigned namespace
@@ -21,13 +22,12 @@ func (m *APIManager) GetDeployments(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "can not get cluster."})
 		return
 	}
-	if cluster.Status == k8smanager.ClusterOffline {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "the cluster you get is offline."})
-		return
-	}
 
-	deployments, err := cluster.KubeCli.AppsV1().Deployments(namespace).
-		List(metav1.ListOptions{})
+	ctx := context.Background()
+	listOptions := &client.ListOptions{Namespace: namespace}
+	deployments := &appv1.DeploymentList{}
+
+	err = cluster.Client.List(ctx, listOptions, deployments)
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "get deployments error"})
 		return
