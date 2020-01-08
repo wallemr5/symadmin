@@ -74,8 +74,6 @@ func buildAdvDeployment(app *workloadv1beta1.AppSet, clusterTopology *workloadv1
 }
 
 func applyAdvDeployment(ctx context.Context, cluster *k8smanager.Cluster, req customctrl.CustomRequest, app *workloadv1beta1.AppSet, advDeploy *workloadv1beta1.AdvDeployment) (adv *workloadv1beta1.AdvDeployment, isChanged bool, err error) {
-	logger := utils.GetCtxLogger(ctx)
-
 	obj := &workloadv1beta1.AdvDeployment{}
 	err = cluster.Client.Get(ctx, types.NamespacedName{
 		Name:      app.Name,
@@ -84,11 +82,12 @@ func applyAdvDeployment(ctx context.Context, cluster *k8smanager.Cluster, req cu
 
 	if err != nil {
 		if apierrors.IsNotFound(err) {
-			logger.Info("create spec cluster", "cluster", cluster.Name)
+			advDeploy.Status.AggrStatus.Status = workloadv1beta1.AppStatusInstalling
 			err = cluster.Client.Create(ctx, advDeploy)
 			if err != nil {
-				return nil, false, errors.Wrapf(err, "cluster:%s create advDeploy", cluster.Name)
+				return nil, false, errors.Wrapf(err, "cluster:%s create advDeploy", cluster.GetName())
 			}
+			klog.V(4).Infof("%s: cluster[%s] create AdvDeployment spec info", req.NamespacedName, cluster.GetName())
 			return advDeploy, true, nil
 		}
 		return nil, false, err
