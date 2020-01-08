@@ -12,7 +12,8 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
-func (m *ApiManager) GetServices(c *gin.Context) {
+// GetServices ...
+func (m *APIManager) GetServices(c *gin.Context) {
 	appName := c.Param("appName")
 	clusterName := c.Param("name")
 	clusters := m.K8sMgr.GetAll(clusterName)

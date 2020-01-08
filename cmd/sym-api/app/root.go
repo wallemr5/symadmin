@@ -27,6 +27,7 @@ import (
 	logf "sigs.k8s.io/controller-runtime/pkg/runtime/log"
 )
 
+// AddFlags ...
 func AddFlags(cmd *cobra.Command) {
 	cmd.PersistentFlags().AddGoFlagSet(flag.CommandLine)
 }
@@ -68,7 +69,7 @@ func GetRootCmd(args []string) *cobra.Command {
 	pflag.VisitAll(func(flag *pflag.Flag) {
 		klog.V(2).Infof("FLAG: --%s=%q", flag.Name, flag.Value)
 	})
-	rootCmd.AddCommand(NewApiCmd(cli))
+	rootCmd.AddCommand(NewAPICmd(cli))
 	rootCmd.AddCommand(NewCmdVersion(cli))
 	return rootCmd
 }
