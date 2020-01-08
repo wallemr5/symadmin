@@ -331,7 +331,7 @@ func DeleteRelease(rlsName string, hClient *Client) error {
 func ApplyRelease(rlsName, chartUrlName, specChartVersion string, chartPackage []byte, hClient *Client, env *helmenv.EnvSettings,
 	namespace string, runningRls *hapirelease.Release, vaByte []byte) (*hapirelease.Release, error) {
 	var (
-		applyedRls *hapirelease.Release
+		appliedRls *hapirelease.Release
 		rlsErr     error
 	)
 
@@ -339,8 +339,8 @@ func ApplyRelease(rlsName, chartUrlName, specChartVersion string, chartPackage [
 	if runningRls == nil {
 		rep, err := CreateRelease(rlsName, chartUrlName, specChartVersion, chartPackage, hClient, env, namespace, helm.ValueOverrides(vaByte))
 		if err == nil && rep != nil {
-			applyedRls = rep.GetRelease()
-			klog.V(4).Infof("rlsName: %s has been installed successfully, current version: %d", rlsName, applyedRls.GetVersion())
+			appliedRls = rep.GetRelease()
+			klog.V(4).Infof("Release[%s] has been installed successfully, current version: %d", rlsName, appliedRls.GetVersion())
 		}
 		rlsErr = err
 	} else {
@@ -348,9 +348,9 @@ func ApplyRelease(rlsName, chartUrlName, specChartVersion string, chartPackage [
 		var isDifferent int
 		runningVersion := runningRls.GetChart().GetMetadata().GetVersion()
 		if specChartVersion != "" {
-			klog.V(3).Infof("rlsName:%s ,runningVersion %s => specChartVersion %s", rlsName, runningVersion, specChartVersion)
+			klog.V(3).Infof("Release[%s], runningVersion %s => specChartVersion %s", rlsName, runningVersion, specChartVersion)
 			if strings.Compare(specChartVersion, runningVersion) != 0 {
-				klog.V(3).Infof("rlsName:%s chart version is changed", rlsName)
+				klog.V(3).Infof("Release[%s] chart version is changed", rlsName)
 				isDifferent++
 			}
 		}
@@ -358,14 +358,14 @@ func ApplyRelease(rlsName, chartUrlName, specChartVersion string, chartPackage [
 		if isDifferent <= 0 {
 			runningRaw := runningRls.GetConfig().GetRaw()
 			if len(runningRaw) < 10 && len(vaByte) < 10 {
-				klog.V(4).Infof("rlsName:%s, the length of running raw and spec raw less than 10.", rlsName)
-				return runningRls, nil
+				klog.V(4).Infof("Release[%s] the length of running raw and spec raw less than 10.", rlsName)
+				return nil, nil
 			}
 
 			isEquivalent := equality.Semantic.DeepEqual(string(vaByte), runningRaw)
 			if isEquivalent {
-				klog.V(4).Infof("rlsName:%s 's running raw and spec raw are equivalent, there is no need to create or update it.", rlsName)
-				return runningRls, nil
+				klog.V(4).Infof("Release[%s]'s running raw and spec raw are equivalent, there is no need to create or update it.", rlsName)
+				return nil, nil
 			} else {
 				isDifferent++
 			}
@@ -375,19 +375,14 @@ func ApplyRelease(rlsName, chartUrlName, specChartVersion string, chartPackage [
 		if isDifferent > 0 {
 			rep, err := UpgradeRelease(rlsName, chartUrlName, specChartVersion, chartPackage, hClient, env, vaByte, false)
 			if err == nil && rep != nil {
-				applyedRls = rep.GetRelease()
-				klog.V(4).Infof("rlsName: %s has been upgraded successfully, current version: %d", rlsName, applyedRls.GetVersion())
+				appliedRls = rep.GetRelease()
+				klog.V(4).Infof("Release[%s] has been upgraded successfully, current version: %d", rlsName, appliedRls.GetVersion())
 			}
 			rlsErr = err
-		} else {
-			applyedRls = runningRls
 		}
 	}
 
-	if rlsErr == nil && applyedRls == nil {
-		return nil, errors.WithMessagef(rlsErr, "rlsName:%s neither error and applyed release are exist", rlsName)
-	}
-	return applyedRls, rlsErr
+	return appliedRls, rlsErr
 }
 
 // GetReleaseK8sResources returns K8s resources of a helm release

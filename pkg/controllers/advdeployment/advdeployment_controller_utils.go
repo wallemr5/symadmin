@@ -76,12 +76,14 @@ func (r *AdvDeploymentReconciler) CleanAllReleases(advDeploy *workloadv1beta1.Ad
 }
 
 // We try to converge the advDeploy's status to that desired status.
-func (r *AdvDeploymentReconciler) ApplyReleases(ctx context.Context, advDeploy *workloadv1beta1.AdvDeployment) error {
+// It returns true mean that we modified running releases in some way, otherwise no action happens on running releases.
+func (r *AdvDeploymentReconciler) ApplyReleases(ctx context.Context, advDeploy *workloadv1beta1.AdvDeployment) (bool, error) {
+	hasModifiedRls := false
 	// Initialize a new helm client
 	hClient, err := helmv2.NewClientFromConfig(r.Cfg, r.KubeCli, "")
 	if err != nil {
 		klog.Errorf("Initializing a new helm clinet has an error: %+v", err)
-		return err
+		return hasModifiedRls, err
 	}
 	defer hClient.Close()
 
@@ -91,7 +93,7 @@ func (r *AdvDeploymentReconciler) ApplyReleases(ctx context.Context, advDeploy *
 	response, err := helmv2.ListReleases(labels.MakeHelmReleaseFilter(advDeploy.Name), hClient)
 	if err != nil {
 		klog.Errorf("Can not find a releases with name: %s, err: %v", advDeploy.Name, err)
-		return err
+		return hasModifiedRls, err
 	}
 
 	// The releases which are not defined in specification but are running already.
@@ -111,8 +113,9 @@ func (r *AdvDeploymentReconciler) ApplyReleases(ctx context.Context, advDeploy *
 				// Delete this release with purge flag.
 				if err := helmv2.DeleteRelease(rr.Name, hClient); err != nil {
 					klog.Errorf("Delete the release due to its status, but has an error, rls name: %s, err: %+v", rr.Name, err)
-					return err
+					return hasModifiedRls, err
 				}
+				hasModifiedRls = true
 
 				klog.V(4).Infof("rlsName: [%s], Delete the release due to its status", rr.Name)
 			}
@@ -137,12 +140,16 @@ func (r *AdvDeploymentReconciler) ApplyReleases(ctx context.Context, advDeploy *
 		specChartUrlName = advDeploy.Spec.PodSpec.Chart.ChartUrl.Url
 		specChartUrlVersion = advDeploy.Spec.PodSpec.Chart.ChartUrl.ChartVersion
 	}
+
 	for _, podSet := range advDeploy.Spec.Topology.PodSets {
-		_, err := helmv2.ApplyRelease(podSet.Name, specChartUrlName, specChartUrlVersion, specRawChart,
+		appliedRls, err := helmv2.ApplyRelease(podSet.Name, specChartUrlName, specChartUrlVersion, specRawChart,
 			hClient, r.HelmEnv.Helmv2env, advDeploy.Namespace, findRunningReleases(podSet.Name, response), []byte(podSet.RawValues))
+		if appliedRls != nil {
+			hasModifiedRls = true
+		}
 		if err != nil {
 			klog.Errorf("Podset: [%s], applying the release has an error: %v", podSet.Name, err)
-			return err
+			return hasModifiedRls, err
 		}
 	}
 
@@ -150,13 +157,13 @@ func (r *AdvDeploymentReconciler) ApplyReleases(ctx context.Context, advDeploy *
 	for _, rlsName := range redundantReleases {
 		if err := helmv2.DeleteRelease(rlsName, hClient); err != nil {
 			klog.Errorf("Deleting redundant release[%s] has an error: %+v", rlsName, err)
-			return err
+			return hasModifiedRls, err
 		}
-
+		hasModifiedRls = true
 		klog.V(4).Infof("deleting redundant release[%s] successfully.", rlsName)
 	}
 
-	return nil
+	return hasModifiedRls, nil
 }
 
 func isRedundantRelease(rlsName string, advDeploy *workloadv1beta1.AdvDeployment) bool {

@@ -186,6 +186,7 @@ func (r *AdvDeploymentReconciler) Reconcile(req ctrl.Request) (ctrl.Result, erro
 			logger.Error(err, "failed to get AdvDeployment")
 			return reconcile.Result{}, errors.Wrap(err, "Can not add sym-admin's finalizer to AdvDeployment")
 		}
+
 		klog.V(3).Infof("advDeploy: [%s] Add add Finalizers success")
 		return reconcile.Result{
 			Requeue:      true,
@@ -193,7 +194,8 @@ func (r *AdvDeploymentReconciler) Reconcile(req ctrl.Request) (ctrl.Result, erro
 		}, nil
 	}
 
-	// Until now, the advDeployment is not deleted by others, we must keep it right.
+	// Converge the releases
+	// So far the advDeployment is not deleted by others, we must keep it right.
 	if advDeploy.Spec.PodSpec.DeployType == "helm" {
 		if advDeploy.Spec.PodSpec.Chart == nil {
 			klog.Errorf("advDeploy [%s]'s chart is empty, can not reconcile it.", advDeploy.Name)
@@ -204,23 +206,27 @@ func (r *AdvDeploymentReconciler) Reconcile(req ctrl.Request) (ctrl.Result, erro
 			return reconcile.Result{}, nil
 		}
 
-		err := r.ApplyReleases(ctx, advDeploy)
+		hasModifiedRls, err := r.ApplyReleases(ctx, advDeploy)
 		if err != nil {
 			logger.Error(err, "failed to apply releases")
+		}
+
+		if hasModifiedRls {
 			return reconcile.Result{}, err
 		}
 	} else {
 		klog.Errorf("The deploy type %s don't be supported yet.", advDeploy.Name)
 	}
 
-	aggrStatus, err := r.RecalculateAppSetStatus(ctx, advDeploy)
+	// We can update the status for the advDeployment without modification for any release.
+	aggregatedStatus, err := r.RecalculateStatus(ctx, advDeploy)
 	if err != nil {
-		logger.Error(err, "faild RecalculateAppSetStatus")
+		klog.Errorf("failed to recalculate the newest status of an advancement deployment [%s]: %v", advDeploy.Name, err)
 		return reconcile.Result{}, err
 	}
 
-	if err := r.updateAggrStatus(ctx, advDeploy, aggrStatus); err != nil {
-		logger.Error(err, "faild updateAggrStatus")
+	if err := r.updateStatus(ctx, advDeploy, aggregatedStatus); err != nil {
+		klog.Errorf("failed to update the newest status of an advancement deployment [%s]: %v", advDeploy.Name, err)
 		return reconcile.Result{}, err
 	}
 
