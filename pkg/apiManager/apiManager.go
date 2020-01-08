@@ -12,28 +12,31 @@ import (
 	"k8s.io/klog"
 )
 
-type ApiManagerOption struct {
+// Option ...
+type Option struct {
 	Threadiness        int
 	GoroutineThreshold int
 	ResyncPeriod       time.Duration
 	Features           []string
 
 	// use expose /metrics, /read, /live, /pprof, /api.
-	HttpAddr      string
+	HTTPAddr      string
 	GinLogEnabled bool
 	PprofEnabled  bool
 }
 
-type ApiManager struct {
-	Opt *ApiManagerOption
+// APIManager ...
+type APIManager struct {
+	Opt *Option
 
 	Router       *router.Router
 	HealthHander healthcheck.Handler
 	K8sMgr       *k8smanager.ClusterManager
 }
 
-func DefaultApiManagerOption() *ApiManagerOption {
-	return &ApiManagerOption{
+// DefaultOption ...
+func DefaultOption() *Option {
+	return &Option{
 		HttpAddr:           ":8080",
 		GoroutineThreshold: 1000,
 		GinLogEnabled:      true,
@@ -41,12 +44,13 @@ func DefaultApiManagerOption() *ApiManagerOption {
 	}
 }
 
-func NewApiManager(kubecli kubernetes.Interface, opt *ApiManagerOption, logger logr.Logger, componentName string) (*ApiManager, error) {
+// NewAPIManager ...
+func NewAPIManager(kubecli kubernetes.Interface, opt *Option, logger logr.Logger, componentName string) (*APIManager, error) {
 	healthHander := healthcheck.NewHealthHandler()
 	healthHander.AddLivenessCheck("goroutine_threshold",
 		healthcheck.GoroutineCountCheck(opt.GoroutineThreshold))
 
-	apiMgr := &ApiManager{
+	apiMgr := &APIManager{
 		Opt:          opt,
 		HealthHander: healthHander,
 	}
@@ -77,8 +81,8 @@ func NewApiManager(kubecli kubernetes.Interface, opt *ApiManagerOption, logger l
 	return apiMgr, nil
 }
 
-// Routes
-func (m *ApiManager) Routes() []*router.Route {
+// Routes ...
+func (m *APIManager) Routes() []*router.Route {
 	var routes []*router.Route
 
 	apiRoutes := []*router.Route{
@@ -90,10 +94,9 @@ func (m *ApiManager) Routes() []*router.Route {
 		{"GET", "/api/cluster/:name/nodeName/:nodeName/", m.GetNodeInfo, ""},
 		{"GET", "/api/cluster/:name/terminal", m.GetTerminal, ""},
 		{"GET", "/api/cluster/:name/service/:appName/", m.GetServices, ""},
+		{"GET", "/api/cluster/:name/deployments", m.GetDeployments, ""},
 	}
 
 	routes = append(routes, apiRoutes...)
 	return routes
 }
-
-// GetClusters

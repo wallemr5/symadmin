@@ -2,12 +2,16 @@ package model
 
 import (
 	corev1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
+// ClusterStatus ...
 type ClusterStatus struct {
 	Name   string `json:"name,omitempty"`
 	Status string `json:"status,omitempty"`
 }
+
+// ContainerStatus ...
 type ContainerStatus struct {
 	Name         string `json:"name,omitempty"`
 	Ready        bool   `json:"ready,omitempty"`
@@ -15,10 +19,12 @@ type ContainerStatus struct {
 	Image        string `json:"image,omitempty"`
 	ContainerID  string `json:"containerId,omitempty"`
 }
+
+// Pod ...
 type Pod struct {
 	Name            string             `json:"name,omitempty"`
-	NodeIp          string             `json:"nodeIp,omitempty"`
-	PodIp           string             `json:"podIp,omitempty"`
+	NodeIP          string             `json:"nodeIP,omitempty"`
+	PodIP           string             `json:"podIP,omitempty"`
 	ImageVersion    string             `json:"imageVersion,omitempty"`
 	StartTime       string             `json:"startTime,omitempty"`
 	ContainerStatus []*ContainerStatus `json:"containerStatus,omitempty"`
@@ -30,16 +36,22 @@ type ErrorResponse struct {
 	Message string `json:"message,omitempty"`
 	Error   string `json:"error,omitempty"`
 }
+
+// Project ...
 type Project struct {
 	DomainName string `json:"domainName,omitempty"`
-	PodIp      string `json:"podIp,omitempty"`
+	PodIP      string `json:"podIP,omitempty"`
 }
+
+// NodeProjects ...
 type NodeProjects struct {
 	NodeName string     `json:"nodeName,omitempty"`
-	NodeIp   string     `json:"nodeIp,omitempty"`
+	NodeIP   string     `json:"nodeIP,omitempty"`
 	PodCount int        `json:"podCount,omitempty"`
 	Projects []*Project `json:"projects,omitempty"`
 }
+
+// Endpoints ...
 type Endpoints struct {
 	Name              string `json:"name,omitempty"`
 	Namespace         string `json:"namespace,omitempty"`
@@ -48,23 +60,41 @@ type Endpoints struct {
 	ClusterName       string `json:"clusterName,omitempty"`
 	Subsets           string `json:"subsets,omitempty"`
 }
+
+// NodeInfo ...
 type NodeInfo struct {
 	Name          string `json:"name,omitempty"`
-	HostIp        string `json:"hostIp,omitempty"`
+	HostIP        string `json:"hostIP,omitempty"`
 	KernelVersion string `json:"kernelVersion,omitempty"`
 	Architecture  string `json:"architecture,omitempty"`
 	MemorySize    int64  `json:"memorySize,omitempty"`
 	Status        string `json:"status"`
-	Cpu           int64  `json:"cpu,omitempty"`
+	CPU           int64  `json:"cpu,omitempty"`
 	JoinDate      string `json:"joinDate,omitempty"`
 	System        string `json:"system,omitempty"`
 	DockerVersion string `json:"dockerVersion,omitempty"`
 }
 
+// ServiceInfo ...
 type ServiceInfo struct {
 	NameSpace string               `json:"namespace,omitempty"`
 	ClusterIP string               `json:"clusterIP,omitempty"`
 	Type      string               `json:"type,omitempty"`
 	Ports     []corev1.ServicePort `json:"ports,omitempty"`
 	Selector  map[string]string    `json:"selector,omitempty"`
+}
+
+// DeploymentInfo ...
+type DeploymentInfo struct {
+	Cluster             string                `json:"cluster,omitempty"`
+	NameSpace           string                `json:"namespace,omitempty"`
+	Name                string                `json:"name,omitempty"`
+	DesiredReplicas     *int32                `json:"desiredReplicas,omitempty"`
+	UpdatedReplicas     int32                 `json:"updatedReplicas,omitempty"`
+	ReadyReplicas       int32                 `json:"readyReplicas,omitempty"`
+	AvailableReplicas   int32                 `json:"availableReplicas,omitempty"`
+	UnavailableReplicas int32                 `json:"unavailableReplicas,omitempty"`
+	Group               string                `json:"group,omitempty"`
+	Selector            *metav1.LabelSelector `json:"selector,omitempty"`
+	CreationTimestamp   metav1.Time           `json:"creationTimestamp,omitempty"`
 }
