@@ -21,11 +21,10 @@ type ClusterManagerOption struct {
 }
 
 type ClusterManager struct {
-	clusters      map[string]*Cluster
+	clusters      []*Cluster
 	mu            *sync.RWMutex
 	MasterKubecli kubernetes.Interface
 	Opt           *ClusterManagerOption
-	sclusters     []*Cluster
 }
 
 func DefaultClusterManagerOption() *ClusterManagerOption {
@@ -47,7 +46,7 @@ func NewManager(kubecli kubernetes.Interface, log logr.Logger, opt *ClusterManag
 	klog.Infof("find %d cluster form namespace: %s ls: %v ", len(configMaps.Items), opt.Namespace, opt.LabelSelector)
 	mgr := &ClusterManager{
 		MasterKubecli: kubecli,
-		clusters:      make(map[string]*Cluster),
+		clusters:      make([]*Cluster, 0, 4),
 		mu:            &sync.RWMutex{},
 		Opt:           opt,
 	}
@@ -88,7 +87,7 @@ func (m *ClusterManager) GetAll(name ...string) []*Cluster {
 	}
 
 	list := make([]*Cluster, 0, 4)
-	for _, c := range m.sclusters {
+	for _, c := range m.clusters {
 		if c.Status == ClusterOffline {
 			continue
 		}
@@ -98,6 +97,7 @@ func (m *ClusterManager) GetAll(name ...string) []*Cluster {
 		} else {
 			if ObserveName != "" && ObserveName == c.Name {
 				list = append(list, c)
+				break
 			}
 		}
 	}
@@ -109,11 +109,9 @@ func (m *ClusterManager) Add(cluster *Cluster) error {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 
-	m.clusters[cluster.GetName()] = cluster
-
-	m.sclusters = append(m.sclusters, cluster)
-	sort.Slice(m.sclusters, func(i int, j int) bool {
-		return m.sclusters[i].Name > m.sclusters[j].Name
+	m.clusters = append(m.clusters, cluster)
+	sort.Slice(m.clusters, func(i int, j int) bool {
+		return m.clusters[i].Name > m.clusters[j].Name
 	})
 
 	return nil
@@ -124,15 +122,19 @@ func (m *ClusterManager) Delete(cluster *Cluster) error {
 		return nil
 	}
 
-	if m.clusters[cluster.GetName()] == nil {
-		return nil
-	}
-
 	m.mu.Lock()
 	defer m.mu.Unlock()
 
-	delete(m.clusters, cluster.GetName())
+	newClusters := make([]*Cluster, 0, 4)
+	for _, c := range m.clusters {
+		if cluster.Name == c.Name {
+			continue
+		}
 
+		newClusters = append(newClusters, c)
+	}
+
+	m.clusters = newClusters
 	return nil
 }
 
@@ -140,16 +142,26 @@ func (m *ClusterManager) Get(name string) (*Cluster, error) {
 	m.mu.RLock()
 	defer m.mu.RUnlock()
 
-	cluster := m.clusters[name]
-	if cluster == nil {
+	if name == "" || name == "all" {
+		return nil, fmt.Errorf("single query not support: %s ", name)
+	}
+
+	var findCluster *Cluster
+	for _, c := range m.clusters {
+		if name == c.Name {
+			findCluster = c
+			break
+		}
+	}
+	if findCluster == nil {
 		return nil, fmt.Errorf("cluster: %s not found", name)
 	}
 
-	if cluster.Status == ClusterOffline {
+	if findCluster.Status == ClusterOffline {
 		return nil, fmt.Errorf("cluster: %s found, but offline", name)
 	}
 
-	return cluster, nil
+	return findCluster, nil
 }
 
 // InitStart init start Informers
