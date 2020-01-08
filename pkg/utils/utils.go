@@ -171,9 +171,7 @@ func FillDuplicatedVersion(infos []*workloadv1beta1.PodSetSatusInfo) string {
 		foundSet = append(foundSet, k)
 	}
 
-	sort.Slice(foundSet, func(i, j int) bool {
-		return foundSet[i] < foundSet[i]
-	})
+	sort.Strings(foundSet)
 
 	return strings.Join(foundSet, "/")
 }
