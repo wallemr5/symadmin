@@ -16,6 +16,7 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	"k8s.io/client-go/util/retry"
+	"k8s.io/klog"
 )
 
 // ModifySpec modify spec handler
@@ -27,7 +28,7 @@ func (r *AppSetReconciler) ModifySpec(ctx context.Context, req customctrl.Custom
 		}
 
 		newObj := buildAdvDeployment(app, v, r.DksMgr.Opt.Debug)
-		_, isChanged, err = applyAdvDeployment(ctx, cluster, app, newObj)
+		_, isChanged, err = applyAdvDeployment(ctx, cluster, req, app, newObj)
 		if err != nil {
 			return false, err
 		}
@@ -72,7 +73,7 @@ func buildAdvDeployment(app *workloadv1beta1.AppSet, clusterTopology *workloadv1
 	return obj
 }
 
-func applyAdvDeployment(ctx context.Context, cluster *k8smanager.Cluster, app *workloadv1beta1.AppSet, advDeploy *workloadv1beta1.AdvDeployment) (adv *workloadv1beta1.AdvDeployment, isChanged bool, err error) {
+func applyAdvDeployment(ctx context.Context, cluster *k8smanager.Cluster, req customctrl.CustomRequest, app *workloadv1beta1.AppSet, advDeploy *workloadv1beta1.AdvDeployment) (adv *workloadv1beta1.AdvDeployment, isChanged bool, err error) {
 	logger := utils.GetCtxLogger(ctx)
 
 	obj := &workloadv1beta1.AdvDeployment{}
@@ -102,7 +103,7 @@ func applyAdvDeployment(ctx context.Context, cluster *k8smanager.Cluster, app *w
 			obj.Status.AggrStatus.Status = workloadv1beta1.AppStatusInstalling
 			updateErr := cluster.Client.Update(ctx, obj)
 			if updateErr == nil {
-				logger.Info("advDeploy updated successfully", "cluster", cluster.Name)
+				klog.V(4).Infof("%s: cluster[%s] AdvDeployment update successfully", req.NamespacedName, cluster.GetName())
 				return nil
 			}
 

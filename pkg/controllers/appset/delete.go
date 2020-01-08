@@ -63,10 +63,6 @@ func (r *AppSetReconciler) DeleteUnExpectInfo(ctx context.Context, req customctr
 	// get current info
 	currentInfo := map[string]*workloadv1beta1.AdvDeployment{}
 	for _, cluster := range r.DksMgr.K8sMgr.GetAll() {
-		if cluster.Status == k8smanager.ClusterOffline {
-			continue
-		}
-
 		b := &workloadv1beta1.AdvDeployment{}
 		err := cluster.Client.Get(ctx, req.NamespacedName, b)
 		if err == nil {
