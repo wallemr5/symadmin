@@ -69,7 +69,7 @@ func NewAPIManager(kubecli kubernetes.Interface, opt *Option, logger logr.Logger
 		GinLogEnabled:    opt.GinLogEnabled,
 		MetricsEnabled:   true,
 		PprofEnabled:     opt.PprofEnabled,
-		Addr:             opt.HttpAddr,
+		Addr:             opt.HTTPAddr,
 		MetricsPath:      "metrics",
 		MetricsSubsystem: componentName,
 	}

@@ -55,9 +55,9 @@ func (m *APIManager) GetNodeInfo(c *gin.Context) {
 			memory = memory / 1024 / 1024 / 1024
 			nodeInfo := model.NodeInfo{
 				Name:          node.Name,
-				HostIp:        node.Status.Addresses[0].Address,
+				HostIP:        node.Status.Addresses[0].Address,
 				Status:        string(node.Status.Conditions[len(node.Status.Conditions)-1].Type),
-				Cpu:           cpu,
+				CPU:           cpu,
 				KernelVersion: node.Status.NodeInfo.KernelVersion,
 				Architecture:  node.Status.NodeInfo.Architecture,
 				System:        node.Status.NodeInfo.OSImage,

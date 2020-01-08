@@ -50,14 +50,14 @@ func (m *APIManager) GetNodeProject(c *gin.Context) {
 					pods.Projects = append(pods.Projects, &model.Project{
 
 						DomainName: dm,
-						PodIp:      pod.Status.PodIP,
+						PodIP:      pod.Status.PodIP,
 					})
 				}
 			}
 		}
 
 		pods.PodCount = len(pods.Projects)
-		pods.NodeIp = nodeIP
+		pods.NodeIP = nodeIP
 	}
 	c.JSON(http.StatusOK, pods)
 }
@@ -98,8 +98,8 @@ func (m *APIManager) GetPod(c *gin.Context) {
 				ContainerID:  pod.Status.ContainerStatuses[0].ContainerID,
 			})
 			pods.Name = pod.Name
-			pods.NodeIp = pod.Status.HostIP
-			pods.PodIp = pod.Status.PodIP
+			pods.NodeIP = pod.Status.HostIP
+			pods.PodIP = pod.Status.PodIP
 			pods.StartTime = pod.Status.StartTime.String()
 			//}
 		}
