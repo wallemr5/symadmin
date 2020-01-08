@@ -25,3 +25,4 @@ bin
 *.sum
 cache
 .vscode/launch.json
+manifests/appset-springBoot-bbcc2.yaml

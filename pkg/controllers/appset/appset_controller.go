@@ -29,7 +29,6 @@ import (
 	"gitlab.dmall.com/arch/sym-admin/pkg/labels"
 	pkgmanager "gitlab.dmall.com/arch/sym-admin/pkg/manager"
 	"gitlab.dmall.com/arch/sym-admin/pkg/utils"
-	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/equality"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
@@ -123,22 +122,6 @@ func NewAppSetController(mgr manager.Manager, cMgr *pkgmanager.DksManager) (*App
 		}
 		advDeploymentInformer.AddEventHandler(customctrl.HandlerWraps(customImpl.EnqueueMulti))
 		klog.Infof("cluster name:%s AddEventHandler AdvDeployment key to queue", cluster.Name)
-
-		deploymentInformer, err := cluster.Cache.GetInformer(&appsv1.Deployment{})
-		if err != nil {
-			klog.Errorf("cluster name:%s can't add Deployment InformerEntry, err: %+v", cluster.Name, err)
-			return nil, nil
-		}
-		deploymentInformer.AddEventHandler(customctrl.HandlerWraps(customImpl.EnqueueMultiLabelOfCluster))
-		klog.Infof("cluster name:%s AddEventHandler Deployment key to queue", cluster.Name)
-
-		statefulSetInformer, err := cluster.Cache.GetInformer(&appsv1.StatefulSet{})
-		if err != nil {
-			klog.Errorf("cluster name:%s can't add StatefulSet InformerEntry, err: %+v", cluster.Name, err)
-			return nil, nil
-		}
-		statefulSetInformer.AddEventHandler(customctrl.HandlerWraps(customImpl.EnqueueMultiLabelOfCluster))
-		klog.Infof("cluster name:%s AddEventHandler StatefulSet key to queue", cluster.Name)
 
 		cluster.Cache.GetInformer(&corev1.Pod{})
 		cluster.Cache.GetInformer(&corev1.Service{})

@@ -4,7 +4,7 @@ metadata:
   name: bbcc2
   namespace: default
 spec:
-  replicas: 10
+  replicas: 12
   podSpec:
     deployType: helm
     chart:
@@ -53,7 +53,7 @@ spec:
           sym-cluster-info: tcc-bj5-dks-test-01
         podSets:
           - name: bbcc2-gz01a-canary
-            replicas: 1
+            replicas: 2
             image: registry.cn-hangzhou.aliyuncs.com/dmall/bbcc
             version: v4
             meta:
@@ -67,7 +67,7 @@ spec:
               sym-group: blue
               sym-ldc: gz01a
           - name: bbcc2-gz01a-green
-            replicas: 2
+            replicas: 3
             version: v3
             image: registry.cn-hangzhou.aliyuncs.com/dmall/bbcc
             meta:
