@@ -56,6 +56,7 @@ func buildAppSetStatus(ctx context.Context, dksManger *k8smanager.ClusterManager
 		as.UnAvailable += obj.Status.AggrStatus.UnAvailable
 		as.Desired += obj.Status.AggrStatus.Desired
 		if obj.Status.AggrStatus.Status != workloadv1beta1.AppStatusRuning {
+			klog.V(4).Infof("%s: cluster[%s] status is %s", req.NamespacedName, cluster.GetName(), obj.Status.AggrStatus.Status)
 			finalStatus = workloadv1beta1.AppStatusInstalling
 		}
 		if !strings.Contains(as.Version, obj.Status.AggrStatus.Version) {
@@ -109,6 +110,7 @@ func buildAppSetStatus(ctx context.Context, dksManger *k8smanager.ClusterManager
 	} else {
 		as.Status = workloadv1beta1.AppStatusInstalling
 	}
+	klog.V(4).Infof("%s: build AppSet.Status.Aggregate.Status judgeStatus:%s available:%d replicas:%d, finalStatus:%s", req.NamespacedName, finalStatus, as.Available, *app.Spec.Replicas, as.Status)
 
 	return as, nil
 }
