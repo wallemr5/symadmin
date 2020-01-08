@@ -8,12 +8,20 @@ type ClusterStatus struct {
 	Name   string `json:"name,omitempty"`
 	Status string `json:"status,omitempty"`
 }
-
-type Pod struct {
+type ContainerStatus struct {
 	Name         string `json:"name,omitempty"`
-	NodeIp       string `json:"nodeIp,omitempty"`
-	PodIp        string `json:"podIp,omitempty"`
-	ImageVersion string `json:"imageVersion,omitempty"`
+	Ready        bool   `json:"ready,omitempty"`
+	RestartCount int32  `json:"restartCount,omitempty"`
+	Image        string `json:"image,omitempty"`
+	ContainerID  string `json:"containerId,omitempty"`
+}
+type Pod struct {
+	Name            string             `json:"name,omitempty"`
+	NodeIp          string             `json:"nodeIp,omitempty"`
+	PodIp           string             `json:"podIp,omitempty"`
+	ImageVersion    string             `json:"imageVersion,omitempty"`
+	StartTime       string             `json:"startTime,omitempty"`
+	ContainerStatus []*ContainerStatus `json:"containerStatus,omitempty"`
 }
 
 // ErrorResponse describes responses when an error occurred
@@ -23,10 +31,14 @@ type ErrorResponse struct {
 	Error   string `json:"error,omitempty"`
 }
 type Project struct {
-	NodeIp     string `json:"nodeIp,omitempty"`
 	DomainName string `json:"domainName,omitempty"`
 	PodIp      string `json:"podIp,omitempty"`
-	PodCount   int    `json:"podCount,omitempty"`
+}
+type NodeProjects struct {
+	NodeName string     `json:"nodeName,omitempty"`
+	NodeIp   string     `json:"nodeIp,omitempty"`
+	PodCount int        `json:"podCount,omitempty"`
+	Projects []*Project `json:"projects,omitempty"`
 }
 type Endpoints struct {
 	Name              string `json:"name,omitempty"`
@@ -39,9 +51,7 @@ type Endpoints struct {
 type NodeInfo struct {
 	Name          string `json:"name,omitempty"`
 	HostIp        string `json:"hostIp,omitempty"`
-	OsImage       string `json:"osImage,omitempty"`
 	KernelVersion string `json:"kernelVersion,omitempty"`
-	PodsCount     int    `json:"podsCount,omitempty"`
 	Architecture  string `json:"architecture,omitempty"`
 	MemorySize    int64  `json:"memorySize,omitempty"`
 	Status        string `json:"status"`

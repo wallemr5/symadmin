@@ -2,13 +2,13 @@ package apiManager
 
 import (
 	"context"
-	"net/http"
-
 	"github.com/gin-gonic/gin"
 	"gitlab.dmall.com/arch/sym-admin/pkg/apiManager/model"
+	k8smanager "gitlab.dmall.com/arch/sym-admin/pkg/k8s/manager"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/klog"
+	"net/http"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
@@ -21,7 +21,6 @@ func (m *ApiManager) GetNodeInfo(c *gin.Context) {
 
 	ctx := context.Background()
 	nodes := make([]model.NodeInfo, 0, 4)
-	//nodes := []model.NodeInfo{}
 
 	listOptions := &client.ListOptions{
 		LabelSelector: nil,
@@ -33,6 +32,10 @@ func (m *ApiManager) GetNodeInfo(c *gin.Context) {
 		"nodeName": nodeName,
 	})
 	for _, cluster := range clusters {
+		if cluster.Status == k8smanager.ClusterOffline {
+			continue
+		}
+
 		nodeList := &corev1.NodeList{}
 		err := cluster.Client.List(ctx, listOptions, nodeList)
 		if err != nil {
@@ -48,17 +51,13 @@ func (m *ApiManager) GetNodeInfo(c *gin.Context) {
 			cpu, _ := node.Status.Allocatable.Cpu().AsInt64()
 			memory, _ := node.Status.Allocatable.Memory().AsInt64()
 			memory = memory / 1024 / 1024 / 1024
-			podsCount := m.GetNodeProject
-			klog.Info(podsCount)
 			nodeInfo := model.NodeInfo{
 				Name:          node.Name,
 				HostIp:        node.Status.Addresses[0].Address,
 				Status:        string(node.Status.Conditions[len(node.Status.Conditions)-1].Type),
 				Cpu:           cpu,
-				OsImage:       "",
-				KernelVersion: "",
-				PodsCount:     0,
-				Architecture:  "",
+				KernelVersion: node.Status.NodeInfo.KernelVersion,
+				Architecture:  node.Status.NodeInfo.Architecture,
 				System:        node.Status.NodeInfo.OSImage,
 				MemorySize:    memory,
 				JoinDate:      node.CreationTimestamp.Format("2006-01-02"),
