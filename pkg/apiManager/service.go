@@ -14,17 +14,13 @@ import (
 
 func (m *ApiManager) GetServices(c *gin.Context) {
 	appName := c.Param("appName")
-	clusters := m.K8sMgr.GetAll()
+	clusterName := c.Param("name")
+	clusters := m.K8sMgr.GetAll(clusterName)
 	ctx := context.Background()
 	svcResult := make([]model.ServiceInfo, 0, 4)
-	listOptions := &client.ListOptions{
-		LabelSelector: nil,
-		FieldSelector: nil,
-		Namespace:     "",
-		Raw:           nil,
-	}
+	listOptions := &client.ListOptions{}
 	listOptions.MatchingLabels(map[string]string{
-		"app": appName,
+		"app": appName + "-svc", // 协商service selector 需要加"-svc"加后缀
 	})
 	for _, cluster := range clusters {
 		svclist := &corev1.ServiceList{}
