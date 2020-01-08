@@ -14,14 +14,14 @@ import (
 
 // GetEndpoints ...
 func (m *APIManager) GetEndpoints(c *gin.Context) {
-	// clusterName := c.Param("name")
+	clusterName := c.Param("name")
 
 	endpointName := c.Param("endpointName")
 
-	clusters := m.K8sMgr.GetAll()
+	clusters := m.K8sMgr.GetAll(clusterName)
 
 	ctx := context.Background()
-	eps := make([]*model.Endpoints, 0, 4)
+	eps := make([]*model.Endpoint, 0, 4)
 	//pods := make([]*model.Pod, 0, 4)
 	listOptions := &client.ListOptions{}
 	for _, cluster := range clusters {
@@ -43,7 +43,7 @@ func (m *APIManager) GetEndpoints(c *gin.Context) {
 				//fmt.Println(ep)
 				for _, ss := range ep.Subsets {
 					for _, addr := range ss.Addresses {
-						eps = append(eps, &model.Endpoints{
+						eps = append(eps, &model.Endpoint{
 							Subsets:           addr.IP,
 							Name:              ep.Name,
 							Namespace:         ep.Namespace,
@@ -55,6 +55,6 @@ func (m *APIManager) GetEndpoints(c *gin.Context) {
 				}
 			}
 		}
-		c.JSON(http.StatusOK, eps)
+		c.IndentedJSON(http.StatusOK, eps)
 	}
 }

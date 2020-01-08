@@ -52,7 +52,7 @@ type NodeProjects struct {
 }
 
 // Endpoints ...
-type Endpoints struct {
+type Endpoint struct {
 	Name              string `json:"name,omitempty"`
 	Namespace         string `json:"namespace,omitempty"`
 	CreationTimestamp string `json:"creationTimes,omitempty"`
@@ -97,4 +97,9 @@ type DeploymentInfo struct {
 	Group               string                `json:"group,omitempty"`
 	Selector            *metav1.LabelSelector `json:"selector,omitempty"`
 	CreationTimestamp   metav1.Time           `json:"creationTimestamp,omitempty"`
+}
+
+type EndpointsOfCluster struct {
+	ClusterName string     `json:"clusterName,omitempty"`
+	Endpoint    []Endpoint `json:"endpoint,omitempty"`
 }
