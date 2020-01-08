@@ -11,7 +11,7 @@ import (
 )
 
 // GetDeployments get all deployments in assigned namespace
-func (m *ApiManager) GetDeployments(c *gin.Context) {
+func (m *APIManager) GetDeployments(c *gin.Context) {
 	clusterName := c.Param("name")
 	namespace := c.DefaultQuery("namespace", "default")
 

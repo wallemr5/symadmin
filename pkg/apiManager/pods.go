@@ -13,10 +13,10 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
-//GetNodeProject
-func (m *ApiManager) GetNodeProject(c *gin.Context) {
+//GetNodeProject ...
+func (m *APIManager) GetNodeProject(c *gin.Context) {
 	// clusterName := c.Param("name")
-	nodeIp := c.Param("ip")
+	nodeIP := c.Param("ip")
 
 	clusters := m.K8sMgr.GetAll()
 
@@ -24,7 +24,7 @@ func (m *ApiManager) GetNodeProject(c *gin.Context) {
 	pods := &model.NodeProjects{}
 
 	listOptions := &client.ListOptions{}
-	//listOptions.MatchingField("spec.nodeName",nodeIp)
+	//listOptions.MatchingField("spec.nodeName",nodeIP)
 
 	for _, cluster := range clusters {
 		if cluster.Status == k8smanager.ClusterOffline {
@@ -43,7 +43,7 @@ func (m *ApiManager) GetNodeProject(c *gin.Context) {
 
 		for i := range podList.Items {
 			pod := &podList.Items[i]
-			if pod.Status.HostIP == nodeIp {
+			if pod.Status.HostIP == nodeIP {
 				dm := pod.GetLabels()
 				//if dm,ok := dm["lightningDomain0"];ok{
 				if dm, ok := dm["app"]; ok {
@@ -57,11 +57,13 @@ func (m *ApiManager) GetNodeProject(c *gin.Context) {
 		}
 
 		pods.PodCount = len(pods.Projects)
-		pods.NodeIp = nodeIp
+		pods.NodeIp = nodeIP
 	}
 	c.JSON(http.StatusOK, pods)
 }
-func (m *ApiManager) GetPod(c *gin.Context) {
+
+// GetPod ...
+func (m *APIManager) GetPod(c *gin.Context) {
 
 	appName := c.Param("appName")
 

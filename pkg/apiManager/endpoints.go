@@ -12,7 +12,8 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
-func (m *ApiManager) GetEndpoints(c *gin.Context) {
+// GetEndpoints ...
+func (m *APIManager) GetEndpoints(c *gin.Context) {
 	// clusterName := c.Param("name")
 
 	endpointName := c.Param("endpointName")

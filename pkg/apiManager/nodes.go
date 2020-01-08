@@ -2,17 +2,19 @@ package apiManager
 
 import (
 	"context"
+	"net/http"
+
 	"github.com/gin-gonic/gin"
 	"gitlab.dmall.com/arch/sym-admin/pkg/apiManager/model"
 	k8smanager "gitlab.dmall.com/arch/sym-admin/pkg/k8s/manager"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/klog"
-	"net/http"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
-func (m *ApiManager) GetNodeInfo(c *gin.Context) {
+// GetNodeInfo ...
+func (m *APIManager) GetNodeInfo(c *gin.Context) {
 	// clusterName := c.Param("name")
 
 	nodeName := c.Param("nodeName")

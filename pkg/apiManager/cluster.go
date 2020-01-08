@@ -7,8 +7,8 @@ import (
 	"gitlab.dmall.com/arch/sym-admin/pkg/apiManager/model"
 )
 
-// GetClusters
-func (m *ApiManager) GetClusters(c *gin.Context) {
+// GetClusters ...
+func (m *APIManager) GetClusters(c *gin.Context) {
 	clusters := m.K8sMgr.GetAll()
 
 	status := make([]*model.ClusterStatus, 0, 4)

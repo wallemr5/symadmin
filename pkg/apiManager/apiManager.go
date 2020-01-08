@@ -37,7 +37,7 @@ type APIManager struct {
 // DefaultOption ...
 func DefaultOption() *Option {
 	return &Option{
-		HttpAddr:           ":8080",
+		HTTPAddr:           ":8080",
 		GoroutineThreshold: 1000,
 		GinLogEnabled:      true,
 		PprofEnabled:       true,
