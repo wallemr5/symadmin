@@ -73,11 +73,20 @@ func NewManager(kubecli kubernetes.Interface, log logr.Logger, opt *ClusterManag
 	return mgr, nil
 }
 
-func (m *ClusterManager) GetAll() map[string]*Cluster {
+func (m *ClusterManager) GetAll() []*Cluster {
 	m.mu.RLock()
 	defer m.mu.RUnlock()
 
-	return m.clusters
+	list := make([]*Cluster, 0, 4)
+	for _, c := range m.sclusters {
+		if c.Status == ClusterOffline {
+			continue
+		}
+
+		list = append(list, c)
+	}
+
+	return list
 }
 
 func (m *ClusterManager) GetAllSort() []*Cluster {
