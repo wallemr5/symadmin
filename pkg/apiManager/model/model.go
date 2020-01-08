@@ -23,8 +23,8 @@ type ContainerStatus struct {
 // Pod ...
 type Pod struct {
 	Name            string             `json:"name,omitempty"`
-	NodeIP          string             `json:"nodeIP,omitempty"`
-	PodIP           string             `json:"podIP,omitempty"`
+	NodeIP          string             `json:"nodeIp,omitempty"`
+	PodIP           string             `json:"podIp,omitempty"`
 	ImageVersion    string             `json:"imageVersion,omitempty"`
 	StartTime       string             `json:"startTime,omitempty"`
 	ContainerStatus []*ContainerStatus `json:"containerStatus,omitempty"`
@@ -40,13 +40,13 @@ type ErrorResponse struct {
 // Project ...
 type Project struct {
 	DomainName string `json:"domainName,omitempty"`
-	PodIP      string `json:"podIP,omitempty"`
+	PodIP      string `json:"podIp,omitempty"`
 }
 
 // NodeProjects ...
 type NodeProjects struct {
 	NodeName string     `json:"nodeName,omitempty"`
-	NodeIP   string     `json:"nodeIP,omitempty"`
+	NodeIP   string     `json:"nodeIp,omitempty"`
 	PodCount int        `json:"podCount,omitempty"`
 	Projects []*Project `json:"projects,omitempty"`
 }
@@ -64,7 +64,7 @@ type Endpoints struct {
 // NodeInfo ...
 type NodeInfo struct {
 	Name          string `json:"name,omitempty"`
-	HostIP        string `json:"hostIP,omitempty"`
+	HostIP        string `json:"hostIp,omitempty"`
 	KernelVersion string `json:"kernelVersion,omitempty"`
 	Architecture  string `json:"architecture,omitempty"`
 	MemorySize    int64  `json:"memorySize,omitempty"`
@@ -78,7 +78,7 @@ type NodeInfo struct {
 // ServiceInfo ...
 type ServiceInfo struct {
 	NameSpace string               `json:"namespace,omitempty"`
-	ClusterIP string               `json:"clusterIP,omitempty"`
+	ClusterIP string               `json:"clusterIp,omitempty"`
 	Type      string               `json:"type,omitempty"`
 	Ports     []corev1.ServicePort `json:"ports,omitempty"`
 	Selector  map[string]string    `json:"selector,omitempty"`
