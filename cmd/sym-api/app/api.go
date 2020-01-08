@@ -17,26 +17,25 @@ limitations under the License.
 package app
 
 import (
-	"gitlab.dmall.com/arch/sym-admin/pkg/apiManager"
 	"time"
 
 	"github.com/spf13/cobra"
+	"gitlab.dmall.com/arch/sym-admin/pkg/apiManager"
 	k8sclient "gitlab.dmall.com/arch/sym-admin/pkg/k8s/client"
-
 	"k8s.io/klog"
-	// ctrl "sigs.k8s.io/controller-runtime"
 	ctrlmanager "sigs.k8s.io/controller-runtime/pkg/manager"
-	"sigs.k8s.io/controller-runtime/pkg/runtime/signals"
-
 	logf "sigs.k8s.io/controller-runtime/pkg/runtime/log"
+	"sigs.k8s.io/controller-runtime/pkg/runtime/signals"
+	// ctrl "sigs.k8s.io/controller-runtime"
 )
 
 var (
 	logger = logf.KBLog.WithName("controller")
 )
 
-func NewApiCmd(cli *DksCli) *cobra.Command {
-	opt := apiManager.DefaultApiManagerOption()
+// NewAPICmd ...
+func NewAPICmd(cli *DksCli) *cobra.Command {
+	opt := apiManager.DefaultOption()
 	cmd := &cobra.Command{
 		Use:     "api",
 		Aliases: []string{"api"},
@@ -60,7 +59,7 @@ func NewApiCmd(cli *DksCli) *cobra.Command {
 			}
 
 			stopCh := signals.SetupSignalHandler()
-			apiMgr, err := apiManager.NewApiManager(cli.GetKubeInterfaceOrDie(), opt, logger, "controller")
+			apiMgr, err := apiManager.NewAPIManager(cli.GetKubeInterfaceOrDie(), opt, logger, "controller")
 			if err != nil {
 				klog.Fatalf("unable to NewDksManager err: %v", err)
 			}
@@ -80,7 +79,7 @@ func NewApiCmd(cli *DksCli) *cobra.Command {
 	}
 
 	cmd.PersistentFlags().IntVar(&opt.GoroutineThreshold, "goroutine-threshold", opt.GoroutineThreshold, "the max Goroutine Threshold")
-	cmd.PersistentFlags().StringVar(&opt.HttpAddr, "http-addr", opt.HttpAddr, "HttpAddr for some info")
+	cmd.PersistentFlags().StringVar(&opt.HTTPAddr, "http-addr", opt.HTTPAddr, "HttpAddr for some info")
 	cmd.PersistentFlags().BoolVar(&opt.GinLogEnabled, "enable-ginlog", opt.GinLogEnabled, "Enabled will open gin run log.")
 	cmd.PersistentFlags().BoolVar(&opt.PprofEnabled, "enable-pprof", opt.PprofEnabled, "Enabled will open endpoint for go pprof.")
 	return cmd

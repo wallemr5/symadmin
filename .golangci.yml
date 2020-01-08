@@ -187,11 +187,11 @@ linters-settings:
     # To check which checks are enabled run `GL_DEBUG=gocritic golangci-lint run`
     # By default list of stable checks is used.
     enabled-checks:
-      - rangeValCopy
+      # - rangeValCopy
 
     # Which checks should be disabled; can't be combined with 'enabled-checks'; default is empty
     disabled-checks:
-      - regexpMust
+      # - regexpMust
 
     # Enable multiple checks by tags, run `GL_DEBUG=gocritic golangci-lint run` to see all tags and checks.
     # Empty list by default. See https://github.com/go-critic/go-critic#usage -> section "Tags".
@@ -253,7 +253,9 @@ issues:
   # it can be disabled by `exclude-use-default: false`. To list all
   # excluded by default patterns execute `golangci-lint run --help`
   exclude:
-    - abcdef
+    - unused
+    - "Error return value of"
+    - G104
 
   # Excluding configuration per-path, per-linter, per-text and per-source
   exclude-rules:
@@ -306,4 +308,4 @@ issues:
   new-from-rev: REV
 
   # Show only new issues created in git patch with set file path.
-  new-from-patch: path/to/patch/file
+  # new-from-patch: path/to/patch/file

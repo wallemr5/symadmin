@@ -51,7 +51,7 @@ type xtermMessage struct {
 }
 
 // GetTerminal ...
-func (m *ApiManager) GetTerminal(c *gin.Context) {
+func (m *APIManager) GetTerminal(c *gin.Context) {
 	clusterName := c.Param("name")
 	namespace := c.DefaultQuery("namespace", "default")
 	tty, _ := strconv.ParseBool(c.DefaultQuery("tty", "true"))
@@ -159,6 +159,7 @@ func startProcess(cluster *k8smanager.Cluster, namespace, podName, container str
 	return err
 }
 
+// InitWebsocket ...
 func InitWebsocket(resp http.ResponseWriter, req *http.Request) (ws *WsConnection, err error) {
 	conn, err := wsUpgrader.Upgrade(resp, req, nil)
 	if err != nil {
@@ -178,12 +179,14 @@ func InitWebsocket(resp http.ResponseWriter, req *http.Request) (ws *WsConnectio
 	return
 }
 
+// Next ...
 func (handler *streamHandler) Next() (size *remotecommand.TerminalSize) {
 	ret := <-handler.resizeEvent
 	size = &ret
 	return
 }
 
+// Read ...
 func (handler *streamHandler) Read(p []byte) (size int, err error) {
 	msg, err := handler.ws.Read()
 	if err != nil {
@@ -201,6 +204,7 @@ func (handler *streamHandler) Read(p []byte) (size int, err error) {
 
 }
 
+// Write ...
 func (handler *streamHandler) Write(p []byte) (size int, err error) {
 	copyData := make([]byte, len(p))
 	copy(copyData, p)
@@ -213,6 +217,7 @@ func (handler *streamHandler) Write(p []byte) (size int, err error) {
 	return size, nil
 }
 
+// ReadLoop ...
 func (ws *WsConnection) ReadLoop() {
 	for {
 		msgType, data, err := ws.conn.ReadMessage()
@@ -224,6 +229,7 @@ func (ws *WsConnection) ReadLoop() {
 	}
 }
 
+// WriteLoop ...
 func (ws *WsConnection) WriteLoop() {
 	for {
 		select {
@@ -240,6 +246,7 @@ func (ws *WsConnection) WriteLoop() {
 
 }
 
+// Write ...
 func (ws *WsConnection) Write(messageType int, data []byte) (err error) {
 	select {
 	case ws.outChan <- &WsMessage{messageType, data}:
@@ -249,6 +256,7 @@ func (ws *WsConnection) Write(messageType int, data []byte) (err error) {
 	return nil
 }
 
+// Read ...
 func (ws *WsConnection) Read() (msg *WsMessage, err error) {
 	select {
 	case msg := <-ws.inChan:
@@ -259,6 +267,7 @@ func (ws *WsConnection) Read() (msg *WsMessage, err error) {
 	return nil, nil
 }
 
+// Close ...
 func (ws *WsConnection) Close() {
 	ws.mutex.Lock()
 	defer ws.mutex.Unlock()
