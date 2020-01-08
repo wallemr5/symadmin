@@ -38,7 +38,7 @@ func buildAppSetStatus(ctx context.Context, dksManger *k8smanager.ClusterManager
 	}
 	finalStatus := workloadv1beta1.AppStatusRuning
 
-	for _, cluster := range dksManger.GetAllSort() {
+	for _, cluster := range dksManger.GetAll() {
 		if cluster.Status == k8smanager.ClusterOffline {
 			continue
 		}

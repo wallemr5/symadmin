@@ -2,13 +2,14 @@ package apiManager
 
 import (
 	"context"
+	"net/http"
+
 	"github.com/gin-gonic/gin"
 	"gitlab.dmall.com/arch/sym-admin/pkg/apiManager/model"
 	k8smanager "gitlab.dmall.com/arch/sym-admin/pkg/k8s/manager"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/klog"
-	"net/http"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
@@ -74,14 +75,9 @@ func (m *ApiManager) GetPod(c *gin.Context) {
 		"app": appName,
 	})
 	for _, cluster := range clusters {
-		if cluster.Status == k8smanager.ClusterOffline {
-			continue
-		}
-
 		podList := &corev1.PodList{}
 		err := cluster.Client.List(ctx, listOptions, podList)
 		if err != nil {
-
 			if apierrors.IsNotFound(err) {
 				continue
 			}

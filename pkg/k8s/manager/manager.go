@@ -1,10 +1,11 @@
 package manager
 
 import (
-	"errors"
 	"sort"
 	"sync"
 	"time"
+
+	"fmt"
 
 	"github.com/go-logr/logr"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -73,9 +74,18 @@ func NewManager(kubecli kubernetes.Interface, log logr.Logger, opt *ClusterManag
 	return mgr, nil
 }
 
-func (m *ClusterManager) GetAll() []*Cluster {
+func (m *ClusterManager) GetAll(name ...string) []*Cluster {
 	m.mu.RLock()
 	defer m.mu.RUnlock()
+
+	isAll := true
+	var ObserveName string
+	if len(name) > 0 {
+		if name[0] != "all" {
+			ObserveName = name[0]
+			isAll = false
+		}
+	}
 
 	list := make([]*Cluster, 0, 4)
 	for _, c := range m.sclusters {
@@ -83,17 +93,16 @@ func (m *ClusterManager) GetAll() []*Cluster {
 			continue
 		}
 
-		list = append(list, c)
+		if isAll {
+			list = append(list, c)
+		} else {
+			if ObserveName != "" && ObserveName == c.Name {
+				list = append(list, c)
+			}
+		}
 	}
 
 	return list
-}
-
-func (m *ClusterManager) GetAllSort() []*Cluster {
-	m.mu.RLock()
-	defer m.mu.RUnlock()
-
-	return m.sclusters
 }
 
 func (m *ClusterManager) Add(cluster *Cluster) error {
@@ -133,7 +142,11 @@ func (m *ClusterManager) Get(name string) (*Cluster, error) {
 
 	cluster := m.clusters[name]
 	if cluster == nil {
-		return nil, errors.New("cluster not found:" + name)
+		return nil, fmt.Errorf("cluster: %s not found", name)
+	}
+
+	if cluster.Status == ClusterOffline {
+		return nil, fmt.Errorf("cluster: %s found, but offline", name)
 	}
 
 	return cluster, nil
