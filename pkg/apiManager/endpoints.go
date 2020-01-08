@@ -21,6 +21,7 @@ func (m *APIManager) GetEndpoints(c *gin.Context) {
 	clusters := m.K8sMgr.GetAll(clusterName)
 
 	ctx := context.Background()
+	endpointsOfCluster := make([]*model.EndpointsOfCluster, 0, 4)
 	eps := make([]*model.Endpoint, 0, 4)
 	//pods := make([]*model.Pod, 0, 4)
 	listOptions := &client.ListOptions{}
@@ -55,6 +56,12 @@ func (m *APIManager) GetEndpoints(c *gin.Context) {
 				}
 			}
 		}
-		c.IndentedJSON(http.StatusOK, eps)
+		ofCluster := model.EndpointsOfCluster{
+			ClusterName: cluster.Name,
+			Endpoint:    eps,
+		}
+		endpointsOfCluster = append(endpointsOfCluster, &ofCluster)
+
+		c.IndentedJSON(http.StatusOK, endpointsOfCluster)
 	}
 }

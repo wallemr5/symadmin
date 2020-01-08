@@ -100,6 +100,6 @@ type DeploymentInfo struct {
 }
 
 type EndpointsOfCluster struct {
-	ClusterName string     `json:"clusterName,omitempty"`
-	Endpoint    []Endpoint `json:"endpoint,omitempty"`
+	ClusterName string      `json:"clusterName,omitempty"`
+	Endpoint    []*Endpoint `json:"endpoint,omitempty"`
 }
