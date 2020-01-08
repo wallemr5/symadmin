@@ -95,6 +95,7 @@ func (m *APIManager) Routes() []*router.Route {
 		{"GET", "/api/cluster/:name/terminal", m.GetTerminal, ""},
 		{"GET", "/api/cluster/:name/service/:appName/", m.GetServices, ""},
 		{"GET", "/api/cluster/:name/deployments", m.GetDeployments, ""},
+		{"GET", "/api/cluster/:name/appPod/:appName/event", m.GetPodEvent, ""},
 	}
 
 	routes = append(routes, apiRoutes...)
