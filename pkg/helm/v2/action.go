@@ -254,7 +254,7 @@ func getRequestedChart(rlsName, chartName, chartVersion string, chartPackage []b
 func UpgradeRelease(rlsName, chartName, chartVersion string, chartPackage []byte, hClient *Client, env *helmenv.EnvSettings, overrideValue []byte, reuseValues bool) (*rls.UpdateReleaseResponse, error) {
 	chartRequested, err := getRequestedChart(rlsName, chartName, chartVersion, chartPackage, env)
 	if err != nil {
-		return nil, fmt.Errorf("error loading chart: %v", err)
+		return nil, fmt.Errorf("loading chart has an error: %v", err)
 	}
 
 	upgradeRes, err := hClient.UpdateReleaseFromChart(
@@ -266,7 +266,7 @@ func UpgradeRelease(rlsName, chartName, chartVersion string, chartPackage []byte
 		helm.ReuseValues(reuseValues),
 	)
 	if err != nil {
-		return nil, errors.Wrap(err, "upgrade failed")
+		return nil, errors.Wrap(err, "Failed to upgrade a release")
 	}
 
 	return upgradeRes, nil
@@ -327,62 +327,67 @@ func DeleteRelease(rlsName string, hClient *Client) error {
 	return nil
 }
 
-func ApplyRelease(rlsName, chartUrlName, chartVersion string, chartPackage []byte, hClient *Client, env *helmenv.EnvSettings,
-	namespace string, objRls *hapirelease.Release, vaByte []byte) (*hapirelease.Release, error) {
+// Create or update a release, creating it if release parameter is nil, otherwise, updating it.
+func ApplyRelease(rlsName, chartUrlName, specChartVersion string, chartPackage []byte, hClient *Client, env *helmenv.EnvSettings,
+	namespace string, runningRls *hapirelease.Release, vaByte []byte) (*hapirelease.Release, error) {
 	var (
-		appRls *hapirelease.Release
-		rlsErr error
+		applyedRls *hapirelease.Release
+		rlsErr     error
 	)
 
-	if objRls == nil {
-		rep, err := CreateRelease(rlsName, chartUrlName, chartVersion, chartPackage, hClient, env, namespace, helm.ValueOverrides(vaByte))
+	// If the release need to apply is nil, we create this release directly.
+	if runningRls == nil {
+		rep, err := CreateRelease(rlsName, chartUrlName, specChartVersion, chartPackage, hClient, env, namespace, helm.ValueOverrides(vaByte))
 		if err == nil && rep != nil {
-			appRls = rep.GetRelease()
-			klog.V(4).Infof("rlsName: %s install successed, helm version: %d", rlsName, appRls.GetVersion())
+			applyedRls = rep.GetRelease()
+			klog.V(4).Infof("rlsName: %s has been installed successfully, current version: %d", rlsName, applyedRls.GetVersion())
 		}
 		rlsErr = err
 	} else {
-		var isNotSameNum int
-		version := objRls.GetChart().GetMetadata().GetVersion()
-		if chartVersion != "" {
-			klog.V(4).Infof("rlsName:%s chartVersion:%s", rlsName, chartVersion)
-			if strings.Compare(chartVersion, version) != 0 {
-				klog.V(3).Infof("rlsName:%s chart version is changed, %s => %s", rlsName, version, chartVersion)
-				isNotSameNum++
+		// If the release need to apply has been passed here, it is necessary to compare it with the running release.
+		var isDifferent int
+		runningVersion := runningRls.GetChart().GetMetadata().GetVersion()
+		if specChartVersion != "" {
+			klog.V(3).Infof("rlsName:%s ,runningVersion %s => specChartVersion %s", rlsName, runningVersion, specChartVersion)
+			if strings.Compare(specChartVersion, runningVersion) != 0 {
+				klog.V(3).Infof("rlsName:%s chart version is changed", rlsName)
+				isDifferent++
 			}
 		}
 
-		if isNotSameNum <= 0 {
-			raw := objRls.GetConfig().GetRaw()
-			if len(raw) < 10 && len(vaByte) < 10 {
-				return objRls, nil
+		if isDifferent <= 0 {
+			runningRaw := runningRls.GetConfig().GetRaw()
+			if len(runningRaw) < 10 && len(vaByte) < 10 {
+				klog.V(4).Infof("rlsName:%s, the length of running raw and spec raw less than 10.", rlsName)
+				return runningRls, nil
 			}
 
-			isSame := equality.Semantic.DeepEqual(string(vaByte), raw)
-			if isSame {
-				klog.V(4).Infof("rlsName:%s overrideValue is same, ignore", rlsName)
-				return objRls, nil
+			isEquivalent := equality.Semantic.DeepEqual(string(vaByte), runningRaw)
+			if isEquivalent {
+				klog.V(4).Infof("rlsName:%s 's running raw and spec raw are equivalent, there is no need to create or update it.", rlsName)
+				return runningRls, nil
 			} else {
-				isNotSameNum++
+				isDifferent++
 			}
 		}
 
-		if isNotSameNum > 0 {
-			rep, err := UpgradeRelease(rlsName, chartUrlName, chartVersion, chartPackage, hClient, env, vaByte, false)
+		// if the running release differ with the spec one, we update it with the spec one.
+		if isDifferent > 0 {
+			rep, err := UpgradeRelease(rlsName, chartUrlName, specChartVersion, chartPackage, hClient, env, vaByte, false)
 			if err == nil && rep != nil {
-				appRls = rep.GetRelease()
-				klog.V(4).Infof("rlsName: %s upgrade successed, helm version: %d", rlsName, appRls.GetVersion())
+				applyedRls = rep.GetRelease()
+				klog.V(4).Infof("rlsName: %s has been upgraded successfully, current version: %d", rlsName, applyedRls.GetVersion())
 			}
 			rlsErr = err
 		} else {
-			appRls = objRls
+			applyedRls = runningRls
 		}
 	}
 
-	if rlsErr == nil && appRls == nil {
-		return nil, errors.WithMessagef(rlsErr, "rlsName:%s err and rls all nil", rlsName)
+	if rlsErr == nil && applyedRls == nil {
+		return nil, errors.WithMessagef(rlsErr, "rlsName:%s neither error and applyed release are exist", rlsName)
 	}
-	return appRls, rlsErr
+	return applyedRls, rlsErr
 }
 
 // GetReleaseK8sResources returns K8s resources of a helm release

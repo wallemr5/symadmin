@@ -80,89 +80,97 @@ func (r *AdvDeploymentReconciler) ApplyReleases(ctx context.Context, advDeploy *
 	// Initialize a new helm client
 	hClient, err := helmv2.NewClientFromConfig(r.Cfg, r.KubeCli, "")
 	if err != nil {
-		klog.Errorf("Initializing the new helm clinet has an error: %+v", err)
+		klog.Errorf("Initializing a new helm clinet has an error: %+v", err)
 		return err
 	}
 	defer hClient.Close()
 
+	/*
+	  Find out all releases belong to this application to
+	*/
 	response, err := helmv2.ListReleases(labels.MakeHelmReleaseFilter(advDeploy.Name), hClient)
 	if err != nil {
-		klog.Errorf("Can not find releases with name: %s, err: %v", advDeploy.Name, err)
+		klog.Errorf("Can not find a releases with name: %s, err: %v", advDeploy.Name, err)
 		return err
 	}
 
-	var unUseReleasesName []string
+	// The releases which are not defined in specification but are running already.
+	var redundantReleases []string
+
 	if response != nil {
-		for _, r := range response.Releases {
-			if !isFindPodSetByName(r.Name, advDeploy) {
-				unUseReleasesName = append(unUseReleasesName, r.Name)
+		runningReleases := response.Releases
+		for _, rr := range runningReleases {
+			if isRedundantRelease(rr.Name, advDeploy) {
+				redundantReleases = append(redundantReleases, rr.Name)
 			}
 
-			if r.Info.Status.GetCode() == hapirelease.Status_DELETED || r.Info.Status.GetCode() == hapirelease.Status_FAILED || r.Info.Status.GetCode() == hapirelease.Status_UNKNOWN {
-				klog.Infof("Release: [%s]'s status mean there may be some problem, description: %s", r.Name, r.Info.Description)
+			// Delete the release as long as we found its status code is not correct
+			if rr.Info.Status.GetCode() == hapirelease.Status_DELETED || rr.Info.Status.GetCode() == hapirelease.Status_FAILED || rr.Info.Status.GetCode() == hapirelease.Status_UNKNOWN {
+				klog.Infof("Release: [%s]'s status mean there may be some problem, description: %s", rr.Name, rr.Info.Description)
 
 				// Delete this release with purge flag.
-				if err := helmv2.DeleteRelease(r.Name, hClient); err != nil {
-					klog.Errorf("Delete the release due to its status, but has an error, rls name: %s, err: %+v", r.Name, err)
+				if err := helmv2.DeleteRelease(rr.Name, hClient); err != nil {
+					klog.Errorf("Delete the release due to its status, but has an error, rls name: %s, err: %+v", rr.Name, err)
 					return err
 				}
 
-				klog.V(4).Infof("rlsName: [%s], Delete the release due to its status", r.Name)
+				klog.V(4).Infof("rlsName: [%s], Delete the release due to its status", rr.Name)
 			}
 		}
+	} else {
+		klog.V(4).Infof("Listing all releases may be has an error, there is no response feed back.")
 	}
 
 	var (
-		chartUrlName    string
-		chartUrlVersion string
-		RawChart        []byte
+		specChartUrlName    string
+		specChartUrlVersion string
+		specRawChart        []byte
 		// rls    *hapirelease.Release
-		rlsErr error
+
 	)
 
 	if advDeploy.Spec.PodSpec.Chart.RawChart != nil {
-		RawChart = *advDeploy.Spec.PodSpec.Chart.RawChart
+		specRawChart = *advDeploy.Spec.PodSpec.Chart.RawChart
 	}
 
 	if advDeploy.Spec.PodSpec.Chart.ChartUrl != nil {
-		chartUrlName = advDeploy.Spec.PodSpec.Chart.ChartUrl.Url
-		chartUrlVersion = advDeploy.Spec.PodSpec.Chart.ChartUrl.ChartVersion
+		specChartUrlName = advDeploy.Spec.PodSpec.Chart.ChartUrl.Url
+		specChartUrlVersion = advDeploy.Spec.PodSpec.Chart.ChartUrl.ChartVersion
 	}
 	for _, podSet := range advDeploy.Spec.Topology.PodSets {
-		// rls = nil
-		rlsErr = nil
-
-		_, rlsErr = helmv2.ApplyRelease(podSet.Name, chartUrlName, chartUrlVersion, RawChart,
-			hClient, r.HelmEnv.Helmv2env, advDeploy.Namespace, getReleasesByName(podSet.Name, response), []byte(podSet.RawValues))
-		if rlsErr != nil {
-			klog.Errorf("podSet name: %s, ApplyRelease err: %v", podSet.Name, err)
-			return rlsErr
+		_, err := helmv2.ApplyRelease(podSet.Name, specChartUrlName, specChartUrlVersion, specRawChart,
+			hClient, r.HelmEnv.Helmv2env, advDeploy.Namespace, findRunningReleases(podSet.Name, response), []byte(podSet.RawValues))
+		if err != nil {
+			klog.Errorf("Podset: [%s], applying the release has an error: %v", podSet.Name, err)
+			return err
 		}
 	}
 
-	for _, rlsName := range unUseReleasesName {
+	// We must to clean all the releases which are not defined in specification.
+	for _, rlsName := range redundantReleases {
 		if err := helmv2.DeleteRelease(rlsName, hClient); err != nil {
-			klog.Errorf("DeleteRelease name: %s, err:%+v", rlsName, err)
+			klog.Errorf("Deleting redundant release[%s] has an error: %+v", rlsName, err)
 			return err
 		}
 
-		klog.V(4).Infof("rlsName: %s delete unuse spec successed", r.Name)
+		klog.V(4).Infof("deleting redundant release[%s] successfully.", rlsName)
 	}
 
 	return nil
 }
 
-func isFindPodSetByName(name string, advDeploy *workloadv1beta1.AdvDeployment) bool {
+func isRedundantRelease(rlsName string, advDeploy *workloadv1beta1.AdvDeployment) bool {
 	for _, podSet := range advDeploy.Spec.Topology.PodSets {
-		if podSet.Name == name {
-			return true
+		if podSet.Name == rlsName {
+			return false
 		}
 	}
 
-	return false
+	return true
 }
 
-func getReleasesByName(name string, rlsList *rls.ListReleasesResponse) *hapirelease.Release {
+// Find the release with its name from running release response.
+func findRunningReleases(name string, rlsList *rls.ListReleasesResponse) *hapirelease.Release {
 	if rlsList == nil {
 		return nil
 	}
