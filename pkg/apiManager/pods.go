@@ -15,10 +15,10 @@ import (
 
 //GetNodeProject ...
 func (m *APIManager) GetNodeProject(c *gin.Context) {
-	// clusterName := c.Param("name")
+	clusterName := c.Param("name")
 	nodeIP := c.Param("ip")
 
-	clusters := m.K8sMgr.GetAll()
+	clusters := m.K8sMgr.GetAll(clusterName)
 
 	ctx := context.Background()
 	pods := &model.NodeProjects{}
