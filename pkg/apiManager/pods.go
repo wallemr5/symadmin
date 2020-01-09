@@ -3,12 +3,14 @@ package apiManager
 import (
 	"context"
 	"net/http"
+	"strconv"
 
 	"github.com/gin-gonic/gin"
 	"gitlab.dmall.com/arch/sym-admin/pkg/apiManager/model"
 	k8smanager "gitlab.dmall.com/arch/sym-admin/pkg/k8s/manager"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/klog"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
@@ -105,4 +107,52 @@ func (m *APIManager) GetPod(c *gin.Context) {
 		}
 	}
 	c.JSON(http.StatusOK, pods)
+}
+
+// GetPodEvent return pod event
+func (m *APIManager) GetPodEvent(c *gin.Context) {
+	clusterName := c.Param("name")
+	podName := c.Param("appName")
+	namespace := c.DefaultQuery("namespace", "default")
+	limit, _ := strconv.ParseInt(c.DefaultQuery("limit", "10"), 10, 64)
+
+	cluster, err := m.K8sMgr.Get(clusterName)
+	if err != nil {
+		klog.Errorf("get cluster error: %+v", err)
+		c.JSON(http.StatusBadRequest, gin.H{"error": "can not get cluster."})
+		return
+	}
+
+	ctx := context.Background()
+	listOptions := &client.ListOptions{
+		Namespace: namespace,
+		Raw:       &metav1.ListOptions{Limit: limit},
+	}
+	events := &corev1.EventList{}
+
+	err = cluster.Cache.List(ctx, listOptions, events)
+	if err != nil {
+		c.AbortWithError(http.StatusBadRequest, err)
+	}
+
+	result := []*model.Event{}
+	for _, event := range events.Items {
+		item := &model.Event{
+			Cluster:    event.GetObjectMeta().GetClusterName(),
+			Namespace:  event.GetNamespace(),
+			ObjectName: event.InvolvedObject.Name,
+			ObjectKind: event.Kind,
+			Type:       event.Type,
+			Count:      event.Count,
+			FirstTime:  event.FirstTimestamp,
+			LastTime:   event.LastTimestamp,
+			Message:    event.Message,
+			Reason:     event.Reason,
+		}
+		if item.ObjectName == podName {
+			result = append(result, item)
+		}
+	}
+
+	c.JSON(http.StatusOK, result)
 }
