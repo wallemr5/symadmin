@@ -1,4 +1,4 @@
-# API 调用说明
+# API 调用错误说明
 
 ## 一、接口 HTTP 状态码说明
 
@@ -45,5 +45,31 @@
 |   2001 | GetPodError      | 获取 Pod 失败     |
 |   2002 | GetPodEventError | 获取 Pod 事件失败 |
 
-### 3. 
+### 3. Deployment 类型错误
+
+| 错误码 | 命名参考           | 说明                 |
+|--------|--------------------|----------------------|
+|   3001 | GetDeploymentError | 获取 Deployment 失败 |
+
+### 4. Service 类型错误
+
+| 错误码 | 命名参考           | 说明                 |
+|--------|--------------------|----------------------|
+|   4001 | GetServiceError| 获取 Service 失败 |
+
+### 5. Terminal 类型错误
+
+| 错误码 | 命名参考            | 说明                   |
+|--------|---------------------|------------------------|
+|   5001 | GetTerminalError    | 获取 Terminal 失败     |
+|   5002 | WebsocketError      | Websocket 相关错误     |
+|   5003 | RequestK8sExecError | 请求 K8s Exec 命令错误 |
+
+### 9. 其他错误
+
+| 错误码 | 命名参考         | 说明               |
+|--------|------------------|--------------------|
+|   9001 | GetClusterError  | 获取集群信息错误   |
+|   9002 | GetEndpointError | 获取 Endpoint 错误 |
+|   9003 | GetNodeError     | 获取 Node 错误     |
 
