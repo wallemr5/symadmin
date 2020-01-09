@@ -121,6 +121,7 @@ func startProcess(cluster *k8smanager.Cluster, namespace, podName, container str
 	scheme := runtime.NewScheme()
 	if err := core_v1.AddToScheme(scheme); err != nil {
 		klog.Errorf("error adding to scheme: %v", err)
+		return err
 	}
 
 	if !once {
