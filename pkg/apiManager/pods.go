@@ -182,7 +182,7 @@ func (m *APIManager) DeletePod(c *gin.Context) {
 	err = cluster.Client.Delete(ctx, pod)
 	if err != nil {
 		klog.Errorf("delete pod error: %v", err)
-		c.Status(http.StatusBadRequest)
+		AbortHTTPError(c, DeletePodError, "", err)
 	}
 	c.Status(http.StatusOK)
 }
