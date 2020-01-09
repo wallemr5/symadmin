@@ -32,17 +32,13 @@ func (m *APIManager) GetEndpoints(c *gin.Context) {
 				continue
 			}
 			klog.Error(err, "failed to get endpoints")
-			c.AbortWithStatusJSON(
-				http.StatusBadRequest,
-				model.ErrorResponse{Error: err.Error()},
-			)
+			AbortHTTPError(c, GetEndpointError, "", err)
 			return
 		}
 
 		for i := range endpointList.Items {
 			ep := &endpointList.Items[i]
 			if ep.Name == endpointName {
-				//fmt.Println(ep)
 				for _, ss := range ep.Subsets {
 					for _, addr := range ss.Addresses {
 						eps = append(eps, &model.Endpoint{
