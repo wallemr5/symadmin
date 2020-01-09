@@ -61,7 +61,7 @@ func (m *APIManager) GetEndpoints(c *gin.Context) {
 			Endpoint:    eps,
 		}
 		endpointsOfCluster = append(endpointsOfCluster, &ofCluster)
-
-		c.IndentedJSON(http.StatusOK, endpointsOfCluster)
 	}
+
+	c.IndentedJSON(http.StatusOK, endpointsOfCluster)
 }
