@@ -2,6 +2,7 @@ package apiManager
 
 import (
 	"bytes"
+	"errors"
 	"net/http"
 	"strconv"
 	"strings"
@@ -9,7 +10,6 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/gorilla/websocket"
-	"gitlab.dmall.com/arch/sym-admin/pkg/apiManager/model"
 	k8smanager "gitlab.dmall.com/arch/sym-admin/pkg/k8s/manager"
 	core_v1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -64,39 +64,27 @@ func (m *APIManager) GetTerminal(c *gin.Context) {
 
 	podName, ok := c.GetQuery("pod")
 	if !ok {
-		c.AbortWithStatusJSON(
-			http.StatusBadRequest,
-			model.ErrorResponse{Error: "can not get pod name"},
-		)
+		AbortHTTPError(c, ParamInvalidError, "", errors.New("can not get pod."))
 		return
 	}
 
 	containerName, ok := c.GetQuery("container")
 	if !ok {
-		c.AbortWithStatusJSON(
-			http.StatusBadRequest,
-			model.ErrorResponse{Error: "can not get container name"},
-		)
+		AbortHTTPError(c, ParamInvalidError, "", errors.New("can not get container"))
 		return
 	}
 
 	cluster, err := m.K8sMgr.Get(clusterName)
 	if err != nil {
 		klog.Errorf("get cluster error: %+v", err)
-		c.AbortWithStatusJSON(
-			http.StatusBadRequest,
-			model.ErrorResponse{Error: err.Error()},
-		)
+		AbortHTTPError(c, GetClusterError, "", err)
 		return
 	}
 
 	ws, err := InitWebsocket(c.Writer, c.Request)
 	if err != nil {
 		klog.Errorf("init websocket conn error: %+v", err)
-		c.AbortWithStatusJSON(
-			http.StatusBadRequest,
-			model.ErrorResponse{Error: err.Error()},
-		)
+		AbortHTTPError(c, WebsocketError, "", err)
 		return
 	}
 
@@ -104,10 +92,7 @@ func (m *APIManager) GetTerminal(c *gin.Context) {
 		cmd, isStdin, isStdout, isStderr, tty, once, ws)
 	if err != nil {
 		klog.Errorf("error in startProcess: %v", err)
-		c.AbortWithStatusJSON(
-			http.StatusBadRequest,
-			model.ErrorResponse{Error: err.Error()},
-		)
+		AbortHTTPError(c, RequestK8sExecError, "", err)
 	}
 }
 

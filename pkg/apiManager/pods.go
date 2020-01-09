@@ -33,10 +33,7 @@ func (m *APIManager) GetNodeProject(c *gin.Context) {
 				continue
 			}
 			klog.Error(err, "failed to get pods")
-			c.AbortWithStatusJSON(
-				http.StatusBadRequest,
-				model.ErrorResponse{Error: err.Error()},
-			)
+			AbortHTTPError(c, GetPodError, "", err)
 			return
 		}
 
@@ -80,10 +77,7 @@ func (m *APIManager) GetPod(c *gin.Context) {
 				continue
 			}
 			klog.Error(err, "failed to get pods")
-			c.AbortWithStatusJSON(
-				http.StatusBadRequest,
-				model.ErrorResponse{Error: err.Error()},
-			)
+			AbortHTTPError(c, GetPodError, "", err)
 			return
 		}
 
@@ -130,10 +124,7 @@ func (m *APIManager) GetPodEvent(c *gin.Context) {
 				continue
 			}
 			klog.Error(err, "failed to get pod events")
-			c.AbortWithStatusJSON(
-				http.StatusBadRequest,
-				model.ErrorResponse{Error: err.Error()},
-			)
+			AbortHTTPError(c, GetPodEventError, "", err)
 			return
 		}
 

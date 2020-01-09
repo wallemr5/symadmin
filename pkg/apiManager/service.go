@@ -31,10 +31,7 @@ func (m *APIManager) GetServices(c *gin.Context) {
 				continue
 			}
 			klog.Error(err, "failed to get nodes")
-			c.AbortWithStatusJSON(
-				http.StatusBadRequest,
-				model.ErrorResponse{Error: err.Error()},
-			)
+			AbortHTTPError(c, GetServiceError, "", err)
 			return
 		}
 		for i := range svclist.Items {
