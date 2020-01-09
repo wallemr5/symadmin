@@ -103,3 +103,17 @@ type EndpointsOfCluster struct {
 	ClusterName string      `json:"clusterName,omitempty"`
 	Endpoint    []*Endpoint `json:"endpoint,omitempty"`
 }
+
+// Event ...
+type Event struct {
+	Cluster    string      `json:"cluster,omitempty"`
+	Namespace  string      `json:"namespace,omitempty"`
+	ObjectKind string      `json:"objectKind,omitempty"`
+	ObjectName string      `json:"objectName,omitempty"`
+	Type       string      `json:"type,omitempty"`
+	Count      int32       `json:"count,omitempty"`
+	FirstTime  metav1.Time `json:"firstTime,omitempty"`
+	LastTime   metav1.Time `json:"lastTime,omitempty"`
+	Message    string      `json:"message,omitempty"`
+	Reason     string      `json:"reason,omitempty"`
+}

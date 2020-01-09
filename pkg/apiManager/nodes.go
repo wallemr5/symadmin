@@ -15,11 +15,11 @@ import (
 
 // GetNodeInfo ...
 func (m *APIManager) GetNodeInfo(c *gin.Context) {
-	// clusterName := c.Param("name")
+	clusterName := c.Param("name")
 
 	nodeName := c.Param("nodeName")
 
-	clusters := m.K8sMgr.GetAll()
+	clusters := m.K8sMgr.GetAll(clusterName)
 
 	ctx := context.Background()
 	nodes := make([]model.NodeInfo, 0, 4)

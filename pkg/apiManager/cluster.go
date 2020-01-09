@@ -9,7 +9,8 @@ import (
 
 // GetClusters ...
 func (m *APIManager) GetClusters(c *gin.Context) {
-	clusters := m.K8sMgr.GetAll()
+	clusterName := c.Param("name")
+	clusters := m.K8sMgr.GetAll(clusterName)
 
 	status := make([]*model.ClusterStatus, 0, 4)
 	for _, c := range clusters {
