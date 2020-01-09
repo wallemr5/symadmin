@@ -158,7 +158,6 @@ func (m *APIManager) DeletePod(c *gin.Context) {
 	clusterName := c.Param("name")
 	podName := c.Param("appName")
 	namespace := c.DefaultQuery("namespace", "default")
-	klog.Info(clusterName, podName, namespace)
 
 	cluster, err := m.K8sMgr.Get(clusterName)
 	if err != nil {
