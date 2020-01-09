@@ -15,9 +15,7 @@ import (
 // GetEndpoints ...
 func (m *APIManager) GetEndpoints(c *gin.Context) {
 	clusterName := c.Param("name")
-
 	endpointName := c.Param("endpointName")
-
 	clusters := m.K8sMgr.GetAll(clusterName)
 
 	ctx := context.Background()
@@ -30,12 +28,15 @@ func (m *APIManager) GetEndpoints(c *gin.Context) {
 		//podList := &corev1.PodList{}
 		err := cluster.Client.List(ctx, listOptions, endpointList)
 		if err != nil {
-
 			if apierrors.IsNotFound(err) {
 				continue
 			}
 			klog.Error(err, "failed to get endpoints")
-			break
+			c.JSON(http.StatusBadRequest, gin.H{
+				"code": "", // TODO define error code
+				"msg":  err.Error(),
+			})
+			return
 		}
 
 		for i := range endpointList.Items {
@@ -63,5 +64,5 @@ func (m *APIManager) GetEndpoints(c *gin.Context) {
 		endpointsOfCluster = append(endpointsOfCluster, &ofCluster)
 	}
 
-	c.IndentedJSON(http.StatusOK, endpointsOfCluster)
+	c.JSON(http.StatusOK, gin.H{"msg": "ok", "data": endpointsOfCluster})
 }
