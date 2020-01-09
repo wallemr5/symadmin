@@ -9,6 +9,7 @@ import (
 	k8smanager "gitlab.dmall.com/arch/sym-admin/pkg/k8s/manager"
 	"gitlab.dmall.com/arch/sym-admin/pkg/labels"
 	"gitlab.dmall.com/arch/sym-admin/pkg/utils"
+	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/klog"
@@ -98,6 +99,7 @@ func (r *AppSetReconciler) DeleteUnExpectInfo(ctx context.Context, req customctr
 		// not exist need delete cluster
 		return false, nil
 	}
+	r.recorder.Eventf(app, corev1.EventTypeNormal, "DeleteAdvDeployment", "Delete unexpect cluster[%s] AdvDeployment.", delCluster)
 
 	client, err := r.DksMgr.K8sMgr.Get(delCluster)
 	if err != nil {

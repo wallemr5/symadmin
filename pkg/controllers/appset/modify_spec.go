@@ -10,6 +10,7 @@ import (
 	k8smanager "gitlab.dmall.com/arch/sym-admin/pkg/k8s/manager"
 	"gitlab.dmall.com/arch/sym-admin/pkg/labels"
 	"gitlab.dmall.com/arch/sym-admin/pkg/utils"
+	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/equality"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -24,6 +25,7 @@ func (r *AppSetReconciler) ModifySpec(ctx context.Context, req customctrl.Custom
 	for _, v := range app.Spec.ClusterTopology.Clusters {
 		cluster, err := r.DksMgr.K8sMgr.Get(v.Name)
 		if err != nil {
+			r.recorder.Eventf(app.DeepCopy(), corev1.EventTypeWarning, "ClusterOffline", "Get cluster[%s] err:%+v.", v.Name, err)
 			return false, err
 		}
 

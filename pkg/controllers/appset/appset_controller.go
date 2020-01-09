@@ -180,6 +180,7 @@ func (r *AppSetReconciler) CustomReconcile(ctx context.Context, req customctrl.C
 	}
 
 	if !utils.ContainsString(app.ObjectMeta.Finalizers, labels.ControllerFinalizersName) {
+		r.recorder.Event(app, corev1.EventTypeNormal, "AddFinalizers", "Add finalizer 'sym-admin-finalizers'.")
 		klog.V(4).Infof("%s: finalizers not set:%s, set now", req.NamespacedName, labels.ControllerFinalizersName)
 		if app.ObjectMeta.Finalizers == nil {
 			app.ObjectMeta.Finalizers = []string{}
