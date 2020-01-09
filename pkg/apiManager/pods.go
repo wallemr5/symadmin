@@ -10,6 +10,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/klog"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
@@ -150,4 +151,38 @@ func (m *APIManager) GetPodEvent(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusOK, result)
+}
+
+// DeletePod by pod name
+func (m *APIManager) DeletePod(c *gin.Context) {
+	clusterName := c.Param("name")
+	podName := c.Param("appName")
+	namespace := c.DefaultQuery("namespace", "default")
+	klog.Info(clusterName, podName, namespace)
+
+	cluster, err := m.K8sMgr.Get(clusterName)
+	if err != nil {
+		klog.Errorf("get cluster error: %v", err)
+		AbortHTTPError(c, GetClusterError, "", err)
+		return
+	}
+
+	ctx := context.Background()
+	pod := &corev1.Pod{}
+	err = cluster.Client.Get(ctx, types.NamespacedName{
+		Namespace: namespace,
+		Name:      podName,
+	}, pod)
+	if err != nil {
+		klog.Errorf("get pod error: %v", err)
+		AbortHTTPError(c, GetPodError, "", err)
+		return
+	}
+
+	err = cluster.Client.Delete(ctx, pod)
+	if err != nil {
+		klog.Errorf("delete pod error: %v", err)
+		c.Status(http.StatusBadRequest)
+	}
+	c.Status(http.StatusOK)
 }
