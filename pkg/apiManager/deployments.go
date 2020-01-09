@@ -29,10 +29,10 @@ func (m *APIManager) GetDeployments(c *gin.Context) {
 				continue
 			}
 			klog.Errorf("failed to get %s deployments: %v", cluster.GetName(), err)
-			c.JSON(http.StatusBadRequest, gin.H{
-				"code": "", // TODO define error code
-				"msg":  err.Error(),
-			})
+			c.AbortWithStatusJSON(
+				http.StatusBadRequest,
+				model.ErrorResponse{Error: err.Error()},
+			)
 			return
 		}
 
@@ -54,8 +54,5 @@ func (m *APIManager) GetDeployments(c *gin.Context) {
 		}
 	}
 
-	c.JSON(http.StatusOK, gin.H{
-		"msg":  "ok",
-		"data": result,
-	})
+	c.JSON(http.StatusOK, result)
 }

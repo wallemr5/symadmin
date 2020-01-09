@@ -33,10 +33,10 @@ func (m *APIManager) GetNodeProject(c *gin.Context) {
 				continue
 			}
 			klog.Error(err, "failed to get pods")
-			c.JSON(http.StatusBadRequest, gin.H{
-				"code": "", // TODO define error code
-				"msg":  err.Error(),
-			})
+			c.AbortWithStatusJSON(
+				http.StatusBadRequest,
+				model.ErrorResponse{Error: err.Error()},
+			)
 			return
 		}
 
@@ -57,7 +57,7 @@ func (m *APIManager) GetNodeProject(c *gin.Context) {
 		pods.NodeIP = nodeIP
 	}
 
-	c.JSON(http.StatusOK, gin.H{"msg": "ok", "data": pods})
+	c.JSON(http.StatusOK, pods)
 }
 
 // GetPod ...
@@ -80,10 +80,10 @@ func (m *APIManager) GetPod(c *gin.Context) {
 				continue
 			}
 			klog.Error(err, "failed to get pods")
-			c.JSON(http.StatusBadRequest, gin.H{
-				"code": "", // TODO define error code
-				"msg":  err.Error(),
-			})
+			c.AbortWithStatusJSON(
+				http.StatusBadRequest,
+				model.ErrorResponse{Error: err.Error()},
+			)
 			return
 		}
 
@@ -104,7 +104,7 @@ func (m *APIManager) GetPod(c *gin.Context) {
 		}
 	}
 
-	c.JSON(http.StatusOK, gin.H{"msg": "ok", "data": pods})
+	c.JSON(http.StatusOK, pods)
 }
 
 // GetPodEvent return pod event
@@ -130,10 +130,10 @@ func (m *APIManager) GetPodEvent(c *gin.Context) {
 				continue
 			}
 			klog.Error(err, "failed to get pod events")
-			c.JSON(http.StatusBadRequest, gin.H{
-				"code": "", // TODO define error code
-				"msg":  err.Error(),
-			})
+			c.AbortWithStatusJSON(
+				http.StatusBadRequest,
+				model.ErrorResponse{Error: err.Error()},
+			)
 			return
 		}
 
@@ -158,5 +158,5 @@ func (m *APIManager) GetPodEvent(c *gin.Context) {
 		}
 	}
 
-	c.JSON(http.StatusOK, gin.H{"msg": "ok", "data": result})
+	c.JSON(http.StatusOK, result)
 }

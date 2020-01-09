@@ -38,10 +38,10 @@ func (m *APIManager) GetNodeInfo(c *gin.Context) {
 				continue
 			}
 			klog.Error(err, "failed to get nodes")
-			c.JSON(http.StatusBadRequest, gin.H{
-				"code": "", // TODO define error code
-				"msg":  err.Error(),
-			})
+			c.AbortWithStatusJSON(
+				http.StatusBadRequest,
+				model.ErrorResponse{Error: err.Error()},
+			)
 			return
 		}
 
@@ -66,5 +66,5 @@ func (m *APIManager) GetNodeInfo(c *gin.Context) {
 		}
 	}
 
-	c.JSON(http.StatusOK, gin.H{"msg": "ok", "data": nodes})
+	c.JSON(http.StatusOK, nodes)
 }

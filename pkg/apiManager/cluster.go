@@ -20,8 +20,5 @@ func (m *APIManager) GetClusters(c *gin.Context) {
 		})
 	}
 
-	c.JSON(http.StatusOK, gin.H{
-		"msg":  "ok",
-		"data": status,
-	})
+	c.JSON(http.StatusOK, status)
 }
