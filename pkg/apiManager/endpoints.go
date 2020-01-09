@@ -32,10 +32,10 @@ func (m *APIManager) GetEndpoints(c *gin.Context) {
 				continue
 			}
 			klog.Error(err, "failed to get endpoints")
-			c.JSON(http.StatusBadRequest, gin.H{
-				"code": "", // TODO define error code
-				"msg":  err.Error(),
-			})
+			c.AbortWithStatusJSON(
+				http.StatusBadRequest,
+				model.ErrorResponse{Error: err.Error()},
+			)
 			return
 		}
 
@@ -64,5 +64,5 @@ func (m *APIManager) GetEndpoints(c *gin.Context) {
 		endpointsOfCluster = append(endpointsOfCluster, &ofCluster)
 	}
 
-	c.JSON(http.StatusOK, gin.H{"msg": "ok", "data": endpointsOfCluster})
+	c.JSON(http.StatusOK, endpointsOfCluster)
 }

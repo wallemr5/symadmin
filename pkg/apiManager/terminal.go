@@ -9,6 +9,7 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/gorilla/websocket"
+	"gitlab.dmall.com/arch/sym-admin/pkg/apiManager/model"
 	k8smanager "gitlab.dmall.com/arch/sym-admin/pkg/k8s/manager"
 	core_v1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -63,39 +64,39 @@ func (m *APIManager) GetTerminal(c *gin.Context) {
 
 	podName, ok := c.GetQuery("pod")
 	if !ok {
-		c.JSON(http.StatusBadRequest, gin.H{
-			"code": "", // TODO define error code
-			"msg":  "can not get pod name.",
-		})
+		c.AbortWithStatusJSON(
+			http.StatusBadRequest,
+			model.ErrorResponse{Error: "can not get pod name"},
+		)
 		return
 	}
 
 	containerName, ok := c.GetQuery("container")
 	if !ok {
-		c.JSON(http.StatusBadRequest, gin.H{
-			"code": "", // TODO define error code
-			"msg":  "can not get container name.",
-		})
+		c.AbortWithStatusJSON(
+			http.StatusBadRequest,
+			model.ErrorResponse{Error: "can not get container name"},
+		)
 		return
 	}
 
 	cluster, err := m.K8sMgr.Get(clusterName)
 	if err != nil {
 		klog.Errorf("get cluster error: %+v", err)
-		c.JSON(http.StatusBadRequest, gin.H{
-			"code": "", // TODO define error code
-			"msg":  err.Error(),
-		})
+		c.AbortWithStatusJSON(
+			http.StatusBadRequest,
+			model.ErrorResponse{Error: err.Error()},
+		)
 		return
 	}
 
 	ws, err := InitWebsocket(c.Writer, c.Request)
 	if err != nil {
 		klog.Errorf("init websocket conn error: %+v", err)
-		c.JSON(http.StatusBadRequest, gin.H{
-			"code": "", // TODO define error code
-			"msg":  err.Error(),
-		})
+		c.AbortWithStatusJSON(
+			http.StatusBadRequest,
+			model.ErrorResponse{Error: err.Error()},
+		)
 		return
 	}
 
@@ -103,10 +104,10 @@ func (m *APIManager) GetTerminal(c *gin.Context) {
 		cmd, isStdin, isStdout, isStderr, tty, once, ws)
 	if err != nil {
 		klog.Errorf("error in startProcess: %v", err)
-		c.JSON(http.StatusBadRequest, gin.H{
-			"code": "", // TODO define error code
-			"msg":  err.Error(),
-		})
+		c.AbortWithStatusJSON(
+			http.StatusBadRequest,
+			model.ErrorResponse{Error: err.Error()},
+		)
 	}
 }
 
