@@ -7,7 +7,6 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"gitlab.dmall.com/arch/sym-admin/pkg/apiManager/model"
-	k8smanager "gitlab.dmall.com/arch/sym-admin/pkg/k8s/manager"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -21,26 +20,24 @@ func (m *APIManager) GetNodeProject(c *gin.Context) {
 	nodeIP := c.Param("ip")
 
 	clusters := m.K8sMgr.GetAll(clusterName)
-
 	ctx := context.Background()
 	pods := &model.NodeProjects{}
-
 	listOptions := &client.ListOptions{}
 	//listOptions.MatchingField("spec.nodeName",nodeIP)
 
 	for _, cluster := range clusters {
-		if cluster.Status == k8smanager.ClusterOffline {
-			continue
-		}
 		podList := &corev1.PodList{}
 		err := cluster.Client.List(ctx, listOptions, podList)
 		if err != nil {
-
 			if apierrors.IsNotFound(err) {
 				continue
 			}
 			klog.Error(err, "failed to get pods")
-			break
+			c.JSON(http.StatusBadRequest, gin.H{
+				"code": "", // TODO define error code
+				"msg":  err.Error(),
+			})
+			return
 		}
 
 		for i := range podList.Items {
@@ -50,27 +47,24 @@ func (m *APIManager) GetNodeProject(c *gin.Context) {
 				//if dm,ok := dm["lightningDomain0"];ok{
 				if dm, ok := dm["app"]; ok {
 					pods.Projects = append(pods.Projects, &model.Project{
-
 						DomainName: dm,
 						PodIP:      pod.Status.PodIP,
 					})
 				}
 			}
 		}
-
 		pods.PodCount = len(pods.Projects)
 		pods.NodeIP = nodeIP
 	}
-	c.JSON(http.StatusOK, pods)
+
+	c.JSON(http.StatusOK, gin.H{"msg": "ok", "data": pods})
 }
 
 // GetPod ...
 func (m *APIManager) GetPod(c *gin.Context) {
-
 	appName := c.Param("appName")
-
-	clusters := m.K8sMgr.GetAll()
-
+	clusterName := c.Param("name")
+	clusters := m.K8sMgr.GetAll(clusterName)
 	ctx := context.Background()
 	pods := &model.Pod{}
 
@@ -86,7 +80,11 @@ func (m *APIManager) GetPod(c *gin.Context) {
 				continue
 			}
 			klog.Error(err, "failed to get pods")
-			break
+			c.JSON(http.StatusBadRequest, gin.H{
+				"code": "", // TODO define error code
+				"msg":  err.Error(),
+			})
+			return
 		}
 
 		for i := range podList.Items {
@@ -103,56 +101,62 @@ func (m *APIManager) GetPod(c *gin.Context) {
 			pods.NodeIP = pod.Status.HostIP
 			pods.PodIP = pod.Status.PodIP
 			pods.StartTime = pod.Status.StartTime.String()
-			//}
 		}
 	}
-	c.JSON(http.StatusOK, pods)
+
+	c.JSON(http.StatusOK, gin.H{"msg": "ok", "data": pods})
 }
 
 // GetPodEvent return pod event
 func (m *APIManager) GetPodEvent(c *gin.Context) {
 	clusterName := c.Param("name")
 	podName := c.Param("appName")
-	namespace := c.DefaultQuery("namespace", "default")
+	namespace := c.DefaultQuery("namespace", "")
 	limit, _ := strconv.ParseInt(c.DefaultQuery("limit", "10"), 10, 64)
-
-	cluster, err := m.K8sMgr.Get(clusterName)
-	if err != nil {
-		klog.Errorf("get cluster error: %+v", err)
-		c.JSON(http.StatusBadRequest, gin.H{"error": "can not get cluster."})
-		return
-	}
-
-	ctx := context.Background()
-	listOptions := &client.ListOptions{
-		Namespace: namespace,
-		Raw:       &metav1.ListOptions{Limit: limit},
-	}
-	events := &corev1.EventList{}
-
-	err = cluster.Cache.List(ctx, listOptions, events)
-	if err != nil {
-		c.AbortWithError(http.StatusBadRequest, err)
-	}
+	clusters := m.K8sMgr.GetAll(clusterName)
 
 	result := []*model.Event{}
-	for _, event := range events.Items {
-		item := &model.Event{
-			Cluster:    event.GetObjectMeta().GetClusterName(),
-			Namespace:  event.GetNamespace(),
-			ObjectName: event.InvolvedObject.Name,
-			ObjectKind: event.Kind,
-			Type:       event.Type,
-			Count:      event.Count,
-			FirstTime:  event.FirstTimestamp,
-			LastTime:   event.LastTimestamp,
-			Message:    event.Message,
-			Reason:     event.Reason,
+	for _, cluster := range clusters {
+		ctx := context.Background()
+		listOptions := &client.ListOptions{
+			Namespace: namespace,
+			Raw:       &metav1.ListOptions{Limit: limit},
 		}
-		if item.ObjectName == podName {
-			result = append(result, item)
+		events := &corev1.EventList{}
+
+		err := cluster.Cache.List(ctx, listOptions, events)
+		if err != nil {
+			if apierrors.IsNotFound(err) {
+				continue
+			}
+			klog.Error(err, "failed to get pod events")
+			c.JSON(http.StatusBadRequest, gin.H{
+				"code": "", // TODO define error code
+				"msg":  err.Error(),
+			})
+			return
+		}
+
+		for _, event := range events.Items {
+			item := &model.Event{
+				Cluster:    cluster.GetName(),
+				Namespace:  event.GetNamespace(),
+				ObjectName: event.InvolvedObject.Name,
+				ObjectKind: event.InvolvedObject.Kind,
+				Type:       event.Type,
+				Count:      event.Count,
+				FirstTime:  event.FirstTimestamp,
+				LastTime:   event.LastTimestamp,
+				Message:    event.Message,
+				Reason:     event.Reason,
+			}
+			if podName == "all" {
+				result = append(result, item)
+			} else if podName != "all" && item.ObjectName == podName {
+				result = append(result, item)
+			}
 		}
 	}
 
-	c.JSON(http.StatusOK, result)
+	c.JSON(http.StatusOK, gin.H{"msg": "ok", "data": result})
 }

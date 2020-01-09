@@ -6,7 +6,6 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"gitlab.dmall.com/arch/sym-admin/pkg/apiManager/model"
-	k8smanager "gitlab.dmall.com/arch/sym-admin/pkg/k8s/manager"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/klog"
@@ -16,14 +15,11 @@ import (
 // GetNodeInfo ...
 func (m *APIManager) GetNodeInfo(c *gin.Context) {
 	clusterName := c.Param("name")
-
 	nodeName := c.Param("nodeName")
-
 	clusters := m.K8sMgr.GetAll(clusterName)
 
 	ctx := context.Background()
 	nodes := make([]model.NodeInfo, 0, 4)
-
 	listOptions := &client.ListOptions{
 		LabelSelector: nil,
 		FieldSelector: nil,
@@ -33,21 +29,22 @@ func (m *APIManager) GetNodeInfo(c *gin.Context) {
 	listOptions.MatchingLabels(map[string]string{
 		"nodeName": nodeName,
 	})
-	for _, cluster := range clusters {
-		if cluster.Status == k8smanager.ClusterOffline {
-			continue
-		}
 
+	for _, cluster := range clusters {
 		nodeList := &corev1.NodeList{}
 		err := cluster.Client.List(ctx, listOptions, nodeList)
 		if err != nil {
-
 			if apierrors.IsNotFound(err) {
 				continue
 			}
 			klog.Error(err, "failed to get nodes")
-			break
+			c.JSON(http.StatusBadRequest, gin.H{
+				"code": "", // TODO define error code
+				"msg":  err.Error(),
+			})
+			return
 		}
+
 		for i := range nodeList.Items {
 			node := &nodeList.Items[i]
 			cpu, _ := node.Status.Allocatable.Cpu().AsInt64()
@@ -66,9 +63,8 @@ func (m *APIManager) GetNodeInfo(c *gin.Context) {
 				DockerVersion: node.Status.NodeInfo.ContainerRuntimeVersion,
 			}
 			nodes = append(nodes, nodeInfo)
-
 		}
 	}
 
-	c.JSON(http.StatusOK, nodes)
+	c.JSON(http.StatusOK, gin.H{"msg": "ok", "data": nodes})
 }

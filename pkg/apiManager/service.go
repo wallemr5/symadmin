@@ -31,7 +31,11 @@ func (m *APIManager) GetServices(c *gin.Context) {
 				continue
 			}
 			klog.Error(err, "failed to get nodes")
-			break
+			c.JSON(http.StatusBadRequest, gin.H{
+				"code": "", // TODO define error code
+				"msg":  err.Error(),
+			})
+			return
 		}
 		for i := range svclist.Items {
 			service := &svclist.Items[i]
@@ -49,5 +53,5 @@ func (m *APIManager) GetServices(c *gin.Context) {
 		}
 	}
 
-	c.IndentedJSON(http.StatusOK, svcResult)
+	c.IndentedJSON(http.StatusOK, gin.H{"msg": "ok", "data": svcResult})
 }

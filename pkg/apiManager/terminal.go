@@ -63,29 +63,50 @@ func (m *APIManager) GetTerminal(c *gin.Context) {
 
 	podName, ok := c.GetQuery("pod")
 	if !ok {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "can not get pod name."})
+		c.JSON(http.StatusBadRequest, gin.H{
+			"code": "", // TODO define error code
+			"msg":  "can not get pod name.",
+		})
+		return
 	}
 
 	containerName, ok := c.GetQuery("container")
 	if !ok {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "can not get container name."})
+		c.JSON(http.StatusBadRequest, gin.H{
+			"code": "", // TODO define error code
+			"msg":  "can not get container name.",
+		})
+		return
 	}
 
 	cluster, err := m.K8sMgr.Get(clusterName)
 	if err != nil {
 		klog.Errorf("get cluster error: %+v", err)
-		c.JSON(http.StatusBadRequest, gin.H{"error": "can not get cluster."})
+		c.JSON(http.StatusBadRequest, gin.H{
+			"code": "", // TODO define error code
+			"msg":  err.Error(),
+		})
+		return
 	}
 
 	ws, err := InitWebsocket(c.Writer, c.Request)
 	if err != nil {
 		klog.Errorf("init websocket conn error: %+v", err)
+		c.JSON(http.StatusBadRequest, gin.H{
+			"code": "", // TODO define error code
+			"msg":  err.Error(),
+		})
+		return
 	}
 
 	err = startProcess(cluster, namespace, podName, containerName,
 		cmd, isStdin, isStdout, isStderr, tty, once, ws)
 	if err != nil {
 		klog.Errorf("error in startProcess: %v", err)
+		c.JSON(http.StatusBadRequest, gin.H{
+			"code": "", // TODO define error code
+			"msg":  err.Error(),
+		})
 	}
 }
 
