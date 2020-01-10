@@ -4,7 +4,7 @@ metadata:
   name: bbcc2
   namespace: default
 spec:
-  replicas: 12
+  replicas: 5
   podSpec:
     deployType: helm
     chart:
@@ -21,39 +21,39 @@ spec:
     paused: false
   clusterTopology:
     clusters:
-      - name: tcc-bj4-dks-test-01
-        meta:
-          sym-available-zone: bj4
-          sym-cluster-info: tcc-bj4-dks-test-01
-        podSets:
-          - name: bbcc2-gz01b-canary
-            replicas: 1
-            version: v4
-            image: registry.cn-hangzhou.aliyuncs.com/dmall/bbcc
-            meta:
-              sym-group: canary
-              sym-ldc: gz01b
-          - name: bbcc2-gz01b-blue
-            replicas: 2
-            version: v3
-            image: registry.cn-hangzhou.aliyuncs.com/dmall/bbcc
-            meta:
-              sym-group: blue
-              sym-ldc: gz01b
-          - name: bbcc2-gz01b-green
-            replicas: 2
-            version: v3
-            image: registry.cn-hangzhou.aliyuncs.com/dmall/bbcc
-            meta:
-              sym-group: green
-              sym-ldc: gz01b
+      # - name: tcc-bj4-dks-test-01
+      #   meta:
+      #     sym-available-zone: bj4
+      #     sym-cluster-info: tcc-bj4-dks-test-01
+      #   podSets:
+      #     - name: bbcc2-gz01b-canary
+      #       replicas: 1
+      #       version: v4
+      #       image: registry.cn-hangzhou.aliyuncs.com/dmall/bbcc
+      #       meta:
+      #         sym-group: canary
+      #         sym-ldc: gz01b
+      #     - name: bbcc2-gz01b-blue
+      #       replicas: 2
+      #       version: v3
+      #       image: registry.cn-hangzhou.aliyuncs.com/dmall/bbcc
+      #       meta:
+      #         sym-group: blue
+      #         sym-ldc: gz01b
+      #     - name: bbcc2-gz01b-green
+      #       replicas: 2
+      #       version: v3
+      #       image: registry.cn-hangzhou.aliyuncs.com/dmall/bbcc
+      #       meta:
+      #         sym-group: green
+      #         sym-ldc: gz01b
       - name: tcc-bj5-dks-test-01
         meta:
           sym-available-zone: bj5
           sym-cluster-info: tcc-bj5-dks-test-01
         podSets:
           - name: bbcc2-gz01a-canary
-            replicas: 2
+            replicas: 1
             image: registry.cn-hangzhou.aliyuncs.com/dmall/bbcc
             version: v4
             meta:
@@ -67,7 +67,7 @@ spec:
               sym-group: blue
               sym-ldc: gz01a
           - name: bbcc2-gz01a-green
-            replicas: 3
+            replicas: 2
             version: v3
             image: registry.cn-hangzhou.aliyuncs.com/dmall/bbcc
             meta:

@@ -1,5 +1,9 @@
-# 调试
-## 配置hosts
+# sym-admin
+
+## 调试
+
+### 配置 hosts
+
 ```shell
 # 集群kube-apiserver
 10.13.135.251 cls-89a4hpb3.ccs.tencent-cloud.com
@@ -10,7 +14,8 @@
 10.13.135.250 chartmuseum.dmall.com
 ```
 
-## goland参数配置
+### goland 参数配置
+
 ```shell
 # sym-controller 需要配置主集群tcc-bj5-dks-monit-01
 sym-controller controller --enable-master --kubeconfig=./manifests/kubeconfig_TCC_BJ5_DKS_MONIT_01.yaml -v 4
@@ -20,16 +25,9 @@ sym-controller controller --enable-worker --kubeconfig=./manifests/kubeconfig_TC
 sym-api api --kubeconfig=./manifests/kubeconfig_TCC_BJ5_DKS_MONIT_01.yaml -v 4
 ```
 
-# 发布
+## 其他
 
-```shell
-
-```
-
-
-# 其他
-
-## 初始化 pre-commit 钩子
+### 初始化 pre-commit 钩子
 
 可选择安装 [pre-commit](https://pre-commit.com/)，在每次 `git commit` 时对提交的文件自动执行常见的 `lint` 检查，避免低级错误：
 
@@ -57,4 +55,43 @@ go get -v github.com/go-lintpack/lintpack/...
 $ pre-commit uninstall
 ```
 
-*注：通过 UI 界面进行 `git` 操作的话会被隐藏至后台，无法查看。建议通过命令执行 `git commit`*
+_注：通过 UI 界面进行 `git` 操作的话会被隐藏至后台，无法查看。建议通过命令执行 `git commit`_
+
+## 编译
+
+### 编译`linux平台`二进制, 输出到*bin*目录
+
+```shell
+# 单独编译api
+make manager-api
+
+# 单独编译controller
+make manager-controller
+
+# api controller一起编译
+make manager
+```
+
+### 打包 docker 镜像并推送
+
+- `Dockerfile` 文件位于 `install` 目录下，通过后缀区分
+- 镜像地址修改[Makefile](./Makefile)里面`IMG_REG`配置修改
+
+```shell
+# api
+make docekr-push-api
+
+# controller
+make docker-push-controller
+
+# api & controller
+make docker-push
+```
+
+## 发布
+
+通过 `helm` 安装，`chart` 路径 `install/kubernetes/helm`
+
+```shell
+helm install --name sym-ctl --namespace sym install/kubernetes/helm/controller
+```

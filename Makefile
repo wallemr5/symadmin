@@ -1,6 +1,8 @@
 VERSION ?= v0.0.1
 # Image URL to use all building/pushing image targets
-IMG ?= registry.cn-hangzhou.aliyuncs.com/dmall/sym-admin-controller
+IMG_REG ?= registry.cn-hangzhou.aliyuncs.com/r2d2
+IMG_CTL := $(IMG_REG)/sym-admin-controller
+IMG_API := $(IMG_REG)/sym-admin-api
 # Produce CRDs that work back to Kubernetes 1.11 (no version conversion)
 CRD_OPTIONS ?= "crd:trivialVersions=true"
 
@@ -29,9 +31,14 @@ test: generate fmt vet manifests
 	go test ./... -coverprofile cover.out
 
 # Build manager binary
-manager: generate fmt vet
-	go build -o bin/sym-admin-controller cmd/controller/main.go
-	go build -o bin/sym-admin-api cmd/sym-api/main.go
+manager: manager-controller manager-api
+
+manager-controller: generate fmt
+	GOOS=linux GOARCH=amd64 go build -o bin/sym-admin-controller -ldflags "-s -w -X pkg/version.Release=$(VERSION) -X pkg/version.Commit=$(COMMIT) -X pkg/version.BuildDate=$(BuildDate)" cmd/controller/main.go
+
+manager-api: generate fmt
+	GOOS=linux GOARCH=amd64 go build -o bin/sym-admin-api -ldflags "-s -w -X pkg/version.Release=$(VERSION) -X pkg/version.Commit=$(COMMIT) -X pkg/version.BuildDate=$(BuildDate)" cmd/sym-api/main.go
+
 
 # Run against the configured Kubernetes cluster in ~/.kube/config
 run: generate fmt vet manifests
@@ -63,17 +70,23 @@ generate: controller-gen
 	$(CONTROLLER_GEN) object:headerFile=./hack/boilerplate.go.txt paths="./..."
 
 # Build the docker image
-docker-build:
+docker-build: 
 	docker run --rm -v "$$PWD":/go/src/${ROOT} -w /go/src/${ROOT} golang:${GO_VERSION} make build
 
 build:
 	$(GO) -v -o bin/sym-admin-controller -ldflags "-s -w -X pkg/version.Release=$(VERSION) -X pkg/version.Commit=$(COMMIT)   \
 	-X pkg/version.BuildDate=$(BuildDate)" cmd/controller/main.go
 
+docker-push: docker-push-controller docekr-push-api
+
 # Push the docker image
-docker-push:
-	docker build -t ${IMG}:${VERSION} -f ./Dockerfile
-	docker push ${IMG}:${VERSION}
+docker-push-controller: manager-controller
+	docker build -t ${IMG_CTL}:${VERSION} -f ./install/Dockerfile-ctl .
+	docker push ${IMG_CTL}:${VERSION}
+
+docekr-push-api: manager-api
+	docker build -t ${IMG_API}:${VERSION} -f ./install/Dockerfile-api .
+	docker push ${IMG_API}:${VERSION}
 
 # find or download controller-gen
 # download controller-gen if necessary
