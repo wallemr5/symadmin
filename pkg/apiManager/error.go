@@ -16,6 +16,7 @@ const (
 	// PodError
 	GetPodError      = 2001
 	GetPodEventError = 2002
+	DeletePodError   = 2003
 
 	// DeploymentError
 	GetDeploymentError = 3001
