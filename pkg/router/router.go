@@ -2,10 +2,15 @@ package router
 
 import (
 	"net/http"
+	"text/template"
 
 	"context"
 	"crypto/tls"
 	"time"
+
+	"bytes"
+
+	"fmt"
 
 	"github.com/DeanThompson/ginpprof"
 	"github.com/gin-gonic/gin"
@@ -41,12 +46,19 @@ type RouterOptions struct {
 // Router handles all incoming HTTP requests
 type Router struct {
 	*gin.Engine
-	Routes          map[string][]*Route
-	Addr            string
-	httpServer      *http.Server
-	CertFilePath    string
-	KeyFilePath     string
-	ShutdownTimeout time.Duration
+	Routes              map[string][]*Route
+	Addr                string
+	httpServer          *http.Server
+	CertFilePath        string
+	KeyFilePath         string
+	ProfileDescriptions []*Profile
+	ShutdownTimeout     time.Duration
+}
+
+type Profile struct {
+	Name string
+	Href string
+	Desc string
 }
 
 // Route represents an application route
@@ -54,7 +66,7 @@ type Route struct {
 	Method  string
 	Path    string
 	Handler gin.HandlerFunc
-	Action  string
+	Desc    string
 }
 
 // NewRouter creates a new Router instance
@@ -71,19 +83,23 @@ func NewRouter(opt *RouterOptions) *Router {
 	}
 
 	r := &Router{
-		Engine: engine,
-		Routes: make(map[string][]*Route, 0),
+		Engine:              engine,
+		Routes:              make(map[string][]*Route, 0),
+		ProfileDescriptions: make([]*Profile, 0),
+	}
+
+	if opt.PprofEnabled {
+		// automatically add routers for net/http/pprof e.g. /debug/pprof, /debug/pprof/heap, etc.
+		ginpprof.Wrap(r.Engine)
+		r.AddProfile(PprofPath, `PProf related things:<br/>
+			<a href="/debug/pprof/goroutine?debug=2">full goroutine stack dump</a>`)
 	}
 
 	if opt.MetricsEnabled {
 		klog.Infof("start load router path:%s ", opt.MetricsPath)
 		p := metrics.NewPrometheus(opt.MetricsSubsystem, []string{})
 		p.Use(r.Engine, opt.MetricsPath)
-	}
-
-	if opt.PprofEnabled {
-		// automatically add routers for net/http/pprof e.g. /debug/pprof, /debug/pprof/heap, etc.
-		ginpprof.Wrap(r.Engine)
+		r.AddProfile(MetricsPath, "Prometheus format metrics")
 	}
 
 	r.CertFilePath = opt.CertFilePath
@@ -158,6 +174,14 @@ func (r *Router) StartWarp(stopCh <-chan struct{}) {
 	_ = r.Start(stopCh)
 }
 
+func (r *Router) AddProfile(href, desc string) {
+	r.ProfileDescriptions = append(r.ProfileDescriptions, &Profile{
+		Name: href,
+		Href: href,
+		Desc: desc,
+	})
+}
+
 // SetRoutes applies list of routes
 func (r *Router) AddRoutes(apiGroup string, routes []*Route) {
 	klog.V(3).Infof("load apiGroup:%s", apiGroup)
@@ -181,6 +205,23 @@ func (r *Router) AddRoutes(apiGroup string, routes []*Route) {
 	} else {
 		rs = append(rs, routes...)
 	}
+
+	if apiGroup == "health" {
+		r.AddProfile(LivePath, `liveness check: <br/>
+			<a href="/live?full=true"> query the full body`)
+		r.AddProfile(ReadyPath, `readyness check:  <br/>
+			<a href="/ready?full=true"> query the full body`)
+	} else if apiGroup == "cluster" {
+		for _, route := range routes {
+			var desc string
+			if route.Desc == "" {
+				desc = fmt.Sprintf("name: the unique cluster name and all <br/> appName: the unique app name")
+			} else {
+				desc = route.Desc
+			}
+			r.AddProfile(route.Path, desc)
+		}
+	}
 }
 
 // all incoming requests are passed through this handler
@@ -193,20 +234,10 @@ func (r *Router) masterHandler(c *gin.Context) {
 }
 
 // IndexHandler
-func IndexHandler(c *gin.Context) {
-	c.Data(http.StatusOK, "", []byte(`<html>
-             <head><title>Server</title></head>
-             <body>
-             <h1>Welcome Server</h1>
-			 <ul>
-             <li><a href='`+MetricsPath+`'>metrics</a></li>
-             <li><a href='`+LivePath+`'>live</a></li>
-             <li><a href='`+ReadyPath+`'>ready</a></li>
-             <li><a href='`+PprofPath+`'>pprof</a></li>
-             <li><a href='`+VersionPath+`'>version</a></li>
-			 </ul>
-             </body>
-             </html>`))
+func (r *Router) IndexHandler(c *gin.Context) {
+	var b bytes.Buffer
+	indexTmpl.Execute(&b, r.ProfileDescriptions)
+	c.Data(http.StatusOK, "", b.Bytes())
 }
 
 // LiveHandler
@@ -225,16 +256,36 @@ func VersionHandler(c *gin.Context) {
 }
 
 // DefaultRoutes
-func DefaultRoutes() []*Route {
+func (r *Router) DefaultRoutes() []*Route {
 	var routes []*Route
 
 	appRoutes := []*Route{
-		{"GET", "/", IndexHandler, ""},
-		// {"GET", LivePath, LiveHandler, ""},
-		// {"GET", ReadyPath, ReadHandler, ""},
+		{"GET", "/", r.IndexHandler, ""},
 		{"GET", VersionPath, VersionHandler, ""},
 	}
 
 	routes = append(routes, appRoutes...)
 	return routes
 }
+
+var indexTmpl = template.Must(template.New("index").Parse(`<!DOCTYPE html><html>
+<head>
+<title>/debug/pprof/</title>
+<style>
+.profile-name{
+	display:inline-block;
+	width:6rem;
+}
+</style>
+</head>
+<body>
+Things to do:
+{{range .}}
+<h2><a href={{.Href}}>{{.Name}}</a></h2>
+<p>
+{{.Desc}}
+</p>
+{{end}}
+</body>
+</html>
+`))

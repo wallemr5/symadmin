@@ -74,7 +74,7 @@ func NewAPIManager(kubecli kubernetes.Interface, opt *Option, logger logr.Logger
 		MetricsSubsystem: componentName,
 	}
 	rt := router.NewRouter(routerOptions)
-	rt.AddRoutes("index", router.DefaultRoutes())
+	rt.AddRoutes("index", rt.DefaultRoutes())
 	rt.AddRoutes("health", healthHander.Routes())
 	rt.AddRoutes("cluster", apiMgr.Routes())
 	apiMgr.Router = rt

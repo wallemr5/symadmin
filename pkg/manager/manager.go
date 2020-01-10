@@ -85,7 +85,7 @@ func NewDksManager(kubecli kubernetes.Interface, opt *ManagerOption, logger logr
 		healthcheck.GoroutineCountCheck(opt.GoroutineThreshold))
 
 	rt := router.NewRouter(routerOptions)
-	rt.AddRoutes("index", router.DefaultRoutes())
+	rt.AddRoutes("index", rt.DefaultRoutes())
 	rt.AddRoutes("health", healthHander.Routes())
 	// rt.AddRoutes("cluster", mgr.Routes())
 
@@ -120,6 +120,6 @@ func NewHttpsRouter() *router.Router {
 	}
 
 	rt := router.NewRouter(routerOptions)
-	rt.AddRoutes("rt", router.DefaultRoutes())
+	rt.AddRoutes("rt", rt.DefaultRoutes())
 	return rt
 }
