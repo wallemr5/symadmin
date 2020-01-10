@@ -19,9 +19,10 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
-func (r *AdvDeploymentReconciler) GetStatefulSetByLabels(ctx context.Context, advDeploy *workloadv1beta1.AdvDeployment, opts *client.ListOptions) ([]*appsv1.StatefulSet, error) {
-	listOptions := &client.ListOptions{}
-	listOptions.MatchingLabels(map[string]string{
+// GetStatefulSetByLabels Finding all statefuls with a label
+func (r *AdvDeploymentReconciler) GetStatefulSetByLabels(ctx context.Context, advDeploy *workloadv1beta1.AdvDeployment) ([]*appsv1.StatefulSet, error) {
+	opts := &client.ListOptions{}
+	opts.MatchingLabels(map[string]string{
 		"app": advDeploy.Name,
 	})
 	staSets := appsv1.StatefulSetList{}
@@ -42,7 +43,13 @@ func (r *AdvDeploymentReconciler) GetStatefulSetByLabels(ctx context.Context, ad
 	return statefulSets, nil
 }
 
-func (r *AdvDeploymentReconciler) GetDeployListByByLabels(ctx context.Context, advDeploy *workloadv1beta1.AdvDeployment, opts *client.ListOptions) ([]*appsv1.Deployment, error) {
+// GetDeployListByByLabels Finding all deployments with a label
+func (r *AdvDeploymentReconciler) GetDeployListByByLabels(ctx context.Context, advDeploy *workloadv1beta1.AdvDeployment) ([]*appsv1.Deployment, error) {
+	opts := &client.ListOptions{}
+	opts.MatchingLabels(map[string]string{
+		"app": advDeploy.Name,
+	})
+
 	deployLists := appsv1.DeploymentList{}
 	err := r.Client.List(ctx, opts, &deployLists)
 	if err != nil {
@@ -62,6 +69,7 @@ func (r *AdvDeploymentReconciler) GetDeployListByByLabels(ctx context.Context, a
 	return deploys, nil
 }
 
+// GetServiceByByLabels Finding all services with a label
 func (r *AdvDeploymentReconciler) GetServiceByByLabels(ctx context.Context, advDeploy *workloadv1beta1.AdvDeployment) (*corev1.Service, error) {
 	listOptions := &client.ListOptions{}
 	listOptions.MatchingLabels(map[string]string{
@@ -86,20 +94,16 @@ func (r *AdvDeploymentReconciler) GetServiceByByLabels(ctx context.Context, advD
 	}
 }
 
+// RecalculateStatus According to running deployments, calculate the advDeployment's status
 func (r *AdvDeploymentReconciler) RecalculateStatus(ctx context.Context, advDeploy *workloadv1beta1.AdvDeployment) (*workloadv1beta1.AdvDeploymentAggrStatus, error) {
-	opts := &client.ListOptions{}
-	opts.MatchingLabels(map[string]string{
-		"app": advDeploy.Name,
-	})
-
-	deploys, err := r.GetDeployListByByLabels(ctx, advDeploy, opts)
+	deploys, err := r.GetDeployListByByLabels(ctx, advDeploy)
 	if err != nil {
 		return nil, errors.Wrapf(err, "Find all deployments with application name [%s] has an error", advDeploy.Name)
 	}
 
 	var statefulSets []*appsv1.StatefulSet
 	if len(deploys) == 0 {
-		statefulSets, err = r.GetStatefulSetByLabels(ctx, advDeploy, opts)
+		statefulSets, err = r.GetStatefulSetByLabels(ctx, advDeploy)
 		if err != nil {
 			return nil, errors.Wrapf(err, "Find all statefulSet with application name [%s] has an error", advDeploy.Name)
 		}
@@ -147,6 +151,7 @@ func (r *AdvDeploymentReconciler) RecalculateStatus(ctx context.Context, advDepl
 	return status, nil
 }
 
+//updateStatus Update the calculated status into CRD's status so that the controller which is watching for it can be noticed
 func (r *AdvDeploymentReconciler) updateStatus(ctx context.Context, advDeploy *workloadv1beta1.AdvDeployment, recalStatus *workloadv1beta1.AdvDeploymentAggrStatus) error {
 	obj := &workloadv1beta1.AdvDeployment{}
 

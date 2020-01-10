@@ -128,6 +128,8 @@ func Add(mgr manager.Manager, cMgr *pkgmanager.DksManager) error {
 // +kubebuilder:rbac:groups=workload.dmall.com,resources=advdeployments/status,verbs=get;update;patch
 
 func (r *AdvDeploymentReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error) {
+	klog.V(3).Infof("##### [%s] start to reconcile.", req.NamespacedName)
+
 	ctx := context.Background()
 	logger := r.Log.WithValues("key", req.NamespacedName, "id", uuid.Must(uuid.NewV4()).String())
 
@@ -143,7 +145,7 @@ func (r *AdvDeploymentReconciler) Reconcile(req ctrl.Request) (ctrl.Result, erro
 		} else {
 			logLevel = 4
 		}
-		klog.V(logLevel).Infof("key: %v Reconcile end. Time taken: %v. ", req, diffTime)
+		klog.V(logLevel).Infof("##### [%s] reconciling is finished. time taken: %v. ", req.NamespacedName, diffTime)
 	}()
 
 	// At first, find the advDeployment with its namespaced name.
@@ -176,18 +178,18 @@ func (r *AdvDeploymentReconciler) Reconcile(req ctrl.Request) (ctrl.Result, erro
 
 	// If you found that its finalizer list is empty or nil, we must append sym-admin's finalizer into this list if the deletionTimeStamp is nil.
 	if !utils.ContainsString(advDeploy.ObjectMeta.Finalizers, labels.ControllerFinalizersName) {
-		// This list may be nil if its owner isn't sym-admin.
+		// This list may be nil if sym-admin is not its owner.
 		if advDeploy.ObjectMeta.Finalizers == nil {
 			advDeploy.ObjectMeta.Finalizers = []string{}
 		}
 
 		advDeploy.ObjectMeta.Finalizers = append(advDeploy.ObjectMeta.Finalizers, labels.ControllerFinalizersName)
 		if err := r.Client.Update(ctx, advDeploy); err != nil {
-			logger.Error(err, "failed to get AdvDeployment")
+			klog.Errorf("failed to update AdvDeployment[%s] for appending a finalizer to it: %v", advDeploy.Name, err)
 			return reconcile.Result{}, errors.Wrap(err, "Can not add sym-admin's finalizer to AdvDeployment")
 		}
 
-		klog.V(3).Infof("advDeploy: [%s] Add add Finalizers success")
+		klog.V(3).Infof("Adding the finalizer to advDeploy[%s] successfully", advDeploy.Name)
 		return reconcile.Result{
 			Requeue:      true,
 			RequeueAfter: time.Second * 5,

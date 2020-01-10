@@ -15,7 +15,7 @@ import (
 	ctrl "sigs.k8s.io/controller-runtime"
 )
 
-// Remove the sym-admin's finalizer from the entry list.
+// RemoveFinalizers remove the sym-admin's finalizer from the entry list.
 func (r *AdvDeploymentReconciler) RemoveFinalizers(ctx context.Context, req ctrl.Request) error {
 	obj := &workloadv1beta1.AdvDeployment{}
 	err := r.Client.Get(ctx, req.NamespacedName, obj)
@@ -48,34 +48,34 @@ func (r *AdvDeploymentReconciler) RemoveFinalizers(ctx context.Context, req ctrl
 	return nil
 }
 
-// Delete all releases of this advDeployment
+// CleanAllReleases delete all releases of this advDeployment
 func (r *AdvDeploymentReconciler) CleanAllReleases(advDeploy *workloadv1beta1.AdvDeployment) error {
 	hClient, err := helmv2.NewClientFromConfig(r.Cfg, r.KubeCli, "")
 	if err != nil {
-		klog.Errorf("New helm Clinet err:%+v", err)
+		klog.Errorf("Initializing a helm client has an error: %+v", err)
 		return err
 	}
 	defer hClient.Close()
 
 	response, err := helmv2.ListReleases(labels.MakeHelmReleaseFilter(advDeploy.Name), hClient)
 	if err != nil || response == nil {
-		klog.Errorf("no find helm releases by name: %s", advDeploy.Name)
+		klog.Errorf("Can not find release[%s] before deleting it", advDeploy.Name)
 		return err
 	}
 
 	for _, helmRls := range response.Releases {
 		if err := helmv2.DeleteRelease(helmRls.Name, hClient); err != nil {
-			klog.Errorf("DeleteRelease name: %s, err:%+v", helmRls.Name, err)
+			klog.Errorf("Deleting release[%s] has an error:%+v", helmRls.Name, err)
 			return err
 		}
 
-		klog.V(4).Infof("rlsName: %s clean successed", helmRls.Name)
+		klog.V(4).Infof("Release[%s] has been cleaned (or purge deleted) successfully", helmRls.Name)
 	}
 
 	return nil
 }
 
-// We try to converge the advDeploy's status to that desired status.
+// ApplyReleases we try to converge the advDeploy's status to that desired status.
 // It returns true mean that we modified running releases in some way, otherwise no action happens on running releases.
 func (r *AdvDeploymentReconciler) ApplyReleases(ctx context.Context, advDeploy *workloadv1beta1.AdvDeployment) (bool, error) {
 	hasModifiedRls := false
@@ -92,7 +92,7 @@ func (r *AdvDeploymentReconciler) ApplyReleases(ctx context.Context, advDeploy *
 	*/
 	response, err := helmv2.ListReleases(labels.MakeHelmReleaseFilter(advDeploy.Name), hClient)
 	if err != nil {
-		klog.Errorf("Can not find a releases with name: %s, err: %v", advDeploy.Name, err)
+		klog.Errorf("Can not find all releases for advDeploy[%s] before applying them, err: %v", advDeploy.Name, err)
 		return hasModifiedRls, err
 	}
 
@@ -108,20 +108,20 @@ func (r *AdvDeploymentReconciler) ApplyReleases(ctx context.Context, advDeploy *
 
 			// Delete the release as long as we found its status code is not correct
 			if rr.Info.Status.GetCode() == hapirelease.Status_DELETED || rr.Info.Status.GetCode() == hapirelease.Status_FAILED || rr.Info.Status.GetCode() == hapirelease.Status_UNKNOWN {
-				klog.Infof("Release: [%s]'s status mean there may be some problem, description: %s", rr.Name, rr.Info.Description)
+				klog.Infof("Release[%s]'s status means that there may be some problems here, description: %s", rr.Name, rr.Info.Description)
 
 				// Delete this release with purge flag.
 				if err := helmv2.DeleteRelease(rr.Name, hClient); err != nil {
-					klog.Errorf("Delete the release due to its status, but has an error, rls name: %s, err: %+v", rr.Name, err)
+					klog.Errorf("Delete the release due to its status, but it has an error here, rls name: %s, err: %+v", rr.Name, err)
 					return hasModifiedRls, err
 				}
 				hasModifiedRls = true
 
-				klog.V(4).Infof("rlsName: [%s], Delete the release due to its status", rr.Name)
+				klog.V(4).Infof("release[%s], Delete the release due to its status", rr.Name)
 			}
 		}
 	} else {
-		klog.V(4).Infof("Listing all releases may be has an error, there is no response feed back.")
+		klog.V(4).Infof("Listing all releases may be has an error, there is no response feeds back.")
 	}
 
 	var (
@@ -166,6 +166,7 @@ func (r *AdvDeploymentReconciler) ApplyReleases(ctx context.Context, advDeploy *
 	return hasModifiedRls, nil
 }
 
+// isRedundantRelease check if this release is a redundant one.
 func isRedundantRelease(rlsName string, advDeploy *workloadv1beta1.AdvDeployment) bool {
 	for _, podSet := range advDeploy.Spec.Topology.PodSets {
 		if podSet.Name == rlsName {
@@ -176,7 +177,7 @@ func isRedundantRelease(rlsName string, advDeploy *workloadv1beta1.AdvDeployment
 	return true
 }
 
-// Find the release with its name from running release response.
+// findRunningReleases find the release with its name from running release response.
 func findRunningReleases(name string, rlsList *rls.ListReleasesResponse) *hapirelease.Release {
 	if rlsList == nil {
 		return nil
