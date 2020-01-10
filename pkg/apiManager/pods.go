@@ -191,28 +191,23 @@ func (m *APIManager) DeletePodByGroup(c *gin.Context) {
 	clusterName := c.Param("name")
 	appName := c.Param("appName")
 	namespace := c.DefaultQuery("namespace", "default")
-	group, ok := c.Query("group")
+	group, ok := c.GetQuery("group")
 	if !ok {
 		AbortHTTPError(c, GetPodNotGroup, "", nil)
 		return
 	}
 
 	clusters := m.K8sMgr.GetAll(clusterName)
-	if err != nil {
-		klog.Errorf("get clusters error: %v", err)
-		AbortHTTPError(c, GetClusterError, "", err)
-		return
-	}
-
 	ctx := context.Background()
 	listOptions := &client.ListOptions{Namespace: namespace}
 	listOptions.MatchingLabels(map[string]string{
-		"app": appName,
+		"app":       appName,
+		"sym-group": group,
 	})
-	errorPods := &corev1.PodList{}
+	errorPods := []*corev1.Pod{}
 	for _, cluster := range clusters {
 		podList := &corev1.PodList{}
-		err = cluster.Client.List(ctx, ListOptions, podList)
+		err := cluster.Client.List(ctx, listOptions, podList)
 		if err != nil {
 			klog.Errorf("get pods error: %v", err)
 			AbortHTTPError(c, GetPodError, "", err)
@@ -220,10 +215,10 @@ func (m *APIManager) DeletePodByGroup(c *gin.Context) {
 		}
 
 		for _, pod := range podList.Items {
-			err = cluster.Client.Delete(ctx, pod)
+			err = cluster.Client.Delete(ctx, &pod)
 			if err != nil {
 				klog.Errorf("delete pod error: %v", err)
-				errorPods = append(errorPods, pod)
+				errorPods = append(errorPods, &pod)
 			}
 		}
 

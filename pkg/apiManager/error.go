@@ -18,6 +18,7 @@ const (
 	GetPodEventError = 2002
 	DeletePodError   = 2003
 	GetPodNotGroup   = 2004
+	GetPodLogsError  = 2005
 
 	// DeploymentError
 	GetDeploymentError = 3001
