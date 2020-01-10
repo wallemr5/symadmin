@@ -89,6 +89,7 @@ func (m *APIManager) Routes() []*router.Route {
 		{"GET", "/api/cluster/:name", m.GetClusters, ""},
 		{"GET", "/api/cluster/:name/appPod/:appName", m.GetPod, ""},
 		{"DELETE", "/api/cluster/:name/appPod/:appName", m.DeletePod, ""},
+		{"DELETE", "/api/cluster/:name/appPod", m.DeletePod, ""},
 		//{"GET", "/api/cluster/:name/podIp/:ip/", m.GetPodProject, ""},
 		{"GET", "/api/cluster/:name/nodeIp/:ip/", m.GetNodeProject, ""},
 		{"GET", "/api/cluster/:name/endpointName/:endpointName/", m.GetEndpoints, ""},
