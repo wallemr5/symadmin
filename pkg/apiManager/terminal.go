@@ -64,7 +64,7 @@ func (m *APIManager) GetTerminal(c *gin.Context) {
 
 	podName, ok := c.GetQuery("pod")
 	if !ok {
-		AbortHTTPError(c, ParamInvalidError, "", errors.New("can not get pod."))
+		AbortHTTPError(c, ParamInvalidError, "", errors.New("can not get pod"))
 		return
 	}
 
@@ -239,6 +239,7 @@ func (ws *WsConnection) ReadLoop() {
 
 // WriteLoop ...
 func (ws *WsConnection) WriteLoop() {
+Loop:
 	for {
 		select {
 		case msg := <-ws.outChan:
@@ -248,7 +249,7 @@ func (ws *WsConnection) WriteLoop() {
 			}
 		case <-ws.closeChan:
 			ws.Close()
-			break
+			break Loop
 		}
 	}
 

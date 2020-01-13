@@ -28,6 +28,13 @@ run:
     - hack
     - manifests
     - tools
+    - pkg/helm
+    - pkg/utils
+    - pkg/router
+    - pkg/metrics
+    - pkg/manager
+    - pkg/resources
+    - pkg/controllers
 
   # default is true. Enables skipping of directories:
   #   vendor$, third_party$, testdata$, examples$, Godeps$, builtin$
@@ -256,6 +263,7 @@ issues:
     - unused
     - "Error return value of"
     - G104
+    - "Using a reference for the variable on range scope"
 
   # Excluding configuration per-path, per-linter, per-text and per-source
   exclude-rules:
@@ -305,7 +313,7 @@ issues:
   new: false
 
   # Show only new issues created after git revision `REV`
-  new-from-rev: REV
+  new-from-rev: ""
 
   # Show only new issues created in git patch with set file path.
   # new-from-patch: path/to/patch/file

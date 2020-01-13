@@ -61,7 +61,8 @@ func NewAPIManager(kubecli kubernetes.Interface, opt *Option, logger logr.Logger
 		klog.Fatalf("unable to new k8s manager err: %v", err)
 	}
 
-	ctx, _ := context.WithTimeout(context.Background(), time.Minute)
+	ctx, cancel := context.WithTimeout(context.Background(), time.Minute)
+	defer cancel()
 	manager.InitStart(ctx.Done())
 	apiMgr.K8sMgr = manager
 
@@ -86,20 +87,20 @@ func (m *APIManager) Routes() []*router.Route {
 	var routes []*router.Route
 
 	apiRoutes := []*router.Route{
-		{"GET", "/api/cluster/:name", m.GetClusters, ""},
-		{"GET", "/api/cluster/:name/appPod/:appName", m.GetPod, ""},
-		{"DELETE", "/api/cluster/:name/appPod/:appName", m.DeletePod, ""},
-		{"DELETE", "/api/cluster/:name/appPod", m.DeletePod, ""},
+		{Method: "GET", Path: "/api/cluster/:name", Handler: m.GetClusters, Desc: ""},
+		{Method: "GET", Path: "/api/cluster/:name/appPod/:appName", Handler: m.GetPod, Desc: ""},
+		{Method: "DELETE", Path: "/api/cluster/:name/appPod/:appName", Handler: m.DeletePod, Desc: ""},
+		{Method: "DELETE", Path: "/api/cluster/:name/appPod", Handler: m.DeletePod, Desc: ""},
 		//{"GET", "/api/cluster/:name/podIp/:ip/", m.GetPodProject, ""},
-		{"GET", "/api/cluster/:name/nodeIp/:ip/", m.GetNodeProject, ""},
-		{"GET", "/api/cluster/:name/endpointName/:endpointName/", m.GetEndpoints, ""},
-		{"GET", "/api/cluster/:name/nodeName/:nodeName/", m.GetNodeInfo, ""},
-		{"GET", "/api/cluster/:name/terminal", m.GetTerminal, ""},
-		{"GET", "/api/cluster/:name/service/:appName/", m.GetServices, ""},
-		{"GET", "/api/cluster/:name/deployments", m.GetDeployments, ""},
-		{"GET", "/api/cluster/:name/appPod/:appName/event", m.GetPodEvent, ""},
-		{"GET", "/api/cluster/:name/appPod/:appName/logs", m.HandleLogs, ""},
-		{"GET", "/api/cluster/:name/appPod/:appName/logs/file", m.HandleFileLogs, ""},
+		{Method: "GET", Path: "/api/cluster/:name/nodeIp/:ip/", Handler: m.GetNodeProject, Desc: ""},
+		{Method: "GET", Path: "/api/cluster/:name/endpointName/:endpointName/", Handler: m.GetEndpoints, Desc: ""},
+		{Method: "GET", Path: "/api/cluster/:name/nodeName/:nodeName/", Handler: m.GetNodeInfo, Desc: ""},
+		{Method: "GET", Path: "/api/cluster/:name/terminal", Handler: m.GetTerminal, Desc: ""},
+		{Method: "GET", Path: "/api/cluster/:name/service/:appName/", Handler: m.GetServices, Desc: ""},
+		{Method: "GET", Path: "/api/cluster/:name/deployments", Handler: m.GetDeployments, Desc: ""},
+		{Method: "GET", Path: "/api/cluster/:name/appPod/:appName/event", Handler: m.GetPodEvent, Desc: ""},
+		{Method: "GET", Path: "/api/cluster/:name/appPod/:appName/logs", Handler: m.HandleLogs, Desc: ""},
+		{Method: "GET", Path: "/api/cluster/:name/appPod/:appName/logs/file", Handler: m.HandleFileLogs, Desc: ""},
 	}
 
 	routes = append(routes, apiRoutes...)

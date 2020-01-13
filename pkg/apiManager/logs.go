@@ -70,10 +70,19 @@ func (m *APIManager) HandleLogs(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusOK, logs)
-
 }
 
 // HandleFileLogs get log files in a pod
 func (m *APIManager) HandleFileLogs(c *gin.Context) {
+	// clusterName := c.Param("name")
+	// podName := c.Param("appName")
+	// namespace := c.DefaultQuery("namespace", "default")
+	// container := c.DefaultQuery("container", "")
+	// tailLines, _ := strconv.ParseInt(c.DefaultQuery("tail", "100"), 10, 64)
 
+	// cluster, err := m.K8sMgr.Get(clusterName)
+	// if err != nil {
+	// 	AbortHTTPError(c, GetClusterError, "", err)
+	// 	return
+	// }
 }
