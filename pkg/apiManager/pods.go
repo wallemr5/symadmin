@@ -153,10 +153,10 @@ func (m *APIManager) GetPodEvent(c *gin.Context) {
 	c.JSON(http.StatusOK, result)
 }
 
-// DeletePod by pod name
-func (m *APIManager) DeletePod(c *gin.Context) {
+// DeletePodByName ...
+func (m *APIManager) DeletePodByName(c *gin.Context) {
 	clusterName := c.Param("name")
-	podName := c.Param("appName")
+	podName := c.Param("podName")
 	namespace := c.DefaultQuery("namespace", "default")
 
 	cluster, err := m.K8sMgr.Get(clusterName)
