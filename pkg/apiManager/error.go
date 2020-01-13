@@ -32,9 +32,10 @@ const (
 	RequestK8sExecError = 5003
 
 	// OtherError
-	GetClusterError  = 9001
-	GetEndpointError = 9002
-	GetNodeError     = 9003
+	GetClusterError     = 9001
+	GetEndpointError    = 9002
+	GetNodeError        = 9003
+	ParseTimeStampError = 9004
 )
 
 // AbortHTTPError ...
