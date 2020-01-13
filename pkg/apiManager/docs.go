@@ -75,7 +75,12 @@ e.g. <br/>
 `
 
 // GetServicesDesc ...
-var GetServicesDesc = ``
+var GetServicesDesc = `
+Get all services for a specific app in the cluster. <br/>
+name: url param, the unique cluster name and all. <br/>
+appName: url param, the unique app name. <br/>
+e.g. <br/>
+`
 
 // GetDeploymentsDesc ...
 var GetDeploymentsDesc = ``
