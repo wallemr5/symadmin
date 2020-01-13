@@ -193,7 +193,7 @@ func (m *APIManager) DeletePodByGroup(c *gin.Context) {
 	namespace := c.DefaultQuery("namespace", "default")
 	group, ok := c.GetQuery("group")
 	if !ok {
-		AbortHTTPError(c, GetPodNotGroup, "", nil)
+		AbortHTTPError(c, GetPodNotGroup, "no group label", nil)
 		return
 	}
 

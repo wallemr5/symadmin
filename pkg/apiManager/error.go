@@ -39,10 +39,12 @@ const (
 
 // AbortHTTPError ...
 func AbortHTTPError(c *gin.Context, code int, msg string, err error) {
-	c.AbortWithStatusJSON(http.StatusBadRequest,
-		model.ErrorResponse{
-			Code:    code,
-			Message: msg,
-			Error:   err.Error(),
-		})
+	result := &model.ErrorResponse{
+		Code:    code,
+		Message: msg,
+	}
+	if err != nil {
+		result.Error = err.Error()
+	}
+	c.AbortWithStatusJSON(http.StatusBadRequest, result)
 }
