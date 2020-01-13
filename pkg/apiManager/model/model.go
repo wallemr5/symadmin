@@ -104,6 +104,11 @@ type EndpointsOfCluster struct {
 	Endpoint    []*Endpoint `json:"endpoint,omitempty"`
 }
 
+type PodOfCluster struct {
+	ClusterName string `json:"clusterName,omitempty"`
+	Pods        []*Pod `json:"pods"`
+}
+
 // Event ...
 type Event struct {
 	Cluster    string      `json:"cluster,omitempty"`
