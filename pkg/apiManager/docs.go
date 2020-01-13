@@ -135,7 +135,7 @@ container: query string, the unique container in a pod. <br/>
 tailLines: query string, the log tail number, default is 100. <br/>
 <br/>
 e.g. <br/>
-<a href="/api/cluster/tcc-bj5-dks-monit-01/appPod/aaa/pods/sym-apg-grafana-7c8dbcf7f4-vnmlp/logs?namespace=sym-admin&container=grafana&tailLines=100">/api/cluster/tcc-bj5-dks-monit-01/appPod/aaa/pods/sym-apg-grafana-7c8dbcf7f4-vnmlp/logs?namespace=sym-admin&container=grafana&tailLines=100</a><br/>
+<a href="/api/cluster/tcc-bj5-dks-monit-01/appPod/bbcc2/pods/prometheus-sym-apg-prometheus-0/logs?namespace=sym-admin&tailLines=100">/api/cluster/tcc-bj5-dks-monit-01/appPod/bbcc2/pods/prometheus-sym-apg-prometheus-0/logs?namespace=sym-admin&tailLines=100</a><br/>
 `
 
 // HandleFileLogsDesc ...
