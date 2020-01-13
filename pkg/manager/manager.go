@@ -71,7 +71,7 @@ func DefaultManagerOption() *ManagerOption {
 }
 
 func NewDksManager(kubecli kubernetes.Interface, opt *ManagerOption, logger logr.Logger, componentName string) (*DksManager, error) {
-	routerOptions := &router.RouterOptions{
+	routerOptions := &router.Options{
 		GinLogEnabled:    opt.GinLogEnabled,
 		MetricsEnabled:   true,
 		PprofEnabled:     opt.PprofEnabled,
@@ -110,7 +110,7 @@ func NewDksManager(kubecli kubernetes.Interface, opt *ManagerOption, logger logr
 }
 
 func NewHttpsRouter() *router.Router {
-	routerOptions := &router.RouterOptions{
+	routerOptions := &router.Options{
 		GinLogEnabled:  true,
 		MetricsEnabled: false,
 		PprofEnabled:   false,

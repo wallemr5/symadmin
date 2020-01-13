@@ -179,6 +179,7 @@ func (r *AppSetReconciler) CustomReconcile(ctx context.Context, req customctrl.C
 		return reconcile.Result{}, r.DeleteAll(ctx, req, app)
 	}
 
+	// add finalizers
 	if !utils.ContainsString(app.ObjectMeta.Finalizers, labels.ControllerFinalizersName) {
 		r.recorder.Event(app, corev1.EventTypeNormal, "AddFinalizers", "Add finalizer 'sym-admin-finalizers'.")
 		klog.V(4).Infof("%s: finalizers not set:%s, set now", req.NamespacedName, labels.ControllerFinalizersName)
@@ -189,6 +190,7 @@ func (r *AppSetReconciler) CustomReconcile(ctx context.Context, req customctrl.C
 		return reconcile.Result{}, r.Client.Update(ctx, app)
 	}
 
+	// modify spec info
 	isChange, err := r.ModifySpec(ctx, req, app)
 	if err != nil {
 		logger.Error(err, "modify advdeployment info with spec")
@@ -198,18 +200,30 @@ func (r *AppSetReconciler) CustomReconcile(ctx context.Context, req customctrl.C
 		return reconcile.Result{}, nil
 	}
 
-	isChange, err = r.DeleteUnExpectInfo(ctx, req, app)
+	// update generation
+	if app.ObjectMeta.Generation != app.Status.ObservedGeneration {
+		r.recorder.Event(app, corev1.EventTypeNormal, "Apply Success", "Apply spec success, change Status.ObservedGeneration and wait status.")
+		klog.V(4).Infof("%s: update Status.ObservedGeneration with meta.Generation", req.NamespacedName)
+		app.Status.ObservedGeneration = app.ObjectMeta.Generation
+		app.Status.AggrStatus.Status = workloadv1beta1.AppStatusInstalling
+		return reconcile.Result{}, r.Client.Status().Update(ctx, app)
+	}
+
+	// update status
+	klog.V(4).Infof("%s: aggregate status", req.NamespacedName)
+	isChange, err = r.ModifyStatus(ctx, req, app)
 	if err != nil {
-		logger.Error(err, "delete unexpect info")
+		logger.Error(err, "update AppSet.Status fail")
 		return reconcile.Result{}, err
 	}
 	if isChange {
 		return reconcile.Result{}, nil
 	}
 
-	klog.V(4).Infof("%s: aggregate status", req.NamespacedName)
-	if err := r.ModifyStatus(ctx, req, app); err != nil {
-		logger.Error(err, "update AppSet.Status fail")
+	// delete unexpect info
+	_, err = r.DeleteUnExpectInfo(ctx, req, app)
+	if err != nil {
+		logger.Error(err, "delete unexpect info")
 		return reconcile.Result{}, err
 	}
 

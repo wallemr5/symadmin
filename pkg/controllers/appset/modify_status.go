@@ -19,17 +19,14 @@ import (
 )
 
 // ModifyStatus modify status handler
-func (r *AppSetReconciler) ModifyStatus(ctx context.Context, req customctrl.CustomRequest, app *workloadv1beta1.AppSet) error {
+func (r *AppSetReconciler) ModifyStatus(ctx context.Context, req customctrl.CustomRequest, app *workloadv1beta1.AppSet) (bool, error) {
 	as, err := buildAppSetStatus(ctx, r.DksMgr.K8sMgr, req, app)
 	if err != nil {
 		klog.Errorf("%s: aggregate AppSet.Status failed: %+v", req.NamespacedName, err)
-		return err
+		return false, err
 	}
 
-	if err := applyStatus(ctx, r.Client, req, as); err != nil {
-		return err
-	}
-	return nil
+	return applyStatus(ctx, r.Client, req, as)
 }
 
 func buildAppSetStatus(ctx context.Context, dksManger *k8smanager.ClusterManager, req customctrl.CustomRequest, app *workloadv1beta1.AppSet) (*workloadv1beta1.AggrAppSetStatus, error) {
@@ -51,14 +48,16 @@ func buildAppSetStatus(ctx context.Context, dksManger *k8smanager.ClusterManager
 		as.Available += obj.Status.AggrStatus.Desired
 		as.UnAvailable += obj.Status.AggrStatus.UnAvailable
 		as.Desired += obj.Status.AggrStatus.Desired
+		// if obj.Status.AggrStatus.Status != workloadv1beta1.AppStatusRuning || obj.ObjectMeta.Generation != obj.Status.ObservedGeneration {
 		if obj.Status.AggrStatus.Status != workloadv1beta1.AppStatusRuning {
-			klog.V(4).Infof("%s: cluster[%s] status is %s", req.NamespacedName, cluster.GetName(), obj.Status.AggrStatus.Status)
+			klog.V(4).Infof("%s: cluster[%s] status is %s, meta generation:%d, observedGeneration:%d", req.NamespacedName, cluster.GetName(), obj.Status.AggrStatus.Status, obj.ObjectMeta.Generation, obj.Status.ObservedGeneration)
 			finalStatus = workloadv1beta1.AppStatusInstalling
 		}
 		if !strings.Contains(as.Version, obj.Status.AggrStatus.Version) {
 			as.Version = mergeVersion(as.Version, obj.Status.AggrStatus.Version)
 		}
 		as.Clusters = append(as.Clusters, &workloadv1beta1.ClusterAppActual{
+			Name:        cluster.GetName(),
 			Desired:     obj.Status.AggrStatus.Desired,
 			Available:   obj.Status.AggrStatus.Available,
 			UnAvailable: obj.Status.AggrStatus.UnAvailable,
@@ -111,19 +110,19 @@ func buildAppSetStatus(ctx context.Context, dksManger *k8smanager.ClusterManager
 	return as, nil
 }
 
-func applyStatus(ctx context.Context, client client.Client, req customctrl.CustomRequest, as *workloadv1beta1.AggrAppSetStatus) error {
+func applyStatus(ctx context.Context, client client.Client, req customctrl.CustomRequest, as *workloadv1beta1.AggrAppSetStatus) (isChange bool, err error) {
 	app := &workloadv1beta1.AppSet{}
 	if err := client.Get(ctx, req.NamespacedName, app); err != nil {
 		klog.Errorf("%s: applyStatus get AppSet info fail: %+v", req.NamespacedName, err)
-		return err
+		return false, err
 	}
 
 	if equality.Semantic.DeepEqual(&app.Status.AggrStatus, as) {
 		klog.V(4).Infof("%s: applyStatus AppSet.Status not need change", req.NamespacedName)
-		return nil
+		return false, nil
 	}
 
-	return retry.RetryOnConflict(retry.DefaultRetry, func() error {
+	err = retry.RetryOnConflict(retry.DefaultRetry, func() error {
 		as.DeepCopyInto(&app.Status.AggrStatus)
 		t := metav1.Now()
 		app.Status.LastUpdateTime = &t
@@ -142,4 +141,5 @@ func applyStatus(ctx context.Context, client client.Client, req customctrl.Custo
 		klog.Errorf("%s: applyStatus update AppSet.Status faile: %+v", req.NamespacedName, updateErr)
 		return updateErr
 	})
+	return true, err
 }

@@ -9410,6 +9410,8 @@ spec:
                       desired:
                         format: int32
                         type: integer
+                      name:
+                        type: string
                       podSets:
                         items:
                           description: PodSetSatusInfo
@@ -9458,9 +9460,6 @@ spec:
                       unAvailable:
                         format: int32
                         type: integer
-                    required:
-                    - available
-                    - desired
                     type: object
                   type: array
                 desired:
