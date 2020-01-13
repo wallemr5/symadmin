@@ -16,6 +16,8 @@ import (
 	"github.com/gin-gonic/gin"
 	"gitlab.dmall.com/arch/sym-admin/pkg/metrics"
 	"gitlab.dmall.com/arch/sym-admin/pkg/version"
+	"go.opencensus.io/plugin/ochttp"
+	"go.opencensus.io/trace"
 	"k8s.io/klog"
 )
 
@@ -90,18 +92,28 @@ func NewRouter(opt *Options) *Router {
 		ProfileDescriptions: make([]*Profile, 0),
 	}
 
+	if opt.MetricsEnabled {
+		klog.Infof("start load router path:%s ", opt.MetricsPath)
+		// p := metrics.NewPrometheus(opt.MetricsSubsystem, []string{})
+		// p.Use(r.Engine, opt.MetricsPath)
+
+		p, err := metrics.NewOcPrometheus(r.Engine)
+		if err != nil {
+			klog.Fatalf("NewOcPrometheus err: %#v", err)
+		}
+
+		p.Router.GET("/metrics", gin.HandlerFunc(func(c *gin.Context) {
+			p.Exporter.ServeHTTP(c.Writer, c.Request)
+		}))
+
+		r.AddProfile("GET", MetricsPath, "Prometheus format metrics")
+	}
+
 	if opt.PprofEnabled {
 		// automatically add routers for net/http/pprof e.g. /debug/pprof, /debug/pprof/heap, etc.
 		ginpprof.Wrap(r.Engine)
 		r.AddProfile("GET", PprofPath, `PProf related things:<br/>
 			<a href="/debug/pprof/goroutine?debug=2">full goroutine stack dump</a>`)
-	}
-
-	if opt.MetricsEnabled {
-		klog.Infof("start load router path:%s ", opt.MetricsPath)
-		p := metrics.NewPrometheus(opt.MetricsSubsystem, []string{})
-		p.Use(r.Engine, opt.MetricsPath)
-		r.AddProfile("GET", MetricsPath, "Prometheus format metrics")
 	}
 
 	r.CertFilePath = opt.CertFilePath
@@ -117,9 +129,22 @@ func (r *Router) Start(stopCh <-chan struct{}) error {
 		r.ShutdownTimeout = 5 * time.Second
 	}
 
+	warpHandler := &ochttp.Handler{
+		Handler: r.Engine,
+		GetStartOptions: func(r *http.Request) trace.StartOptions {
+			startOptions := trace.StartOptions{}
+
+			if r.URL.Path == "/metrics" {
+				startOptions.Sampler = trace.NeverSample()
+			}
+
+			return startOptions
+		},
+	}
+
 	r.httpServer = &http.Server{
 		Addr:         r.Addr,
-		Handler:      r.Engine,
+		Handler:      warpHandler,
 		ReadTimeout:  15 * time.Second,
 		WriteTimeout: 15 * time.Second,
 	}
