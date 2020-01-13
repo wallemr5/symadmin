@@ -19,6 +19,7 @@ import (
 	"k8s.io/klog"
 )
 
+// other URLs
 const (
 	VersionPath = "version"
 	MetricsPath = "/metrics"
@@ -27,8 +28,8 @@ const (
 	PprofPath   = "/debug/pprof"
 )
 
-// RouterOptions are options for constructing a Router
-type RouterOptions struct {
+// Options are options for constructing a Router
+type Options struct {
 	GinLogEnabled  bool
 	PprofEnabled   bool
 	MetricsEnabled bool
@@ -55,6 +56,7 @@ type Router struct {
 	ShutdownTimeout     time.Duration
 }
 
+// Profile ...
 type Profile struct {
 	Name string
 	Href string
@@ -70,7 +72,7 @@ type Route struct {
 }
 
 // NewRouter creates a new Router instance
-func NewRouter(opt *RouterOptions) *Router {
+func NewRouter(opt *Options) *Router {
 	engine := gin.New()
 	engine.Use(gin.Recovery())
 	// engine := gin.Default()
@@ -91,7 +93,7 @@ func NewRouter(opt *RouterOptions) *Router {
 	if opt.PprofEnabled {
 		// automatically add routers for net/http/pprof e.g. /debug/pprof, /debug/pprof/heap, etc.
 		ginpprof.Wrap(r.Engine)
-		r.AddProfile(PprofPath, `PProf related things:<br/>
+		r.AddProfile("GET", PprofPath, `PProf related things:<br/>
 			<a href="/debug/pprof/goroutine?debug=2">full goroutine stack dump</a>`)
 	}
 
@@ -99,7 +101,7 @@ func NewRouter(opt *RouterOptions) *Router {
 		klog.Infof("start load router path:%s ", opt.MetricsPath)
 		p := metrics.NewPrometheus(opt.MetricsSubsystem, []string{})
 		p.Use(r.Engine, opt.MetricsPath)
-		r.AddProfile(MetricsPath, "Prometheus format metrics")
+		r.AddProfile("GET", MetricsPath, "Prometheus format metrics")
 	}
 
 	r.CertFilePath = opt.CertFilePath
@@ -109,6 +111,7 @@ func NewRouter(opt *RouterOptions) *Router {
 	return r
 }
 
+// Start ...
 func (r *Router) Start(stopCh <-chan struct{}) error {
 	if r.ShutdownTimeout == 0 {
 		r.ShutdownTimeout = 5 * time.Second
@@ -170,19 +173,21 @@ func (r *Router) Start(stopCh <-chan struct{}) error {
 	return err
 }
 
+// StartWarp ...
 func (r *Router) StartWarp(stopCh <-chan struct{}) {
 	_ = r.Start(stopCh)
 }
 
-func (r *Router) AddProfile(href, desc string) {
+// AddProfile ...
+func (r *Router) AddProfile(method, href, desc string) {
 	r.ProfileDescriptions = append(r.ProfileDescriptions, &Profile{
-		Name: href,
+		Name: method + " " + href,
 		Href: href,
 		Desc: desc,
 	})
 }
 
-// SetRoutes applies list of routes
+// AddRoutes applies list of routes
 func (r *Router) AddRoutes(apiGroup string, routes []*Route) {
 	klog.V(3).Infof("load apiGroup:%s", apiGroup)
 	for _, route := range routes {
@@ -207,9 +212,9 @@ func (r *Router) AddRoutes(apiGroup string, routes []*Route) {
 	}
 
 	if apiGroup == "health" {
-		r.AddProfile(LivePath, `liveness check: <br/>
+		r.AddProfile("GET", LivePath, `liveness check: <br/>
 			<a href="/live?full=true"> query the full body`)
-		r.AddProfile(ReadyPath, `readyness check:  <br/>
+		r.AddProfile("GET", ReadyPath, `readyness check:  <br/>
 			<a href="/ready?full=true"> query the full body`)
 	} else if apiGroup == "cluster" {
 		for _, route := range routes {
@@ -219,7 +224,7 @@ func (r *Router) AddRoutes(apiGroup string, routes []*Route) {
 			} else {
 				desc = route.Desc
 			}
-			r.AddProfile(route.Path, desc)
+			r.AddProfile(route.Method, route.Path, desc)
 		}
 	}
 }
@@ -233,29 +238,29 @@ func (r *Router) masterHandler(c *gin.Context) {
 		"error":  "router not found"})
 }
 
-// IndexHandler
+// IndexHandler ...
 func (r *Router) IndexHandler(c *gin.Context) {
 	var b bytes.Buffer
 	indexTmpl.Execute(&b, r.ProfileDescriptions)
 	c.Data(http.StatusOK, "", b.Bytes())
 }
 
-// LiveHandler
+// LiveHandler ...
 func LiveHandler(c *gin.Context) {
 	c.String(http.StatusOK, "ok")
 }
 
-// ReadHandler
+// ReadHandler ...
 func ReadHandler(c *gin.Context) {
 	c.String(http.StatusOK, "ok")
 }
 
-// VersionHandler
+// VersionHandler ...
 func VersionHandler(c *gin.Context) {
 	c.JSON(http.StatusOK, version.GetVersion())
 }
 
-// DefaultRoutes
+// DefaultRoutes ...
 func (r *Router) DefaultRoutes() []*Route {
 	var routes []*Route
 

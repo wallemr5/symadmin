@@ -139,8 +139,9 @@ type AppSetStatus struct {
 
 // ClusterAppActual
 type ClusterAppActual struct {
-	Desired     int32              `json:"desired"`
-	Available   int32              `json:"available"`
+	Name        string             `json:"name,omitempty"`
+	Desired     int32              `json:"desired,omitempty"`
+	Available   int32              `json:"available,omitempty"`
 	UnAvailable int32              `json:"unAvailable,omitempty"`
 	PodSets     []*PodSetSatusInfo `json:"podSets,omitempty"`
 }

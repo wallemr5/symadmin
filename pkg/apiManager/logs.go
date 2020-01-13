@@ -17,7 +17,7 @@ import (
 // HandleLogs get the pod container stdout
 func (m *APIManager) HandleLogs(c *gin.Context) {
 	clusterName := c.Param("name")
-	podName := c.Param("appName")
+	podName := c.Param("podName")
 	namespace := c.DefaultQuery("namespace", "default")
 	container := c.DefaultQuery("container", "")
 	tailLines, _ := strconv.ParseInt(c.DefaultQuery("tail", "100"), 10, 64)

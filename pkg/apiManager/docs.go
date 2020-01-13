@@ -4,24 +4,29 @@ package apiManager
 var GetClusterDesc = `
 Get cluster status:<br/>
 name: url param,the unique cluster name and all <br/>
+<br/>
 e.g. <br/>
-<a href="/api/cluster/all">get all cluster status</a><br/>
+<a href="/api/cluster/all">/api/cluster/all</a><br/>
 `
 
 // GetPodDesc ...
 var GetPodDesc = `
 Get all the pods which an app belongs: <br/>
 name: url param,the unique cluster name and all <br/>
-appName: url param,the unique app name
+appName: url param,the unique app name. <br>
+<br/>
 e.g. <br/>
+<a href="/api/cluster/all/appPod/bbcc2">/api/cluster/all/appPod/bbcc2</a><br/>
 `
 
 // GetNodeProjectDesc ...
 var GetNodeProjectDesc = `
 Get all pods on a node: <br/>
 name: url param,the unique cluster name and all <br/>
-ip: url param,the unique node ip
+ip: url param,the unique node ip. <br/>
+<br/>
 e.g. <br/>
+<a href="/api/cluster/all/nodeIp/10.13.135.17">/api/cluster/all/nodeIp/10.13.135.17</a><br/>
 `
 
 // DeletePodByGroupDesc ...
@@ -29,7 +34,11 @@ var DeletePodByGroupDesc = `
 Delete all the pods which app label is blue/green: <br/>
 name: url param,the unique cluster name and all. <br/>
 appName: url param,the unique app name. <br/>
+namespace: query string, the unique namespace name. <br/>
+group: query string, the unique group label. <br/>
+<br/>
 e.g. <br/>
+<a href="/api/cluster/tcc-bj5-dks-monit-01/appPod/tidb-pd-0?namespace=tidb-admin&group=blue">/api/cluster/tcc-bj5-dks-monit-01/appPod/tidb-pd-0?namespace=tidb-admin&group=blue</a><br/>
 `
 
 // DeletePodByNameDesc ...
@@ -39,7 +48,9 @@ name: the unique cluster name and all <br/>
 appName: url param, the unique app name <br/>
 podName: url param, the unique pod name <br/>
 namespace: query string, the unique namespace name. <br/>
+<br/>
 e.g. <br/>
+<a href="/api/cluster/tcc-bj5-dks-monit-01/appPod/tidb-pd-0/pods/podname?namespace=tidb-admin">/api/cluster/tcc-bj5-dks-monit-01/appPod/tidb-pd-0/pods/podname?namespace=tidb-admin</a><br/>
 `
 
 // GetEndpointsDesc ...
@@ -47,7 +58,9 @@ var GetEndpointsDesc = `
 Get all endpoint by name: <br/>
 name: url param, the unique cluster name and all. <br/>
 endpointName: url param, the unique endpoint name. <br/>
+<br/>
 e.g. <br/>
+<a href="/api/cluster/all/endpointName/kubernetes">/api/cluster/all/endpointName/kubernetes</a><br/>
 `
 
 // GetNodeInfoDesc ...
@@ -55,7 +68,9 @@ var GetNodeInfoDesc = `
 Get node info by name: <br/>
 name: url param,the unique cluster name and all. <br/>
 nodeName: url param,the unique node name. <br/>
+<br/>
 e.g. <br/>
+<a href="/api/cluster/all/nodeName/10.13.135.252">/api/cluster/all/nodeName/10.13.135.252</a><br/>
 `
 
 // GetTerminalDesc ...
@@ -71,20 +86,69 @@ isStdin: query string, this parameter determines whether open stdin. Default is 
 isStdout: query string, this parameter determines whether open stdout. Default is true. <br/>
 once: query string, this parameter determines whether to execute a command and exit. <br/>
 cmd: query string, commands executed in the container. <br/>
+<br/>
 e.g. <br/>
+<a href="/">ws://localhost:8080/api/cluster/tcc-bj5-dks-monit-01/terminal?namespace=sym-admin&pod=prometheus-sym-apg-prometheus-0&container=prometheus</a><br/>
 `
 
 // GetServicesDesc ...
-var GetServicesDesc = ``
+var GetServicesDesc = `
+Get all services for a specific app in the cluster. <br/>
+name: url param, the unique cluster name and all. <br/>
+appName: url param, the unique app name. <br/>
+<br/>
+e.g. <br/>
+<a href="/api/cluster/all/service/appName">/api/cluster/all/service/appName</a><br/>
+`
 
 // GetDeploymentsDesc ...
-var GetDeploymentsDesc = ``
+var GetDeploymentsDesc = `
+Get all deployments in assigned namespace. <br/>
+name: url param, the unique cluster name and all. <br/>
+namespace: query string, the unique namespace in a cluster. Default is 'default' namespace. <br/>
+<br/>
+e.g. <br/>
+<a href="/api/cluster/all/deployments">/api/cluster/all/deployments</a><br/>
+`
 
 // GetPodEventDesc ...
-var GetPodEventDesc = ``
+var GetPodEventDesc = `
+Get a limited number of pod events. <br/>
+name: url param, the unique cluster name and all. <br/>
+appName: url param,the unique app name. <br>
+namespace: query string, the unique namespace in a cluster. Default is 'default' namespace. <br/>
+podName: url param, the unique pod name. <br/>
+limit: query string, the limit number, default is 10. <br/>
+<br/>
+e.g. <br/>
+<a href="/api/cluster/all/appPod/all/pods/all/event">/api/cluster/all/appPod/all/pods/all/event</a><br/>
+`
 
 // HandleLogsDesc ...
-var HandleLogsDesc = ``
+var HandleLogsDesc = `
+Get stdout of a specific pod container. <br/>
+name: url param, the unique cluster name and all. <br/>
+appName: url param,the unique app name. <br>
+podName: url param, the unique pod name. <br/>
+namespace: query string, the unique namespace in a cluster. Default is 'default' namespace. <br/>
+container: query string, the unique container in a pod. <br/>
+tailLines: query string, the log tail number, default is 100. <br/>
+<br/>
+e.g. <br/>
+<a href="/api/cluster/tcc-bj5-dks-monit-01/appPod/aaa/pods/sym-apg-grafana-7c8dbcf7f4-vnmlp/logs?namespace=sym-admin&container=grafana&tailLines=100">/api/cluster/tcc-bj5-dks-monit-01/appPod/aaa/pods/sym-apg-grafana-7c8dbcf7f4-vnmlp/logs?namespace=sym-admin&container=grafana&tailLines=100</a><br/>
+`
 
 // HandleFileLogsDesc ...
-var HandleFileLogsDesc = ``
+var HandleFileLogsDesc = `
+Get log files for a specific pod container. <br/>
+name: url param, the unique cluster name and all. <br/>
+appName: url param, the unique app name. <br>
+podName: url param, the unique pod name. <br/>
+namespace: query string, the unique namespace in a cluster. Default is 'default' namespace. <br/>
+container: query string, the unique container in a pod. <br/>
+tailLines: query string, the log tail number, default is 100. <br/>
+fileName: query string, the log file path in a container. <br/>
+<br/>
+e.g. <br/>
+<a href=""></a><br/>
+`
