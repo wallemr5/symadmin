@@ -26,17 +26,30 @@ func (m *APIManager) HandleLogs(c *gin.Context) {
 	follow, _ := strconv.ParseBool(c.DefaultQuery("follow", "true"))
 	previous, _ := strconv.ParseBool(c.DefaultQuery("previous", "false"))
 	timestamps, _ := strconv.ParseBool(c.DefaultQuery("timestamps", "true"))
-	sinceSecond, _ := strconv.ParseInt(c.DefaultQuery("sinceSecond", "0"), 10, 64)
-	sinceTimeStr := c.Query("sinceTime")
-	sinceTime := metav1.Time{}
+	// sinceSecond, _ := strconv.ParseInt(c.DefaultQuery("sinceSecond", "1"), 10, 64)
 
-	if len(sinceTimeStr) > 0 {
-		sinceTime.Time, err = time.Parse("", sinceTimeStr)
+	logOptions := &corev1.PodLogOptions{
+		Follow:     follow,
+		Previous:   previous,
+		Timestamps: timestamps,
+		TailLines:  &tailLines,
+		LimitBytes: &limitBytes,
+	}
+
+	sinceTime := metav1.Time{}
+	sinceTimeStr, ok := c.GetQuery("sinceTime")
+	if ok {
+		parseTime, err := time.Parse("", sinceTimeStr)
+		sinceTime.Time = parseTime
+		logOptions.SinceTime = &sinceTime
 		if err != nil {
 			AbortHTTPError(c, ParseTimeStampError, "", err)
 			return
 		}
 	}
+	// else {
+	// 	logOptions.SinceSeconds = &sinceSecond
+	// }
 
 	cluster, err := m.K8sMgr.Get(clusterName)
 	if err != nil {
@@ -57,21 +70,9 @@ func (m *APIManager) HandleLogs(c *gin.Context) {
 	}
 
 	if len(container) == 0 {
-		container = pod.Spec.Containers[0].Name
+		logOptions.Container = pod.Spec.Containers[0].Name
 	}
 
-	logOptions := &corev1.PodLogOptions{
-		Container:    container,
-		Follow:       follow,
-		Previous:     previous,
-		Timestamps:   timestamps,
-		TailLines:    &tailLines,
-		SinceSeconds: &sinceSecond,
-		SinceTime: &metav1.Time{
-			Time: time.Time{},
-		},
-		LimitBytes: &limitBytes,
-	}
 	req, err := cluster.KubeCli.CoreV1().RESTClient().Get().
 		Namespace(namespace).
 		Name(podName).
