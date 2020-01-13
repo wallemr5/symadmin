@@ -64,13 +64,14 @@ func (m *APIManager) GetPod(c *gin.Context) {
 	clusterName := c.Param("name")
 	clusters := m.K8sMgr.GetAll(clusterName)
 	ctx := context.Background()
-	pods := &model.Pod{}
+	clusterPods := make([]*model.PodOfCluster, 0, 4)
 
 	listOptions := &client.ListOptions{}
 	listOptions.MatchingLabels(map[string]string{
 		"app": appName,
 	})
 	for _, cluster := range clusters {
+		pods := make([]*model.Pod, 0, 4)
 		podList := &corev1.PodList{}
 		err := cluster.Client.List(ctx, listOptions, podList)
 		if err != nil {
@@ -84,22 +85,32 @@ func (m *APIManager) GetPod(c *gin.Context) {
 
 		for i := range podList.Items {
 			pod := &podList.Items[i]
-			//if pod.Name == appName{
-			pods.ContainerStatus = append(pods.ContainerStatus, &model.ContainerStatus{
+			apiPod := &model.Pod{
+				Name:            pod.GetName(),
+				NodeIP:          pod.Status.HostIP,
+				PodIP:           pod.Status.PodIP,
+				ImageVersion:    "",
+				StartTime:       pod.Status.StartTime.String(),
+				ContainerStatus: nil,
+			}
+			apiPod.ContainerStatus = append(apiPod.ContainerStatus, &model.ContainerStatus{
 				Name:         pod.Status.ContainerStatuses[0].Name,
 				Ready:        pod.Status.ContainerStatuses[0].Ready,
 				RestartCount: pod.Status.ContainerStatuses[0].RestartCount,
 				Image:        pod.Status.ContainerStatuses[0].Image,
 				ContainerID:  pod.Status.ContainerStatuses[0].ContainerID,
 			})
-			pods.Name = pod.Name
-			pods.NodeIP = pod.Status.HostIP
-			pods.PodIP = pod.Status.PodIP
-			pods.StartTime = pod.Status.StartTime.String()
+			pods = append(pods, apiPod)
 		}
+
+		ofCluster := &model.PodOfCluster{
+			ClusterName: cluster.Name,
+			Pods:        pods,
+		}
+		clusterPods = append(clusterPods, ofCluster)
 	}
 
-	c.JSON(http.StatusOK, pods)
+	c.IndentedJSON(http.StatusOK, clusterPods)
 }
 
 // GetPodEvent return pod event

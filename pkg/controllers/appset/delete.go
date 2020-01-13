@@ -52,15 +52,24 @@ func deleteByCluster(ctx context.Context, cluster *k8smanager.Cluster, req custo
 		return true, nil
 	}
 	if apierrors.IsNotFound(err) {
-		klog.V(4).Infof("%s: delete cluster[%s] Advdeployment event fail, not found", req.NamespacedName, cluster.GetName())
+		klog.Errorf("%s: delete cluster[%s] Advdeployment event fail, not found", req.NamespacedName, cluster.GetName())
 		return false, nil
 	}
 
-	klog.V(4).Infof("%s: delete cluster[%s] Advdeployment event fail:%+v", req.NamespacedName, cluster.GetName(), err)
-	return false, fmt.Errorf("delete cluster:%s AdvDeployment(%s) fail:%+v", cluster.GetName(), req.NamespacedName.String(), err)
+	return false, fmt.Errorf("delete cluster[%s] AdvDeployment(%s) fail:%+v", cluster.GetName(), req.NamespacedName.String(), err)
 }
 
-func (r *AppSetReconciler) DeleteUnExpectInfo(ctx context.Context, req customctrl.CustomRequest, app *workloadv1beta1.AppSet) (isChange bool, err error) {
+func (r *AppSetReconciler) DeleteUnExpectInfo(ctx context.Context, req customctrl.CustomRequest) (isChange bool, err error) {
+	app := &workloadv1beta1.AppSet{}
+	if err := r.Client.Get(ctx, req.NamespacedName, app); err != nil {
+		klog.Errorf("%s: applyStatus get AppSet info fail: %+v", req.NamespacedName, err)
+		return false, err
+	}
+
+	if app.Status.AggrStatus.Status != workloadv1beta1.AppStatusRuning {
+		return false, nil
+	}
+
 	// get current info
 	currentInfo := map[string]*workloadv1beta1.AdvDeployment{}
 	for _, cluster := range r.DksMgr.K8sMgr.GetAll() {
@@ -99,11 +108,12 @@ func (r *AppSetReconciler) DeleteUnExpectInfo(ctx context.Context, req customctr
 		// not exist need delete cluster
 		return false, nil
 	}
+	klog.V(4).Infof("%s: delete unexpect info, get cluster[%s] client", req.NamespacedName, delCluster)
 	r.recorder.Eventf(app, corev1.EventTypeNormal, "DeleteAdvDeployment", "Delete unexpect cluster[%s] AdvDeployment.", delCluster)
 
 	client, err := r.DksMgr.K8sMgr.Get(delCluster)
 	if err != nil {
-		klog.V(4).Infof("%s: delete unexpect info, get cluster[%s] client fail:%+v", req.NamespacedName, delCluster, err)
+		klog.Errorf("%s: delete unexpect info, get cluster[%s] client fail:%+v", req.NamespacedName, delCluster, err)
 		return false, err
 	}
 	return deleteByCluster(ctx, client, req)
