@@ -178,6 +178,9 @@ func (r *AdvDeploymentReconciler) updateStatus(ctx context.Context, advDeploy *w
 		time := metav1.Now()
 		obj.Status.LastUpdateTime = &time
 		recalStatus.DeepCopyInto(&obj.Status.AggrStatus)
+		// It is very useful for controller that support this field
+		// without this, you might trigger a sync as a result of updating your own status.
+		obj.Status.ObservedGeneration = obj.ObjectMeta.Generation
 		updateErr := r.Client.Status().Update(ctx, obj)
 		if updateErr == nil {
 			klog.V(3).Infof("Updating the status of advDeploy[%s] successfully", advDeploy.Name)
