@@ -21,7 +21,13 @@ import (
 )
 
 // ModifySpec modify spec handler
-func (r *AppSetReconciler) ModifySpec(ctx context.Context, req customctrl.CustomRequest, app *workloadv1beta1.AppSet) (isChanged bool, err error) {
+func (r *AppSetReconciler) ModifySpec(ctx context.Context, req customctrl.CustomRequest) (isChanged bool, err error) {
+	app := &workloadv1beta1.AppSet{}
+	if err := r.Client.Get(ctx, req.NamespacedName, app); err != nil {
+		klog.Errorf("%s: applyStatus get AppSet info fail: %+v", req.NamespacedName, err)
+		return false, err
+	}
+
 	for _, v := range app.Spec.ClusterTopology.Clusters {
 		cluster, err := r.DksMgr.K8sMgr.Get(v.Name)
 		if err != nil {

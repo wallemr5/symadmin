@@ -19,11 +19,20 @@ import (
 )
 
 // ModifyStatus modify status handler
-func (r *AppSetReconciler) ModifyStatus(ctx context.Context, req customctrl.CustomRequest, app *workloadv1beta1.AppSet) (bool, error) {
+func (r *AppSetReconciler) ModifyStatus(ctx context.Context, req customctrl.CustomRequest) (bool, error) {
+	app := &workloadv1beta1.AppSet{}
+	if err := r.Client.Get(ctx, req.NamespacedName, app); err != nil {
+		klog.Errorf("%s: applyStatus get AppSet info fail: %+v", req.NamespacedName, err)
+		return false, err
+	}
+
 	as, err := buildAppSetStatus(ctx, r.DksMgr.K8sMgr, req, app)
 	if err != nil {
 		klog.Errorf("%s: aggregate AppSet.Status failed: %+v", req.NamespacedName, err)
 		return false, err
+	}
+	if as.Status == workloadv1beta1.AppStatusRuning {
+		r.recorder.Event(app, corev1.EventTypeNormal, "Running", "Status is Running.")
 	}
 
 	return applyStatus(ctx, r.Client, req, as)
@@ -48,8 +57,7 @@ func buildAppSetStatus(ctx context.Context, dksManger *k8smanager.ClusterManager
 		as.Available += obj.Status.AggrStatus.Desired
 		as.UnAvailable += obj.Status.AggrStatus.UnAvailable
 		as.Desired += obj.Status.AggrStatus.Desired
-		// if obj.Status.AggrStatus.Status != workloadv1beta1.AppStatusRuning || obj.ObjectMeta.Generation != obj.Status.ObservedGeneration {
-		if obj.Status.AggrStatus.Status != workloadv1beta1.AppStatusRuning {
+		if obj.ObjectMeta.Generation != obj.Status.ObservedGeneration || obj.Status.AggrStatus.Status != workloadv1beta1.AppStatusRuning {
 			klog.V(4).Infof("%s: cluster[%s] status is %s, meta generation:%d, observedGeneration:%d", req.NamespacedName, cluster.GetName(), obj.Status.AggrStatus.Status, obj.ObjectMeta.Generation, obj.Status.ObservedGeneration)
 			finalStatus = workloadv1beta1.AppStatusInstalling
 		}
@@ -134,7 +142,7 @@ func applyStatus(ctx context.Context, client client.Client, req customctrl.Custo
 
 		getErr := client.Get(ctx, req.NamespacedName, app)
 		if getErr != nil {
-			klog.Errorf("%s: applyStatus reget AppSet info fail: %+v", req.NamespacedName, getErr)
+			klog.Errorf("%s: applyStatus get AppSet again info fail: %+v", req.NamespacedName, getErr)
 			return getErr
 		}
 

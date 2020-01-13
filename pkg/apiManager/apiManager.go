@@ -101,7 +101,7 @@ func (m *APIManager) Routes() []*router.Route {
 		},
 		{
 			Method:  "GET",
-			Path:    "/api/cluster/:name/nodeIp/:ip/",
+			Path:    "/api/cluster/:name/nodeIp/:ip",
 			Handler: m.GetNodeProject,
 			Desc:    GetNodeProjectDesc,
 		},
@@ -135,7 +135,7 @@ func (m *APIManager) Routes() []*router.Route {
 			Desc:    GetTerminalDesc},
 		{
 			Method:  "GET",
-			Path:    "/api/cluster/:name/service/:appName/",
+			Path:    "/api/cluster/:name/service/:appName",
 			Handler: m.GetServices,
 			Desc:    GetServicesDesc,
 		},

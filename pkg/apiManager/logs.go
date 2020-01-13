@@ -2,6 +2,7 @@ package apiManager
 
 import (
 	"context"
+	"io/ioutil"
 	"net/http"
 	"strconv"
 	"time"
@@ -20,7 +21,35 @@ func (m *APIManager) HandleLogs(c *gin.Context) {
 	podName := c.Param("podName")
 	namespace := c.DefaultQuery("namespace", "default")
 	container := c.DefaultQuery("container", "")
-	tailLines, _ := strconv.ParseInt(c.DefaultQuery("tail", "100"), 10, 64)
+	tailLines, _ := strconv.ParseInt(c.DefaultQuery("tail", "10"), 10, 64)
+	limitBytes, _ := strconv.ParseInt(c.DefaultQuery("limitBytes", "2048"), 10, 64)
+	follow, _ := strconv.ParseBool(c.DefaultQuery("follow", "true"))
+	previous, _ := strconv.ParseBool(c.DefaultQuery("previous", "false"))
+	timestamps, _ := strconv.ParseBool(c.DefaultQuery("timestamps", "true"))
+	// sinceSecond, _ := strconv.ParseInt(c.DefaultQuery("sinceSecond", "1"), 10, 64)
+
+	logOptions := &corev1.PodLogOptions{
+		Follow:     follow,
+		Previous:   previous,
+		Timestamps: timestamps,
+		TailLines:  &tailLines,
+		LimitBytes: &limitBytes,
+	}
+
+	sinceTime := metav1.Time{}
+	sinceTimeStr, ok := c.GetQuery("sinceTime")
+	if ok {
+		parseTime, err := time.Parse("", sinceTimeStr)
+		sinceTime.Time = parseTime
+		logOptions.SinceTime = &sinceTime
+		if err != nil {
+			AbortHTTPError(c, ParseTimeStampError, "", err)
+			return
+		}
+	}
+	// else {
+	// 	logOptions.SinceSeconds = &sinceSecond
+	// }
 
 	cluster, err := m.K8sMgr.Get(clusterName)
 	if err != nil {
@@ -41,22 +70,10 @@ func (m *APIManager) HandleLogs(c *gin.Context) {
 	}
 
 	if len(container) == 0 {
-		container = pod.Spec.Containers[0].Name
+		logOptions.Container = pod.Spec.Containers[0].Name
 	}
 
-	logOptions := &corev1.PodLogOptions{
-		Container:    container,
-		Follow:       false,
-		Previous:     false,
-		SinceSeconds: nil,
-		SinceTime: &metav1.Time{
-			Time: time.Time{},
-		},
-		Timestamps: false,
-		TailLines:  &tailLines,
-		LimitBytes: nil,
-	}
-	logs, err := cluster.KubeCli.CoreV1().RESTClient().Get().
+	req, err := cluster.KubeCli.CoreV1().RESTClient().Get().
 		Namespace(namespace).
 		Name(podName).
 		Resource("pods").
@@ -64,12 +81,20 @@ func (m *APIManager) HandleLogs(c *gin.Context) {
 		VersionedParams(logOptions, scheme.ParameterCodec).
 		Stream()
 	if err != nil {
-		klog.Errorf("get pod error: %v", err)
+		klog.Errorf("get pod log error: %v", err)
+		AbortHTTPError(c, GetPodLogsError, "", err)
+		return
+	}
+	defer req.Close()
+
+	result, err := ioutil.ReadAll(req)
+	if err != nil {
+		klog.Errorf("get pod log error: %v", err)
 		AbortHTTPError(c, GetPodLogsError, "", err)
 		return
 	}
 
-	c.JSON(http.StatusOK, logs)
+	c.JSON(http.StatusOK, gin.H{"logs": string(result)})
 }
 
 // HandleFileLogs get log files in a pod
