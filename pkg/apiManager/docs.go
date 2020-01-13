@@ -16,7 +16,7 @@ name: url param,the unique cluster name and all <br/>
 appName: url param,the unique app name. <br>
 <br/>
 e.g. <br/>
-<a href="/api/cluster/all/appPod/exampleApp">/api/cluster/all/appPod/exampleApp</a><br/>
+<a href="/api/cluster/all/appPod/bbcc2">/api/cluster/all/appPod/bbcc2</a><br/>
 `
 
 // GetNodeProjectDesc ...
@@ -26,7 +26,7 @@ name: url param,the unique cluster name and all <br/>
 ip: url param,the unique node ip. <br/>
 <br/>
 e.g. <br/>
-<a href="/api/cluster/tcc-bj4-dks-test-01/nodeIp/10.10.110.24">/api/cluster/tcc-bj4-dks-test-01/nodeIp/10.10.110.24</a><br/>
+<a href="/api/cluster/all/nodeIp/10.13.135.17">/api/cluster/all/nodeIp/10.13.135.17</a><br/>
 `
 
 // DeletePodByGroupDesc ...
