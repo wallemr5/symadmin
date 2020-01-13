@@ -12,7 +12,7 @@ e.g. <br/>
 var GetPodDesc = `
 Get all the pods which an app belongs: <br/>
 name: url param,the unique cluster name and all <br/>
-appName: url param,the unique app name
+appName: url param,the unique app name. <br>
 e.g. <br/>
 `
 
@@ -20,7 +20,7 @@ e.g. <br/>
 var GetNodeProjectDesc = `
 Get all pods on a node: <br/>
 name: url param,the unique cluster name and all <br/>
-ip: url param,the unique node ip
+ip: url param,the unique node ip. <br/>
 e.g. <br/>
 `
 
@@ -83,13 +83,45 @@ e.g. <br/>
 `
 
 // GetDeploymentsDesc ...
-var GetDeploymentsDesc = ``
+var GetDeploymentsDesc = `
+Get all deployments in assigned namespace. <br/>
+name: url param, the unique cluster name and all. <br/>
+namespace: query string, the unique namespace in a cluster. Default is 'default' namespace. <br/>
+e.g. <br/>
+`
 
 // GetPodEventDesc ...
-var GetPodEventDesc = ``
+var GetPodEventDesc = `
+Get a limited number of pod events. <br/>
+name: url param, the unique cluster name and all. <br/>
+appName: url param,the unique app name. <br>
+namespace: query string, the unique namespace in a cluster. Default is 'default' namespace. <br/>
+podName: url param, the unique pod name. <br/>
+limit: query string, the limit number, default is 10. <br/>
+e.g. <br/>
+`
 
 // HandleLogsDesc ...
-var HandleLogsDesc = ``
+var HandleLogsDesc = `
+Get stdout of a specific pod container. <br/>
+name: url param, the unique cluster name and all. <br/>
+appName: url param,the unique app name. <br>
+podName: url param, the unique pod name. <br/>
+namespace: query string, the unique namespace in a cluster. Default is 'default' namespace. <br/>
+container: query string, the unique container in a pod. <br/>
+tailLines: query string, the log tail number, default is 100. <br/>
+e.g. <br/>
+`
 
 // HandleFileLogsDesc ...
-var HandleFileLogsDesc = ``
+var HandleFileLogsDesc = `
+Get log files for a specific pod container. <br/>
+name: url param, the unique cluster name and all. <br/>
+appName: url param, the unique app name. <br>
+podName: url param, the unique pod name. <br/>
+namespace: query string, the unique namespace in a cluster. Default is 'default' namespace. <br/>
+container: query string, the unique container in a pod. <br/>
+tailLines: query string, the log tail number, default is 100. <br/>
+fileName: query string, the log file path in a container. <br/>
+e.g. <br/>
+`
