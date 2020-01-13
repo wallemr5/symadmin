@@ -55,7 +55,7 @@ func (m *APIManager) GetNodeProject(c *gin.Context) {
 		pods.NodeIP = nodeIP
 	}
 
-	c.JSON(http.StatusOK, pods)
+	c.IndentedJSON(http.StatusOK, pods)
 }
 
 // GetPod ...
@@ -161,7 +161,7 @@ func (m *APIManager) GetPodEvent(c *gin.Context) {
 		}
 	}
 
-	c.JSON(http.StatusOK, result)
+	c.IndentedJSON(http.StatusOK, result)
 }
 
 // DeletePodByName ...

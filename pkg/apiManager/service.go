@@ -50,5 +50,5 @@ func (m *APIManager) GetServices(c *gin.Context) {
 		}
 	}
 
-	c.JSON(http.StatusOK, svcResult)
+	c.IndentedJSON(http.StatusOK, svcResult)
 }

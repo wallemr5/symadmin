@@ -51,5 +51,5 @@ func (m *APIManager) GetDeployments(c *gin.Context) {
 		}
 	}
 
-	c.JSON(http.StatusOK, result)
+	c.IndentedJSON(http.StatusOK, result)
 }

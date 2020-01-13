@@ -94,7 +94,7 @@ func (m *APIManager) HandleLogs(c *gin.Context) {
 		return
 	}
 
-	c.JSON(http.StatusOK, gin.H{"logs": string(result)})
+	c.IndentedJSON(http.StatusOK, gin.H{"logs": string(result)})
 }
 
 // HandleFileLogs get log files in a pod

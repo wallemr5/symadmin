@@ -20,5 +20,5 @@ func (m *APIManager) GetClusters(c *gin.Context) {
 		})
 	}
 
-	c.JSON(http.StatusOK, status)
+	c.IndentedJSON(http.StatusOK, status)
 }

@@ -63,5 +63,5 @@ func (m *APIManager) GetNodeInfo(c *gin.Context) {
 		}
 	}
 
-	c.JSON(http.StatusOK, nodes)
+	c.IndentedJSON(http.StatusOK, nodes)
 }
