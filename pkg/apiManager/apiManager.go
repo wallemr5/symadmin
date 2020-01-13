@@ -66,7 +66,7 @@ func NewAPIManager(kubecli kubernetes.Interface, opt *Option, logger logr.Logger
 	manager.InitStart(ctx.Done())
 	apiMgr.K8sMgr = manager
 
-	routerOptions := &router.RouterOptions{
+	routerOptions := &router.Options{
 		GinLogEnabled:    opt.GinLogEnabled,
 		MetricsEnabled:   true,
 		PprofEnabled:     opt.PprofEnabled,
