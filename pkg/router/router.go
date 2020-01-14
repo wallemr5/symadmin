@@ -39,6 +39,7 @@ type Options struct {
 	Addr             string
 	MetricsSubsystem string
 	MetricsPath      string
+	ShutdownTimeout  time.Duration
 
 	// 	Username      string
 	// 	Password      string
@@ -50,12 +51,9 @@ type Options struct {
 type Router struct {
 	*gin.Engine
 	Routes              map[string][]*Route
-	Addr                string
 	httpServer          *http.Server
-	CertFilePath        string
-	KeyFilePath         string
 	ProfileDescriptions []*Profile
-	ShutdownTimeout     time.Duration
+	Opt                 *Options
 }
 
 // Profile ...
@@ -94,15 +92,13 @@ func NewRouter(opt *Options) *Router {
 
 	if opt.MetricsEnabled {
 		klog.Infof("start load router path:%s ", opt.MetricsPath)
-		// p := metrics.NewPrometheus(opt.MetricsSubsystem, []string{})
-		// p.Use(r.Engine, opt.MetricsPath)
-
-		p, err := metrics.NewOcPrometheus(r.Engine)
+		p, err := metrics.NewOcPrometheus()
 		if err != nil {
 			klog.Fatalf("NewOcPrometheus err: %#v", err)
 		}
 
-		p.Router.GET("/metrics", gin.HandlerFunc(func(c *gin.Context) {
+		metrics.RegisterGinView()
+		r.Engine.GET("/metrics", gin.HandlerFunc(func(c *gin.Context) {
 			p.Exporter.ServeHTTP(c.Writer, c.Request)
 		}))
 
@@ -116,41 +112,44 @@ func NewRouter(opt *Options) *Router {
 			<a href="/debug/pprof/goroutine?debug=2">full goroutine stack dump</a>`)
 	}
 
-	r.CertFilePath = opt.CertFilePath
-	r.KeyFilePath = opt.KeyFilePath
-	r.Addr = opt.Addr
+	r.Opt = opt
 	r.NoRoute(r.masterHandler)
 	return r
 }
 
 // Start ...
 func (r *Router) Start(stopCh <-chan struct{}) error {
-	if r.ShutdownTimeout == 0 {
-		r.ShutdownTimeout = 5 * time.Second
+	if r.Opt.ShutdownTimeout == 0 {
+		r.Opt.ShutdownTimeout = 5 * time.Second
 	}
 
-	warpHandler := &ochttp.Handler{
-		Handler: r.Engine,
-		GetStartOptions: func(r *http.Request) trace.StartOptions {
-			startOptions := trace.StartOptions{}
+	var warpHandler http.Handler
+	if r.Opt.MetricsEnabled {
+		warpHandler = &ochttp.Handler{
+			Handler: r.Engine,
+			GetStartOptions: func(r *http.Request) trace.StartOptions {
+				startOptions := trace.StartOptions{}
 
-			if r.URL.Path == "/metrics" {
-				startOptions.Sampler = trace.NeverSample()
-			}
+				if r.URL.Path == "/metrics" {
+					startOptions.Sampler = trace.NeverSample()
+				}
 
-			return startOptions
-		},
+				return startOptions
+			},
+		}
+	} else {
+		warpHandler = r.Engine
 	}
 
 	r.httpServer = &http.Server{
-		Addr:         r.Addr,
+		Addr:         r.Opt.Addr,
 		Handler:      warpHandler,
 		ReadTimeout:  15 * time.Second,
 		WriteTimeout: 15 * time.Second,
 	}
 
-	if r.CertFilePath != "" && r.KeyFilePath != "" {
-		cert, err := tls.LoadX509KeyPair(r.CertFilePath, r.KeyFilePath)
+	if r.Opt.CertFilePath != "" && r.Opt.KeyFilePath != "" {
+		cert, err := tls.LoadX509KeyPair(r.Opt.CertFilePath, r.Opt.KeyFilePath)
 		if err != nil {
 			klog.Errorf("LoadX509KeyPair err:%+v", err)
 			return err
@@ -160,14 +159,14 @@ func (r *Router) Start(stopCh <-chan struct{}) error {
 
 	errCh := make(chan error)
 	go func() {
-		if r.CertFilePath != "" && r.KeyFilePath != "" {
-			klog.Infof("Listening on %s, https://localhost%s\n", r.Addr, r.Addr)
-			if err := r.httpServer.ListenAndServeTLS(r.CertFilePath, r.KeyFilePath); err != nil && err != http.ErrServerClosed {
+		if r.Opt.CertFilePath != "" && r.Opt.KeyFilePath != "" {
+			klog.Infof("Listening on %s, https://localhost%s\n", r.Opt.Addr, r.Opt.Addr)
+			if err := r.httpServer.ListenAndServeTLS(r.Opt.CertFilePath, r.Opt.KeyFilePath); err != nil && err != http.ErrServerClosed {
 				klog.Error("Https server error: ", err)
 				errCh <- err
 			}
 		} else {
-			klog.Infof("Listening on %s, http://localhost%s\n", r.Addr, r.Addr)
+			klog.Infof("Listening on %s, http://localhost%s\n", r.Opt.Addr, r.Opt.Addr)
 			if err := r.httpServer.ListenAndServe(); err != nil && err != http.ErrServerClosed {
 				klog.Error("Http server error: ", err)
 				errCh <- err
@@ -178,9 +177,9 @@ func (r *Router) Start(stopCh <-chan struct{}) error {
 	var err error
 	select {
 	case <-stopCh:
-		klog.Infof("Shutting down the http/https:%s server...", r.Addr)
-		if r.ShutdownTimeout > 0 {
-			ctx, cancel := context.WithTimeout(context.Background(), r.ShutdownTimeout)
+		klog.Infof("Shutting down the http/https:%s server...", r.Opt.Addr)
+		if r.Opt.ShutdownTimeout > 0 {
+			ctx, cancel := context.WithTimeout(context.Background(), r.Opt.ShutdownTimeout)
 			defer cancel()
 			err = r.httpServer.Shutdown(ctx)
 		} else {
@@ -300,7 +299,7 @@ func (r *Router) DefaultRoutes() []*Route {
 
 var indexTmpl = template.Must(template.New("index").Parse(`<!DOCTYPE html><html>
 <head>
-<title>/debug/pprof/</title>
+<title>sym-index</title>
 <style>
 .profile-name{
 	display:inline-block;
