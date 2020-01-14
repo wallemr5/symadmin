@@ -216,14 +216,14 @@ func (r *AppSetReconciler) CustomReconcile(ctx context.Context, req customctrl.C
 
 	// update status
 	klog.V(4).Infof("%s: aggregate status", req.NamespacedName)
-	_, err = r.ModifyStatus(ctx, req)
+	status, _, err := r.ModifyStatus(ctx, req)
 	if err != nil {
 		logger.Error(err, "update AppSet.Status fail")
 		return reconcile.Result{}, err
 	}
 
 	// delete unexpect info
-	_, err = r.DeleteUnExpectInfo(ctx, req)
+	_, err = r.DeleteUnExpectInfo(ctx, req, status)
 	if err != nil {
 		logger.Error(err, "delete unexpect info")
 		return reconcile.Result{}, err

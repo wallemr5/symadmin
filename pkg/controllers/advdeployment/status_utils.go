@@ -111,7 +111,7 @@ func (r *AdvDeploymentReconciler) RecalculateStatus(ctx context.Context, advDepl
 
 	status := &workloadv1beta1.AdvDeploymentAggrStatus{}
 	for _, deploy := range deploys {
-		podSetStatus := &workloadv1beta1.PodSetSatusInfo{}
+		podSetStatus := &workloadv1beta1.PodSetStatusInfo{}
 		podSetStatus.Name = deploy.Name
 		podSetStatus.Version = utils.FillImageVersion(advDeploy.Name, &deploy.Spec.Template.Spec)
 		podSetStatus.Available = deploy.Status.AvailableReplicas
@@ -126,7 +126,7 @@ func (r *AdvDeploymentReconciler) RecalculateStatus(ctx context.Context, advDepl
 	}
 
 	for _, set := range statefulSets {
-		podSetStatus := &workloadv1beta1.PodSetSatusInfo{}
+		podSetStatus := &workloadv1beta1.PodSetStatusInfo{}
 		podSetStatus.Name = set.Name
 		podSetStatus.Version = utils.FillImageVersion(advDeploy.Name, &set.Spec.Template.Spec)
 		podSetStatus.Available = set.Status.ReadyReplicas

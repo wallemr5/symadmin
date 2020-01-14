@@ -139,11 +139,11 @@ type AppSetStatus struct {
 
 // ClusterAppActual
 type ClusterAppActual struct {
-	Name        string             `json:"name,omitempty"`
-	Desired     int32              `json:"desired,omitempty"`
-	Available   int32              `json:"available,omitempty"`
-	UnAvailable int32              `json:"unAvailable,omitempty"`
-	PodSets     []*PodSetSatusInfo `json:"podSets,omitempty"`
+	Name        string              `json:"name,omitempty"`
+	Desired     int32               `json:"desired,omitempty"`
+	Available   int32               `json:"available,omitempty"`
+	UnAvailable int32               `json:"unAvailable,omitempty"`
+	PodSets     []*PodSetStatusInfo `json:"podSets,omitempty"`
 }
 
 // AppActual represent the app status

@@ -103,11 +103,12 @@ func applyAdvDeployment(ctx context.Context, cluster *k8smanager.Cluster, req cu
 
 	if compare(obj, advDeploy) {
 		err := retry.RetryOnConflict(retry.DefaultRetry, func() error {
+
 			time := metav1.Now()
 			advDeploy.Spec.DeepCopyInto(&obj.Spec)
 			obj.Labels = advDeploy.ObjectMeta.Labels
 			obj.Status.LastUpdateTime = &time
-			obj.Status.AggrStatus.Status = workloadv1beta1.AppStatusInstalling
+
 			updateErr := cluster.Client.Update(ctx, obj)
 			if updateErr == nil {
 				klog.V(4).Infof("%s: cluster[%s] AdvDeployment update successfully", req.NamespacedName, cluster.GetName())

@@ -4650,7 +4650,7 @@ spec:
                         type: string
                       podSets:
                         items:
-                          description: PodSetSatusInfo
+                          description: PodSetStatusInfo
                           properties:
                             available:
                               format: int32
