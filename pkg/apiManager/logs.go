@@ -2,6 +2,7 @@ package apiManager
 
 import (
 	"context"
+	"errors"
 	"io/ioutil"
 	"net/http"
 	"strconv"
@@ -99,4 +100,36 @@ func (m *APIManager) HandleLogs(c *gin.Context) {
 
 // HandleFileLogs get log files in a pod
 func (m *APIManager) HandleFileLogs(c *gin.Context) {
+	clusterName := c.Param("name")
+	namespace := c.DefaultQuery("namespace", "default")
+	podName := c.Param("podName")
+	tailLines := c.DefaultQuery("tail", "10")
+
+	containerName, ok := c.GetQuery("container")
+	if !ok {
+		AbortHTTPError(c, ParamInvalidError, "", errors.New("can not get container"))
+		return
+	}
+	filepath, ok := c.GetQuery("filepath")
+	if !ok {
+		AbortHTTPError(c, ParamInvalidError, "", errors.New("can not get filename"))
+		return
+	}
+
+	cluster, err := m.K8sMgr.Get(clusterName)
+	if err != nil {
+		klog.Errorf("get cluster error: %+v", err)
+		AbortHTTPError(c, GetClusterError, "", err)
+		return
+	}
+
+	cmd := "tail -n " + tailLines + " " + filepath
+	result, err := RunCmdOnceInContainer(cluster, namespace, podName, containerName, cmd, false)
+	if err != nil {
+		klog.Errorf("run cmd once in container error: %v", err)
+		AbortHTTPError(c, ExecCmdError, "", err)
+		return
+	}
+
+	c.IndentedJSON(http.StatusOK, result)
 }

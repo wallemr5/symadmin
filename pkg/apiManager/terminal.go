@@ -218,8 +218,9 @@ func RunCmdOnceInContainer(cluster *k8smanager.Cluster, namespace, pod, containe
 	}
 
 	parameterCodec := runtime.NewParameterCodec(scheme)
+	klog.Infof("exec cmd: %s", cmd)
 	req.VersionedParams(&core_v1.PodExecOptions{
-		Command:   []string{cmd},
+		Command:   strings.Fields(cmd),
 		Container: container,
 		Stdin:     false,
 		Stdout:    true,
@@ -325,15 +326,16 @@ func (ws *WsConnection) ReadLoop() {
 func (ws *WsConnection) WriteLoop() {
 Loop:
 	for {
+	Select:
 		select {
 		case msg := <-ws.outChan:
 			if err := ws.conn.WriteMessage(msg.MessageType, msg.Data); err != nil {
 				klog.Errorf("error in write websocket message: %v", err)
-				continue
+				break Loop
 			}
 		case <-ws.closeChan:
 			ws.Close()
-			break Loop
+			break Select
 		}
 	}
 

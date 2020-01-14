@@ -162,8 +162,8 @@ podName: url param, the unique pod name. <br/>
 namespace: query string, the unique namespace in a cluster. Default is 'default' namespace. <br/>
 container: query string, the unique container in a pod. <br/>
 tailLines: query string, the log tail number, default is 100. <br/>
-fileName: query string, the log file path in a container. <br/>
+filepath: query string, the log file path in a container. <br/>
 <br/>
 e.g. <br/>
-<a href=""></a><br/>
+<a href="/api/cluster/tcc-bj5-dks-monit-01/appPod/aaa/pods/prometheus-sym-apg-prometheus-0/logs/file?namespace=sym-admin&container=prometheus&filepath=thanos.shipper.json">/api/cluster/tcc-bj5-dks-monit-01/appPod/aaa/pods/prometheus-sym-apg-prometheus-0/logs/file?namespace=sym-admin&container=prometheus&filepath=thanos.shipper.json</a><br/>
 `
