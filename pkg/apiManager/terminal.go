@@ -115,53 +115,20 @@ func (m *APIManager) GetFiles(c *gin.Context) {
 		AbortHTTPError(c, GetClusterError, "", err)
 		return
 	}
-	req := cluster.KubeCli.CoreV1().RESTClient().Post().
-		Resource("pods").
-		Name(podName).
-		Namespace(namespace).
-		SubResource("exec")
-
-	scheme := runtime.NewScheme()
-	if err = core_v1.AddToScheme(scheme); err != nil {
-		klog.Errorf("error adding to scheme: %v", err)
-		AbortHTTPError(c, AddToSchemeError, "", err)
-		return
-	}
 
 	cmd := "ls"
-	if len(path) != 0 {
+	if len(path) > 0 {
 		cmd = cmd + " " + path
 	}
-	parameterCodec := runtime.NewParameterCodec(scheme)
-	req.VersionedParams(&core_v1.PodExecOptions{
-		Command:   []string{cmd},
-		Container: containerName,
-		Stdin:     false,
-		Stdout:    true,
-		Stderr:    true,
-		TTY:       false,
-	}, parameterCodec)
 
-	exec, err := remotecommand.NewSPDYExecutor(cluster.RestConfig, "POST", req.URL())
+	result, err := RunCmdOnceInContainer(cluster, namespace, podName, containerName, cmd, false)
 	if err != nil {
-		klog.Errorf("error while creating Executor: %+v", err)
-		AbortHTTPError(c, CreateSPDYExecutorError, "", err)
-		return
-	}
-
-	var stdout, stderr bytes.Buffer
-	err = exec.Stream(remotecommand.StreamOptions{
-		Stdin:  nil,
-		Stdout: &stdout,
-		Stderr: &stderr,
-		Tty:    false,
-	})
-
-	if err != nil {
+		klog.Errorf("run cmd once in container error: %v", err)
 		AbortHTTPError(c, ExecCmdError, "", err)
 		return
 	}
-	files := strings.Split(stdout.String(), "\n")
+
+	files := strings.Split(result, "\n")
 	c.IndentedJSON(http.StatusOK, files)
 }
 
@@ -234,6 +201,54 @@ func startProcess(cluster *k8smanager.Cluster, namespace, podName, container str
 	}
 
 	return err
+}
+
+// RunCmdOnceInContainer ...
+func RunCmdOnceInContainer(cluster *k8smanager.Cluster, namespace, pod, container, cmd string, tty bool) (string, error) {
+	req := cluster.KubeCli.CoreV1().RESTClient().Post().
+		Resource("pods").
+		Name(pod).
+		Namespace(namespace).
+		SubResource("exec")
+
+	scheme := runtime.NewScheme()
+	if err := core_v1.AddToScheme(scheme); err != nil {
+		klog.Errorf("error adding to scheme: %v", err)
+		return "", err
+	}
+
+	parameterCodec := runtime.NewParameterCodec(scheme)
+	req.VersionedParams(&core_v1.PodExecOptions{
+		Command:   []string{cmd},
+		Container: container,
+		Stdin:     false,
+		Stdout:    true,
+		Stderr:    true,
+		TTY:       tty,
+	}, parameterCodec)
+
+	exec, err := remotecommand.NewSPDYExecutor(cluster.RestConfig, "POST", req.URL())
+	if err != nil {
+		klog.Errorf("error while creating Executor: %+v", err)
+		return "", err
+	}
+
+	var stdout, stderr bytes.Buffer
+	err = exec.Stream(remotecommand.StreamOptions{
+		Stdin:  nil,
+		Stdout: &stdout,
+		Stderr: &stderr,
+		Tty:    tty,
+	})
+	if err != nil {
+		klog.Errorf("get exec streaming error: %v", err)
+		return "", err
+	}
+
+	if stderr.Len() > 0 {
+		return stderr.String(), nil
+	}
+	return stdout.String(), nil
 }
 
 // InitWebsocket ...
