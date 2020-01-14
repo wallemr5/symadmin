@@ -148,7 +148,7 @@ type AdvDeploymentAggrStatus struct {
 	Desired     int32              `json:"desired"`
 	Available   int32              `json:"available"`
 	UnAvailable int32              `json:"unAvailable,omitempty"`
-	PodSets     []*PodSetSatusInfo `json:"podSets,omitempty"`
+	PodSets     []*PodSetStatusInfo `json:"podSets,omitempty"`
 }
 
 // AdvDeploymentStatus defines the observed state of AdvDeployment

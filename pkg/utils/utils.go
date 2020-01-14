@@ -158,7 +158,7 @@ func FillImageVersion(name string, podSpec *corev1.PodSpec) string {
 }
 
 // FillDuplicatedVersion
-func FillDuplicatedVersion(infos []*workloadv1beta1.PodSetSatusInfo) string {
+func FillDuplicatedVersion(infos []*workloadv1beta1.PodSetStatusInfo) string {
 	found := make(map[string]bool)
 	var foundSet []string
 	for i := range infos {

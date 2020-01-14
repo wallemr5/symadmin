@@ -127,8 +127,8 @@ type PodSpec struct {
 	Chart    *ChartSpec              `json:"chart,omitempty"`
 }
 
-// PodSetSatusInfo
-type PodSetSatusInfo struct {
+// PodSetStatusInfo
+type PodSetStatusInfo struct {
 	Name          string `json:"name"`
 	Desired       int32  `json:"desired"`
 	Available     int32  `json:"available"`

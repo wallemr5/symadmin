@@ -59,15 +59,15 @@ func deleteByCluster(ctx context.Context, cluster *k8smanager.Cluster, req custo
 	return false, fmt.Errorf("delete cluster[%s] AdvDeployment(%s) fail:%+v", cluster.GetName(), req.NamespacedName.String(), err)
 }
 
-func (r *AppSetReconciler) DeleteUnExpectInfo(ctx context.Context, req customctrl.CustomRequest) (isChange bool, err error) {
+func (r *AppSetReconciler) DeleteUnExpectInfo(ctx context.Context, req customctrl.CustomRequest, status workloadv1beta1.AppStatus) (isChange bool, err error) {
+	if status != workloadv1beta1.AppStatusRuning {
+		return false, nil
+	}
+
 	app := &workloadv1beta1.AppSet{}
 	if err := r.Client.Get(ctx, req.NamespacedName, app); err != nil {
 		klog.Errorf("%s: applyStatus get AppSet info fail: %+v", req.NamespacedName, err)
 		return false, err
-	}
-
-	if app.Status.AggrStatus.Status != workloadv1beta1.AppStatusRuning {
-		return false, nil
 	}
 
 	// get current info
@@ -108,7 +108,7 @@ func (r *AppSetReconciler) DeleteUnExpectInfo(ctx context.Context, req customctr
 		// not exist need delete cluster
 		return false, nil
 	}
-	klog.V(4).Infof("%s: delete unexpect info, get cluster[%s] client", req.NamespacedName, delCluster)
+	klog.V(4).Infof("%s: delete unexpect info cluster:%s", req.NamespacedName, delCluster)
 	r.recorder.Eventf(app, corev1.EventTypeNormal, "DeleteAdvDeployment", "Delete unexpect cluster[%s] AdvDeployment.", delCluster)
 
 	client, err := r.DksMgr.K8sMgr.Get(delCluster)
