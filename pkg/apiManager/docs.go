@@ -16,7 +16,7 @@ name: url param,the unique cluster name and all <br/>
 appName: url param,the unique app name. <br>
 <br/>
 e.g. <br/>
-<a href="/api/cluster/all/appPod/bbcc2">/api/cluster/all/appPod/bbcc2</a><br/>
+<a href="/api/cluster/all/appPod/helm">/api/cluster/all/appPod/helm</a><br/>
 `
 
 // GetNodeProjectDesc ...
@@ -38,7 +38,7 @@ namespace: query string, the unique namespace name. <br/>
 group: query string, the unique group label. <br/>
 <br/>
 e.g. <br/>
-<a href="/api/cluster/tcc-bj5-dks-monit-01/appPod/tidb-pd-0?namespace=tidb-admin&group=blue">/api/cluster/tcc-bj5-dks-monit-01/appPod/tidb-pd-0?namespace=tidb-admin&group=blue</a><br/>
+<a>/api/cluster/tcc-bj5-dks-monit-01/appPod/tidb-pd-0?namespace=tidb-admin&group=blue</a><br/>
 `
 
 // DeletePodByNameDesc ...
@@ -50,7 +50,7 @@ podName: url param, the unique pod name <br/>
 namespace: query string, the unique namespace name. <br/>
 <br/>
 e.g. <br/>
-<a href="/api/cluster/tcc-bj5-dks-monit-01/appPod/tidb-pd-0/pods/podname?namespace=tidb-admin">/api/cluster/tcc-bj5-dks-monit-01/appPod/tidb-pd-0/pods/podname?namespace=tidb-admin</a><br/>
+<a>/api/cluster/tcc-bj5-dks-monit-01/appPod/tidb-pd-0/pods/podname?namespace=tidb-admin</a><br/>
 `
 
 // GetEndpointsDesc ...
@@ -88,7 +88,7 @@ once: query string, this parameter determines whether to execute a command and e
 cmd: query string, commands executed in the container. <br/>
 <br/>
 e.g. <br/>
-<a href="/">ws://localhost:8080/api/cluster/tcc-bj5-dks-monit-01/terminal?namespace=sym-admin&pod=prometheus-sym-apg-prometheus-0&container=prometheus</a><br/>
+<a>ws://localhost:8080/api/cluster/tcc-bj5-dks-monit-01/terminal?namespace=sym-admin&pod=prometheus-sym-apg-prometheus-0&container=prometheus</a><br/>
 `
 
 // GetServicesDesc ...
