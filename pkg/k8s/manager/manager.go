@@ -7,72 +7,114 @@ import (
 
 	"fmt"
 
-	"github.com/go-logr/logr"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	kblabels "k8s.io/apimachinery/pkg/labels"
+	"context"
+
+	corev1 "k8s.io/api/core/v1"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
+	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/util/wait"
-	"k8s.io/client-go/kubernetes"
 	"k8s.io/klog"
+	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/manager"
+	logf "sigs.k8s.io/controller-runtime/pkg/runtime/log"
+)
+
+var (
+	logger = logf.KBLog.WithName("controller")
+)
+
+const (
+	KeyKubeconfig = "kubeconfig.yaml"
+	KeyStauts     = "status"
 )
 
 type ClusterManagerOption struct {
 	Namespace     string
-	LabelSelector kblabels.Set
+	LabelSelector map[string]string
 }
 
 type ClusterManager struct {
-	clusters      []*Cluster
-	mu            *sync.RWMutex
-	MasterKubecli kubernetes.Interface
-	Opt           *ClusterManagerOption
+	clusters  []*Cluster
+	mu        *sync.RWMutex
+	MasterMgr manager.Manager
+	Opt       *ClusterManagerOption
+	PreInit   func()
 }
 
 func DefaultClusterManagerOption() *ClusterManagerOption {
 	return &ClusterManagerOption{
 		Namespace: "default",
-		LabelSelector: kblabels.Set{
+		LabelSelector: map[string]string{
 			"ClusterOwer": "sym-admin",
 		},
 	}
 }
 
-func NewManager(kubecli kubernetes.Interface, log logr.Logger, opt *ClusterManagerOption) (*ClusterManager, error) {
-	lsel := opt.LabelSelector.AsSelector()
-	configMaps, err := kubecli.CoreV1().ConfigMaps(opt.Namespace).List(metav1.ListOptions{LabelSelector: lsel.String()})
-	if err != nil {
-		klog.Errorf("unable to get cluster configmap err: %v", err)
-	}
+func convertToKubeconfig(cm *corev1.ConfigMap) (string, bool) {
+	var kubeconfig string
+	var ok bool
 
-	klog.Infof("find %d cluster form namespace: %s ls: %v ", len(configMaps.Items), opt.Namespace, opt.LabelSelector)
-	mgr := &ClusterManager{
-		MasterKubecli: kubecli,
-		clusters:      make([]*Cluster, 0, 4),
-		mu:            &sync.RWMutex{},
-		Opt:           opt,
-	}
-
-	for i := range configMaps.Items {
-		cm := &configMaps.Items[i]
-		for k, v := range cm.Data {
-			if k != "kubeconfig.yaml" {
-				klog.Infof("data key:%s", k)
-				break
-			}
-
-			cluster, err := NewCluster(cm.Name, []byte(v), log)
-			if err != nil {
-				klog.Errorf("new cluster err: %v", err)
-				break
-			}
-
-			klog.Infof("add cluster name: %s ", cm.Name)
-			mgr.Add(cluster)
+	if status, ok := cm.Data[KeyStauts]; ok {
+		if status == "maintaining" {
+			klog.Infof("cluster name: %s status: %s", cm.Name, status)
+			return "", false
 		}
 	}
 
-	return mgr, nil
+	if kubeconfig, ok = cm.Data[KeyKubeconfig]; !ok {
+		return "", false
+	}
+
+	return kubeconfig, true
 }
 
+func NewManager(mgr manager.Manager, opt *ClusterManagerOption) (*ClusterManager, error) {
+	cMgr := &ClusterManager{
+		MasterMgr: mgr,
+		clusters:  make([]*Cluster, 0, 4),
+		mu:        &sync.RWMutex{},
+		Opt:       opt,
+	}
+
+	return cMgr, nil
+}
+
+func (m *ClusterManager) AddPreInit(preInit func()) {
+	if m.PreInit != nil {
+		klog.Errorf("cluster manager already have preInit func ")
+	}
+
+	m.PreInit = preInit
+}
+
+// getClusterByConfigmap
+func (m *ClusterManager) getClusterByConfigmap() ([]*corev1.ConfigMap, error) {
+	configmaps := &corev1.ConfigMapList{}
+	err := m.MasterMgr.GetClient().List(context.Background(), &client.ListOptions{
+		LabelSelector: labels.SelectorFromSet(m.Opt.LabelSelector),
+		Namespace:     m.Opt.Namespace,
+	}, configmaps)
+	if err != nil {
+		if apierrors.IsNotFound(err) {
+			return nil, err
+		}
+
+		klog.Errorf("failed to ConfigMapList ls :%v, err: %v", m.Opt.LabelSelector, err)
+		return nil, err
+	}
+
+	cms := make([]*corev1.ConfigMap, 0, 4)
+	for i := range configmaps.Items {
+		cms = append(cms, &configmaps.Items[i])
+	}
+
+	sort.Slice(cms, func(i, j int) bool {
+		return cms[i].Name < cms[j].Name
+	})
+	return cms, nil
+}
+
+// GetAll
 func (m *ClusterManager) GetAll(name ...string) []*Cluster {
 	m.mu.RLock()
 	defer m.mu.RUnlock()
@@ -106,9 +148,12 @@ func (m *ClusterManager) GetAll(name ...string) []*Cluster {
 }
 
 func (m *ClusterManager) Add(cluster *Cluster) error {
+	if _, err := m.Get(cluster.Name); err == nil {
+		return fmt.Errorf("cluster name: %s is already add to manager", cluster.Name)
+	}
+
 	m.mu.Lock()
 	defer m.mu.Unlock()
-
 	m.clusters = append(m.clusters, cluster)
 	sort.Slice(m.clusters, func(i int, j int) bool {
 		return m.clusters[i].Name > m.clusters[j].Name
@@ -139,8 +184,8 @@ func (m *ClusterManager) Delete(cluster *Cluster) error {
 }
 
 func (m *ClusterManager) Get(name string) (*Cluster, error) {
-	m.mu.RLock()
-	defer m.mu.RUnlock()
+	m.mu.Lock()
+	defer m.mu.Unlock()
 
 	if name == "" || name == "all" {
 		return nil, fmt.Errorf("single query not support: %s ", name)
@@ -164,16 +209,44 @@ func (m *ClusterManager) Get(name string) (*Cluster, error) {
 	return findCluster, nil
 }
 
-// InitStart init start Informers
-func (m *ClusterManager) InitStart(stopCh <-chan struct{}) error {
-	klog.Info("initStart cluster manager ... ")
-	for _, c := range m.clusters {
-		if !c.healthCheck() {
-			break
+func (m *ClusterManager) preStart() error {
+	ctx, cancel := context.WithTimeout(context.Background(), time.Minute)
+	defer cancel()
+
+	configmaps, err := m.getClusterByConfigmap()
+	if err != nil {
+		klog.Errorf("unable to get cluster configmap err: %v", err)
+		return err
+	}
+
+	klog.Infof("find %d cluster form namespace: %s ls: %v ", len(configmaps), m.Opt.Namespace, m.Opt.LabelSelector)
+	for _, cm := range configmaps {
+		kubeconfig, ok := convertToKubeconfig(cm)
+		if !ok {
+			klog.Errorf("cluster: %s convertToKubeconfig err: %v", cm.Name, err)
+			continue
 		}
 
-		c.StartCache(stopCh)
+		c, err := NewCluster(cm.Name, []byte(kubeconfig), logger)
+		if err != nil {
+			klog.Errorf("cluster: %s new client err: %v", cm.Name, err)
+			continue
+		}
+
+		if !c.healthCheck() {
+			klog.Errorf("cluster: %s check offline", cm.Name)
+			continue
+		}
+
+		c.StartCache(ctx.Done())
+		m.Add(c)
+		klog.Infof("add cluster name: %s ", cm.Name)
 	}
+
+	if m.PreInit != nil {
+		m.PreInit()
+	}
+
 	return nil
 }
 
@@ -183,6 +256,8 @@ func (m *ClusterManager) cluterCheck() {
 
 // Start timer check cluster health
 func (m *ClusterManager) Start(stopCh <-chan struct{}) error {
+	m.preStart()
+
 	klog.Info("start cluster manager check loop ... ")
 	wait.Until(m.cluterCheck, time.Minute, stopCh)
 	return nil

@@ -17,15 +17,16 @@ limitations under the License.
 package manager
 
 import (
-	"context"
 	"time"
 
-	"github.com/go-logr/logr"
+	"fmt"
+
+	workloadv1beta1 "gitlab.dmall.com/arch/sym-admin/pkg/apis/workload/v1beta1"
 	"gitlab.dmall.com/arch/sym-admin/pkg/healthcheck"
 	k8smanager "gitlab.dmall.com/arch/sym-admin/pkg/k8s/manager"
 	"gitlab.dmall.com/arch/sym-admin/pkg/router"
-	"k8s.io/client-go/kubernetes"
 	"k8s.io/klog"
+	"sigs.k8s.io/controller-runtime/pkg/manager"
 )
 
 type ManagerOption struct {
@@ -70,7 +71,7 @@ func DefaultManagerOption() *ManagerOption {
 	}
 }
 
-func NewDksManager(kubecli kubernetes.Interface, opt *ManagerOption, logger logr.Logger, componentName string) (*DksManager, error) {
+func NewDksManager(mgr manager.Manager, opt *ManagerOption, componentName string) (*DksManager, error) {
 	routerOptions := &router.Options{
 		GinLogEnabled:    opt.GinLogEnabled,
 		MetricsEnabled:   true,
@@ -96,14 +97,24 @@ func NewDksManager(kubecli kubernetes.Interface, opt *ManagerOption, logger logr
 	}
 	if opt.MasterEnabled {
 		klog.Info("start init multi cluster manager ... ")
-		manager, err := k8smanager.NewManager(kubecli, logger, k8smanager.DefaultClusterManagerOption())
+		kMgr, err := k8smanager.NewManager(mgr, k8smanager.DefaultClusterManagerOption())
 		if err != nil {
 			klog.Fatalf("unable to new k8s manager err: %v", err)
 		}
 
-		ctx, _ := context.WithTimeout(context.Background(), time.Minute)
-		manager.InitStart(ctx.Done())
-		dksMgr.K8sMgr = manager
+		dksMgr.K8sMgr = kMgr
+		dksMgr.K8sMgr.AddPreInit(func() {
+			klog.Infof("preInit manager cluster informer ... ")
+			for _, c := range dksMgr.K8sMgr.GetAll() {
+				advDeployInformer, _ := c.Cache.GetInformer(&workloadv1beta1.AdvDeployment{})
+				dksMgr.HealthHander.AddReadinessCheck(fmt.Sprintf("%s_%s", c.Name, "advDeploy_cache_sync"), func() error {
+					if advDeployInformer.HasSynced() {
+						return nil
+					}
+					return fmt.Errorf("cluster:%s AdvDeployment cache not sync", c.Name)
+				})
+			}
+		})
 	}
 
 	return dksMgr, nil

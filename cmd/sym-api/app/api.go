@@ -59,7 +59,7 @@ func NewAPICmd(cli *DksCli) *cobra.Command {
 			}
 
 			stopCh := signals.SetupSignalHandler()
-			apiMgr, err := apiManager.NewAPIManager(cli.GetKubeInterfaceOrDie(), opt, logger, "controller")
+			apiMgr, err := apiManager.NewAPIManager(mgr, opt, "controller")
 			if err != nil {
 				klog.Fatalf("unable to NewDksManager err: %v", err)
 			}
