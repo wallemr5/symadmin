@@ -143,11 +143,11 @@ type AdvDeploymentCondition struct {
 }
 
 type AdvDeploymentAggrStatus struct {
-	Status      AppStatus          `json:"status,omitempty"`
-	Version     string             `json:"version,omitempty"`
-	Desired     int32              `json:"desired"`
-	Available   int32              `json:"available"`
-	UnAvailable int32              `json:"unAvailable,omitempty"`
+	Status      AppStatus           `json:"status,omitempty"`
+	Version     string              `json:"version,omitempty"`
+	Desired     int32               `json:"desired"`
+	Available   int32               `json:"available"`
+	UnAvailable int32               `json:"unAvailable,omitempty"`
 	PodSets     []*PodSetStatusInfo `json:"podSets,omitempty"`
 }
 
