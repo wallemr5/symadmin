@@ -122,7 +122,7 @@ func (m *APIManager) GetFiles(c *gin.Context) {
 		SubResource("exec")
 
 	scheme := runtime.NewScheme()
-	if err = corev1.AddToScheme(scheme); err != nil {
+	if err = core_v1.AddToScheme(scheme); err != nil {
 		klog.Errorf("error adding to scheme: %v", err)
 		AbortHTTPError(c, AddToSchemeError, "", err)
 		return
@@ -133,7 +133,7 @@ func (m *APIManager) GetFiles(c *gin.Context) {
 		cmd = cmd + " " + path
 	}
 	parameterCodec := runtime.NewParameterCodec(scheme)
-	req.VersionedParams(&corev1.PodExecOptions{
+	req.VersionedParams(&core_v1.PodExecOptions{
 		Command:   []string{cmd},
 		Container: containerName,
 		Stdin:     false,
