@@ -262,6 +262,7 @@ issues:
   exclude:
     - unused
     - "Error return value of"
+    - "shadows declaration"
     - G104
     - "Using a reference for the variable on range scope"
 
