@@ -69,23 +69,27 @@ func (c *Cluster) GetName() string {
 }
 
 func (c *Cluster) initK8SClients() error {
+	startTime := time.Now()
 	cfg, err := k8sclient.NewClientConfig(c.RawKubeconfig)
 	if err != nil {
 		return errors.Wrapf(err, "could not get rest config name:%s", c.Name)
 	}
+
+	klog.V(4).Infof("##### cluster [%s] NewClientConfig. time taken: %v. ", c.Name, time.Since(startTime))
 	c.RestConfig = cfg
 
-	dynamicClient, err := dynamic.NewForConfig(c.RestConfig)
-	if err != nil {
-		return errors.Wrapf(err, "could not new dynamiccli name:%s", c.Name)
-	}
-	c.DynamicClient = dynamicClient
+	// dynamicClient, err := dynamic.NewForConfig(c.RestConfig)
+	// if err != nil {
+	// 	return errors.Wrapf(err, "could not new dynamiccli name:%s", c.Name)
+	// }
+	// c.DynamicClient = dynamicClient
 
 	kubecli, err := kubernetes.NewForConfig(c.RestConfig)
 	if err != nil {
 		return errors.Wrapf(err, "could not new kubecli name:%s", c.Name)
 	}
 
+	klog.V(4).Infof("##### cluster [%s] NewClientCli. time taken: %v. ", c.Name, time.Since(startTime))
 	c.KubeCli = kubecli
 	rp := time.Minute * 5
 	o := manager.Options{
@@ -98,6 +102,7 @@ func (c *Cluster) initK8SClients() error {
 		return errors.Wrapf(err, "could not new manager name:%s", c.Name)
 	}
 
+	klog.V(4).Infof("##### cluster [%s] NewManagerCli. time taken: %v. ", c.Name, time.Since(startTime))
 	c.Mgr = mgr
 	c.Client = mgr.GetClient()
 	c.Cache = mgr.GetCache()

@@ -1,15 +1,18 @@
 package apiManager
 
 import (
-	"context"
 	"time"
 
-	"github.com/go-logr/logr"
+	"fmt"
+
+	workloadv1beta1 "gitlab.dmall.com/arch/sym-admin/pkg/apis/workload/v1beta1"
 	"gitlab.dmall.com/arch/sym-admin/pkg/healthcheck"
 	k8smanager "gitlab.dmall.com/arch/sym-admin/pkg/k8s/manager"
 	"gitlab.dmall.com/arch/sym-admin/pkg/router"
-	"k8s.io/client-go/kubernetes"
+	appsv1 "k8s.io/api/apps/v1"
+	corev1 "k8s.io/api/core/v1"
 	"k8s.io/klog"
+	"sigs.k8s.io/controller-runtime/pkg/manager"
 )
 
 // Option ...
@@ -45,7 +48,7 @@ func DefaultOption() *Option {
 }
 
 // NewAPIManager ...
-func NewAPIManager(kubecli kubernetes.Interface, opt *Option, logger logr.Logger, componentName string) (*APIManager, error) {
+func NewAPIManager(mgr manager.Manager, opt *Option, componentName string) (*APIManager, error) {
 	healthHander := healthcheck.NewHealthHandler()
 	healthHander.AddLivenessCheck("goroutine_threshold",
 		healthcheck.GoroutineCountCheck(opt.GoroutineThreshold))
@@ -56,15 +59,10 @@ func NewAPIManager(kubecli kubernetes.Interface, opt *Option, logger logr.Logger
 	}
 
 	klog.Info("start init multi cluster manager ... ")
-	manager, err := k8smanager.NewManager(kubecli, logger, k8smanager.DefaultClusterManagerOption())
+	kMgr, err := k8smanager.NewManager(mgr, k8smanager.DefaultClusterManagerOption())
 	if err != nil {
 		klog.Fatalf("unable to new k8s manager err: %v", err)
 	}
-
-	ctx, cancel := context.WithTimeout(context.Background(), time.Minute)
-	defer cancel()
-	manager.InitStart(ctx.Done())
-	apiMgr.K8sMgr = manager
 
 	routerOptions := &router.Options{
 		GinLogEnabled:    opt.GinLogEnabled,
@@ -79,6 +77,63 @@ func NewAPIManager(kubecli kubernetes.Interface, opt *Option, logger logr.Logger
 	rt.AddRoutes("health", healthHander.Routes())
 	rt.AddRoutes("cluster", apiMgr.Routes())
 	apiMgr.Router = rt
+	apiMgr.K8sMgr = kMgr
+	apiMgr.K8sMgr.AddPreInit(func() {
+		klog.Infof("preInit manager cluster informer ... ")
+		for _, c := range apiMgr.K8sMgr.GetAll() {
+			advDeployInformer, _ := c.Cache.GetInformer(&workloadv1beta1.AdvDeployment{})
+			apiMgr.HealthHander.AddReadinessCheck(fmt.Sprintf("%s_%s", c.Name, "advDeploy_cache_sync"), func() error {
+				if advDeployInformer.HasSynced() {
+					return nil
+				}
+				return fmt.Errorf("cluster:%s AdvDeployment cache not sync", c.Name)
+			})
+
+			podInformer, _ := c.Cache.GetInformer(&corev1.Pod{})
+			apiMgr.HealthHander.AddReadinessCheck(fmt.Sprintf("%s_%s", c.Name, "pod_cache_sync"), func() error {
+				if podInformer.HasSynced() {
+					return nil
+				}
+				return fmt.Errorf("cluster:%s pod cache not sync", c.Name)
+			})
+
+			deploymentInformer, _ := c.Cache.GetInformer(&appsv1.Deployment{})
+			apiMgr.HealthHander.AddReadinessCheck(fmt.Sprintf("%s_%s", c.Name, "deployment_cache_sync"), func() error {
+				if deploymentInformer.HasSynced() {
+					return nil
+				}
+				return fmt.Errorf("cluster:%s deployment cache not sync", c.Name)
+			})
+
+			statefulSetInformer, _ := c.Cache.GetInformer(&appsv1.StatefulSet{})
+			apiMgr.HealthHander.AddReadinessCheck(fmt.Sprintf("%s_%s", c.Name, "statefulset_cache_sync"), func() error {
+				if statefulSetInformer.HasSynced() {
+					return nil
+				}
+				return fmt.Errorf("cluster:%s statefulset cache not sync", c.Name)
+			})
+
+			nodeInformer, _ := c.Cache.GetInformer(&corev1.Node{})
+			apiMgr.HealthHander.AddReadinessCheck(fmt.Sprintf("%s_%s", c.Name, "node_cache_sync"), func() error {
+				if nodeInformer.HasSynced() {
+					return nil
+				}
+				return fmt.Errorf("cluster:%s node cache not sync", c.Name)
+			})
+
+			serviceInformer, _ := c.Cache.GetInformer(&corev1.Service{})
+			apiMgr.HealthHander.AddReadinessCheck(fmt.Sprintf("%s_%s", c.Name, "service_cache_sync"), func() error {
+				if serviceInformer.HasSynced() {
+					return nil
+				}
+				return fmt.Errorf("cluster:%s service cache not sync", c.Name)
+			})
+
+			c.Cache.GetInformer(&corev1.Event{})
+			c.Cache.GetInformer(&corev1.Endpoints{})
+		}
+	})
+
 	return apiMgr, nil
 }
 

@@ -58,7 +58,7 @@ func NewControllerCmd(cli *DksCli) *cobra.Command {
 			}
 
 			stopCh := signals.SetupSignalHandler()
-			dksMgr, err := manager.NewDksManager(cli.GetKubeInterfaceOrDie(), opt, logger, "controller")
+			dksMgr, err := manager.NewDksManager(mgr, opt, "controller")
 			if err != nil {
 				klog.Fatalf("unable to NewDksManager err: %v", err)
 			}
