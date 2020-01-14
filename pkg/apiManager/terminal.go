@@ -96,6 +96,75 @@ func (m *APIManager) GetTerminal(c *gin.Context) {
 	}
 }
 
+// GetFiles get the log file of the specified directory
+func (m *APIManager) GetFiles(c *gin.Context) {
+	clusterName := c.Param("name")
+	namespace := c.DefaultQuery("namespace", "default")
+	podName := c.Param("podName")
+	path := c.DefaultQuery("path", "")
+
+	containerName, ok := c.GetQuery("container")
+	if !ok {
+		AbortHTTPError(c, ParamInvalidError, "", errors.New("can not get container"))
+		return
+	}
+
+	cluster, err := m.K8sMgr.Get(clusterName)
+	if err != nil {
+		klog.Errorf("get cluster error: %+v", err)
+		AbortHTTPError(c, GetClusterError, "", err)
+		return
+	}
+	req := cluster.KubeCli.CoreV1().RESTClient().Post().
+		Resource("pods").
+		Name(podName).
+		Namespace(namespace).
+		SubResource("exec")
+
+	scheme := runtime.NewScheme()
+	if err = corev1.AddToScheme(scheme); err != nil {
+		klog.Errorf("error adding to scheme: %v", err)
+		AbortHTTPError(c, AddToSchemeError, "", err)
+		return
+	}
+
+	cmd := "ls"
+	if len(path) != 0 {
+		cmd = cmd + " " + path
+	}
+	parameterCodec := runtime.NewParameterCodec(scheme)
+	req.VersionedParams(&corev1.PodExecOptions{
+		Command:   []string{cmd},
+		Container: containerName,
+		Stdin:     false,
+		Stdout:    true,
+		Stderr:    true,
+		TTY:       false,
+	}, parameterCodec)
+
+	exec, err := remotecommand.NewSPDYExecutor(cluster.RestConfig, "POST", req.URL())
+	if err != nil {
+		klog.Errorf("error while creating Executor: %+v", err)
+		AbortHTTPError(c, CreateSPDYExecutorError, "", err)
+		return
+	}
+
+	var stdout, stderr bytes.Buffer
+	err = exec.Stream(remotecommand.StreamOptions{
+		Stdin:  nil,
+		Stdout: &stdout,
+		Stderr: &stderr,
+		Tty:    false,
+	})
+
+	if err != nil {
+		AbortHTTPError(c, ExecCmdError, "", err)
+		return
+	}
+	files := strings.Split(stdout.String(), "\n")
+	c.IndentedJSON(http.StatusOK, files)
+}
+
 func startProcess(cluster *k8smanager.Cluster, namespace, podName, container string,
 	cmd []string, isStdin, isStdout, isStderr, tty, once bool, ws *WsConnection) error {
 	req := cluster.KubeCli.CoreV1().RESTClient().Post().

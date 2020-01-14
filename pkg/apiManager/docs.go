@@ -124,6 +124,21 @@ e.g. <br/>
 <a href="/api/cluster/all/appPod/all/pods/all/event">/api/cluster/all/appPod/all/pods/all/event</a><br/>
 `
 
+// GetFilesDesc ...
+var GetFilesDesc = `
+Get the file list of the specified directory. <br/>
+name: url param, the unique cluster name and all. <br/>
+appName: url param,the unique app name. <br>
+podName: url param, the unique pod name. <br/>
+namespace: query string, the unique namespace in a cluster. Default is 'default' namespace. <br/>
+container: query string, the unique container in a pod. <br/>
+path: query string, the log files directory path. <br/>
+
+<br/>
+e.g. <br/>
+<a href="/api/cluster/tcc-bj5-dks-monit-01/appPod/aaa/pods/prometheus-sym-apg-prometheus-0/files?namespace=sym-admin&container=prometheus">/api/cluster/tcc-bj5-dks-monit-01/appPod/aaa/pods/prometheus-sym-apg-prometheus-0/files?namespace=sym-admin&container=prometheus</a><br/>
+`
+
 // HandleLogsDesc ...
 var HandleLogsDesc = `
 Get stdout of a specific pod container. <br/>

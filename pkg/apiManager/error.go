@@ -27,15 +27,18 @@ const (
 	GetServiceError = 4001
 
 	// TerminalError
-	GetTerminalError    = 5001
-	WebsocketError      = 5002
-	RequestK8sExecError = 5003
+	GetTerminalError        = 5001
+	WebsocketError          = 5002
+	RequestK8sExecError     = 5003
+	ExecCmdError            = 5004
+	CreateSPDYExecutorError = 5005
 
 	// OtherError
 	GetClusterError     = 9001
 	GetEndpointError    = 9002
 	GetNodeError        = 9003
 	ParseTimeStampError = 9004
+	AddToSchemeError    = 9005
 )
 
 // AbortHTTPError ...

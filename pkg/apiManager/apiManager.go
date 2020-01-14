@@ -153,9 +153,16 @@ func (m *APIManager) Routes() []*router.Route {
 		},
 		{
 			Method:  "GET",
+			Path:    "/api/cluster/:name/appPod/:appName/pods/:podName/files",
+			Handler: m.GetFiles,
+			Desc:    GetFilesDesc,
+		},
+		{
+			Method:  "GET",
 			Path:    "/api/cluster/:name/appPod/:appName/pods/:podName/logs",
 			Handler: m.HandleLogs,
-			Desc:    HandleLogsDesc},
+			Desc:    HandleLogsDesc,
+		},
 		{
 			Method:  "GET",
 			Path:    "/api/cluster/:name/appPod/:appName/pods/:podName/logs/file",
