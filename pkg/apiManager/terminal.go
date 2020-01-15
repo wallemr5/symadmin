@@ -139,7 +139,7 @@ func (m *APIManager) ExecOnceWithHTTP(c *gin.Context) {
 // GetFiles get the log file of the specified directory
 func (m *APIManager) GetFiles(c *gin.Context) {
 	clusterName := c.Param("name")
-	namespace := c.DefaultQuery("namespace", "default")
+	namespace := c.Param("namespace")
 	podName := c.Param("podName")
 	path := c.DefaultQuery("path", "")
 
