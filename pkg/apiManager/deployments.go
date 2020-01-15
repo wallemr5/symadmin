@@ -15,11 +15,16 @@ import (
 // GetDeployments get all deployments in assigned namespace
 func (m *APIManager) GetDeployments(c *gin.Context) {
 	clusterName := c.Param("name")
-	namespace := c.DefaultQuery("namespace", "default")
+	appName := c.Param("appName")
+	namespace := c.DefaultQuery("namespace", "")
+
 	clusters := m.K8sMgr.GetAll(clusterName)
 
 	ctx := context.Background()
 	listOptions := &client.ListOptions{Namespace: namespace}
+	listOptions.MatchingLabels(map[string]string{
+		"app": appName,
+	})
 	result := []*model.DeploymentInfo{}
 	for _, cluster := range clusters {
 		deployments := &appv1.DeploymentList{}

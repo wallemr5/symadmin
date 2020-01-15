@@ -16,7 +16,7 @@ name: url param,the unique cluster name and all <br/>
 appName: url param,the unique app name. <br>
 <br/>
 e.g. <br/>
-<a href="/api/cluster/all/appPod/helm">/api/cluster/all/appPod/helm</a><br/>
+<a href="/api/cluster/all/appPod/bbcc">/api/cluster/all/appPod/bbcc</a><br/>
 `
 
 // GetNodeProjectDesc ...
@@ -26,41 +26,40 @@ name: url param,the unique cluster name and all <br/>
 nodeName: url param,the unique node name. <br/>
 <br/>
 e.g. <br/>
-<a href="/api/cluster/all/nodeName/10.13.135.17/project">/api/cluster/all/nodeIp/10.13.135.17/project</a><br/>
+<a href="/api/cluster/all/nodeProject/10.13.135.17">/api/cluster/all/nodeProject/10.13.135.17</a><br/>
 `
 
 // DeletePodByGroupDesc ...
 var DeletePodByGroupDesc = `
 Delete all the pods which app label is blue/green: <br/>
 name: url param,the unique cluster name and all. <br/>
+namespace: url param, namespace name <br/>
 appName: url param,the unique app name. <br/>
-namespace: query string, the unique namespace name. <br/>
 group: query string, the unique group label. <br/>
 <br/>
 e.g. <br/>
-<a>/api/cluster/tcc-bj5-dks-monit-01/appPod/tidb-pd-0?namespace=tidb-admin&group=blue</a><br/>
+<a>/api/cluster/tcc-bj5-dks-monit-01/namespace/default/app/bbcc?&group=blue</a><br/>
 `
 
 // DeletePodByNameDesc ...
 var DeletePodByNameDesc = `
 Delete a pod with pod name: <br/>
 name: the unique cluster name and all <br/>
-appName: url param, the unique app name <br/>
+namespace: url param, namespace name <br/>
 podName: url param, the unique pod name <br/>
-namespace: query string, the unique namespace name. <br/>
 <br/>
 e.g. <br/>
-<a>/api/cluster/tcc-bj5-dks-monit-01/appPod/tidb-pd-0/pods/podname?namespace=tidb-admin</a><br/>
+<a>/api/cluster/tcc-bj5-dks-monit-01/namespace/default/pod/bbcc-xx-xx</a><br/>
 `
 
 // GetEndpointsDesc ...
 var GetEndpointsDesc = `
 Get all endpoint by name: <br/>
 name: url param, the unique cluster name and all. <br/>
-endpointName: url param, the unique endpoint name. <br/>
+appName: url param,the unique app name. <br/>
 <br/>
 e.g. <br/>
-<a href="/api/cluster/all/endpointName/kubernetes">/api/cluster/all/endpointName/kubernetes</a><br/>
+<a href="/api/cluster/all/endpoints/bbcc">/api/cluster/all/endpoints/bbcc</a><br/>
 `
 
 // GetNodeInfoDesc ...
@@ -70,7 +69,7 @@ name: url param,the unique cluster name and all. <br/>
 nodeName: url param,the unique node name. <br/>
 <br/>
 e.g. <br/>
-<a href="/api/cluster/all/nodeName/10.13.135.252">/api/cluster/all/nodeName/10.13.135.252</a><br/>
+<a href="/api/cluster/all/node/10.13.135.252">/api/cluster/all/node/10.13.135.252</a><br/>
 `
 
 // GetTerminalDesc ...
@@ -88,7 +87,7 @@ once: query string, this parameter determines whether to execute a command and e
 cmd: query string, commands executed in the container. <br/>
 <br/>
 e.g. <br/>
-<a>ws://localhost:8080/api/cluster/tcc-bj5-dks-monit-01/terminal?namespace=sym-admin&pod=prometheus-sym-apg-prometheus-0&container=prometheus</a><br/>
+<a>ws://localhost:8080/api/cluster/tcc-bj5-dks-monit-01/terminal?namespace=default&pod=bbcc-xx-xx&container=bbcc</a><br/>
 `
 
 // ExecOnceWithHTTPDesc ...
@@ -102,7 +101,7 @@ tty: query string, this parameter determines whether to output as tty. Default i
 cmd: query string, commands executed in the container. <br/>
 <br/>
 e.g. <br/>
-<a href="/api/cluster/tcc-bj5-dks-monit-01/exec?namespace=sym-admin&pod=prometheus-sym-apg-prometheus-0&container=prometheus&tty=false&cmd=ls -a">/api/cluster/tcc-bj5-dks-monit-01/exec?namespace=sym-admin&pod=prometheus-sym-apg-prometheus-0&container=prometheus&tty=false&cmd=ls -a</a><br/>
+<a href="/api/cluster/tcc-bj5-dks-monit-01/exec?namespace=default&pod=bbcc-xx-xx&container=bbcc&tty=false&cmd=ls -a">/api/cluster/tcc-bj5-dks-monit-01/exec?namespace=default&pod=bbcc-xx-xx&container=bbcc&tty=false&cmd=ls -a</a><br/>
 `
 
 // GetServicesDesc ...
@@ -112,7 +111,7 @@ name: url param, the unique cluster name and all. <br/>
 appName: url param, the unique app name. <br/>
 <br/>
 e.g. <br/>
-<a href="/api/cluster/all/service/appName">/api/cluster/all/service/appName</a><br/>
+<a href="/api/cluster/all/service/bbcc">/api/cluster/all/service/bbcc</a><br/>
 `
 
 // GetDeploymentsDesc ...
@@ -122,62 +121,58 @@ name: url param, the unique cluster name and all. <br/>
 namespace: query string, the unique namespace in a cluster. Default is 'default' namespace. <br/>
 <br/>
 e.g. <br/>
-<a href="/api/cluster/all/deployments">/api/cluster/all/deployments</a><br/>
+<a href="/api/cluster/all/deployment/bbcc">/api/cluster/all/deployment/bbcc</a><br/>
 `
 
 // GetPodEventDesc ...
 var GetPodEventDesc = `
 Get a limited number of pod events. <br/>
 name: url param, the unique cluster name and all. <br/>
-appName: url param,the unique app name. <br>
-namespace: query string, the unique namespace in a cluster. Default is 'default' namespace. <br/>
+namespace: url param, namespace name <br/>
 podName: url param, the unique pod name. <br/>
 limit: query string, the limit number, default is 10. <br/>
 <br/>
 e.g. <br/>
-<a href="/api/cluster/all/appPod/all/pods/all/event">/api/cluster/all/appPod/all/pods/all/event</a><br/>
+<a href="/api/cluster/all/namespace/default/pods/all/event">/api/cluster/all/namespace/default/pods/all/event</a><br/>
 `
 
 // GetFilesDesc ...
 var GetFilesDesc = `
 Get the file list of the specified directory. <br/>
 name: url param, the unique cluster name and all. <br/>
-appName: url param,the unique app name. <br>
+namespace: url param, namespace name <br/>
 podName: url param, the unique pod name. <br/>
-namespace: query string, the unique namespace in a cluster. Default is 'default' namespace. <br/>
 container: query string, the unique container in a pod. <br/>
 path: query string, the log files directory path. <br/>
 
 <br/>
 e.g. <br/>
-<a href="/api/cluster/tcc-bj5-dks-monit-01/appPod/aaa/pods/prometheus-sym-apg-prometheus-0/files?namespace=sym-admin&container=prometheus">/api/cluster/tcc-bj5-dks-monit-01/appPod/aaa/pods/prometheus-sym-apg-prometheus-0/files?namespace=sym-admin&container=prometheus</a><br/>
+<a href="/api/cluster/tcc-bj5-dks-monit-01/namespace/default/pods/bbcc-xx-xx/files?container=bbcc">/api/cluster/tcc-bj5-dks-monit-01/namespace/default/pods/bbcc-xx-xx/files?container=bbcc</a><br/>
 `
 
 // HandleLogsDesc ...
 var HandleLogsDesc = `
 Get stdout of a specific pod container. <br/>
 name: url param, the unique cluster name and all. <br/>
-appName: url param,the unique app name. <br>
+namespace: url param, namespace name <br/>
 podName: url param, the unique pod name. <br/>
-namespace: query string, the unique namespace in a cluster. Default is 'default' namespace. <br/>
 container: query string, the unique container in a pod. <br/>
 tailLines: query string, the log tail number, default is 100. <br/>
 <br/>
 e.g. <br/>
-<a href="/api/cluster/tcc-bj5-dks-monit-01/appPod/bbcc2/pods/prometheus-sym-apg-prometheus-0/logs?namespace=sym-admin&tailLines=100">/api/cluster/tcc-bj5-dks-monit-01/appPod/bbcc2/pods/prometheus-sym-apg-prometheus-0/logs?namespace=sym-admin&tailLines=100</a><br/>
+<a href="/api/cluster/tcc-bj5-dks-monit-01/namespace/default/pods/bbcc-xx-xx/logs?container=bbcc&tailLines=100">/api/cluster/tcc-bj5-dks-monit-01/namespace/default/pods/bbcc-xx-xx/logs?container=bbcc&tailLines=100</a><br/>
 `
 
 // HandleFileLogsDesc ...
 var HandleFileLogsDesc = `
 Get log files for a specific pod container. <br/>
 name: url param, the unique cluster name and all. <br/>
-appName: url param, the unique app name. <br>
+namespace: url param, namespace name <br/>
 podName: url param, the unique pod name. <br/>
-namespace: query string, the unique namespace in a cluster. Default is 'default' namespace. <br/>
 container: query string, the unique container in a pod. <br/>
 tailLines: query string, the log tail number, default is 100. <br/>
 filepath: query string, the log file path in a container. <br/>
 <br/>
 e.g. <br/>
-<a href="/api/cluster/tcc-bj5-dks-monit-01/appPod/aaa/pods/prometheus-sym-apg-prometheus-0/logs/file?namespace=sym-admin&container=prometheus&filepath=thanos.shipper.json">/api/cluster/tcc-bj5-dks-monit-01/appPod/aaa/pods/prometheus-sym-apg-prometheus-0/logs/file?namespace=sym-admin&container=prometheus&filepath=thanos.shipper.json</a><br/>
+<a href="/api/cluster/tcc-bj5-dks-monit-01/namespace/default/pods/bbcc-xx-xx/logs/file?container=bbcc&filepath=thanos.shipper.json">/api/cluster/tcc-bj5-dks-monit-01/namespace/default/pods/bbcc-xx-xx/logs/file?container=bbcc&filepath=xx/xx.log</a><br/>
 `

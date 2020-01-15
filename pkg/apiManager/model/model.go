@@ -79,11 +79,12 @@ type NodeInfo struct {
 
 // ServiceInfo ...
 type ServiceInfo struct {
-	NameSpace string               `json:"namespace,omitempty"`
-	ClusterIP string               `json:"clusterIp,omitempty"`
-	Type      string               `json:"type,omitempty"`
-	Ports     []corev1.ServicePort `json:"ports,omitempty"`
-	Selector  map[string]string    `json:"selector,omitempty"`
+	ClusterName string               `json:"clusterName,omitempty"`
+	NameSpace   string               `json:"namespace,omitempty"`
+	ClusterIP   string               `json:"clusterIp,omitempty"`
+	Type        string               `json:"type,omitempty"`
+	Ports       []corev1.ServicePort `json:"ports,omitempty"`
+	Selector    map[string]string    `json:"selector,omitempty"`
 }
 
 // DeploymentInfo ...

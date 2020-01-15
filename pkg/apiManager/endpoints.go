@@ -15,17 +15,18 @@ import (
 // GetEndpoints ...
 func (m *APIManager) GetEndpoints(c *gin.Context) {
 	clusterName := c.Param("name")
-	endpointName := c.Param("endpointName")
+	appName := c.Param("appName")
 	clusters := m.K8sMgr.GetAll(clusterName)
 
 	ctx := context.Background()
 	endpointsOfCluster := make([]*model.EndpointsOfCluster, 0, 4)
 	eps := make([]*model.Endpoint, 0, 4)
-	//pods := make([]*model.Pod, 0, 4)
 	listOptions := &client.ListOptions{}
+	listOptions.MatchingLabels(map[string]string{
+		"app": appName + "-svc",
+	})
 	for _, cluster := range clusters {
 		endpointList := &corev1.EndpointsList{}
-		//podList := &corev1.PodList{}
 		err := cluster.Client.List(ctx, listOptions, endpointList)
 		if err != nil {
 			if apierrors.IsNotFound(err) {
@@ -38,20 +39,20 @@ func (m *APIManager) GetEndpoints(c *gin.Context) {
 
 		for i := range endpointList.Items {
 			ep := &endpointList.Items[i]
-			if ep.Name == endpointName {
-				for _, ss := range ep.Subsets {
-					for _, addr := range ss.Addresses {
-						eps = append(eps, &model.Endpoint{
-							Subsets:           addr.IP,
-							Name:              ep.Name,
-							Namespace:         ep.Namespace,
-							CreationTimestamp: ep.ObjectMeta.CreationTimestamp.Time.String(),
-							Release:           "",
-							ClusterName:       ep.ClusterName,
-						})
-					}
+
+			for _, ss := range ep.Subsets {
+				for _, addr := range ss.Addresses {
+					eps = append(eps, &model.Endpoint{
+						Subsets:           addr.IP,
+						Name:              ep.Name,
+						Namespace:         ep.Namespace,
+						CreationTimestamp: ep.ObjectMeta.CreationTimestamp.Time.String(),
+						Release:           "",
+						ClusterName:       ep.ClusterName,
+					})
 				}
 			}
+
 		}
 		ofCluster := model.EndpointsOfCluster{
 			ClusterName: cluster.Name,

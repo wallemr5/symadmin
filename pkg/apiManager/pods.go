@@ -146,7 +146,7 @@ func (m *APIManager) GetPod(c *gin.Context) {
 func (m *APIManager) GetPodEvent(c *gin.Context) {
 	clusterName := c.Param("name")
 	podName := c.Param("podName")
-	namespace := c.DefaultQuery("namespace", "")
+	namespace := c.Param("namespace")
 	limit, _ := strconv.ParseInt(c.DefaultQuery("limit", "10"), 10, 64)
 	clusters := m.K8sMgr.GetAll(clusterName)
 
@@ -197,7 +197,7 @@ func (m *APIManager) GetPodEvent(c *gin.Context) {
 func (m *APIManager) DeletePodByName(c *gin.Context) {
 	clusterName := c.Param("name")
 	podName := c.Param("podName")
-	namespace := c.DefaultQuery("namespace", "default")
+	namespace := c.Param("namespace")
 
 	cluster, err := m.K8sMgr.Get(clusterName)
 	if err != nil {
@@ -230,7 +230,7 @@ func (m *APIManager) DeletePodByName(c *gin.Context) {
 func (m *APIManager) DeletePodByGroup(c *gin.Context) {
 	clusterName := c.Param("name")
 	appName := c.Param("appName")
-	namespace := c.DefaultQuery("namespace", "default")
+	namespace := c.Param("namespace")
 	group, ok := c.GetQuery("group")
 	if !ok {
 		AbortHTTPError(c, GetPodNotGroup, "no group label", nil)
