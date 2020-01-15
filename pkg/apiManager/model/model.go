@@ -40,9 +40,9 @@ type ErrorResponse struct {
 // Project ...
 type Project struct {
 	AppName    string   `json:"appName,omitempty"`
-	PodIPs     []string `json:"podIp,omitempty"`
 	DomainName string   `json:"domainName,omitempty"`
 	PodCount   int      `json:"podCount,omitempty"`
+	Instances  []string `json:"instances,omitempty"`
 }
 
 // NodeProjects ...

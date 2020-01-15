@@ -31,6 +31,8 @@ func (m *APIManager) GetNodeProject(c *gin.Context) {
 	listOptions := &client.ListOptions{}
 	listOptions.MatchingField("spec.nodeName", nodeName)
 
+	var isFind bool
+	var findProject *model.Project
 	ctx := context.Background()
 	for _, cluster := range clusters {
 		podList := &corev1.PodList{}
@@ -47,9 +49,9 @@ func (m *APIManager) GetNodeProject(c *gin.Context) {
 		for i := range podList.Items {
 			var ok bool
 			var appName string
-			podIP := make([]string, 0)
-			pod := &podList.Items[i]
 
+			isFind = false
+			pod := &podList.Items[i]
 			if appName, ok = pod.GetLabels()[labels.ObserveMustLabelAppName]; !ok {
 				continue
 			}
@@ -58,13 +60,39 @@ func (m *APIManager) GetNodeProject(c *gin.Context) {
 				continue
 			}
 
-			podInfo := &model.Project{
-				PodIPs: append(podIP),
+			for _, p := range nodePro.Projects {
+				if p.AppName == appName {
+					findProject = p
+					isFind = true
+					break
+				}
 			}
 
+			if isFind && findProject != nil {
+				nodePro.PodCount++
+				findProject.PodCount++
+				findProject.Instances = append(findProject.Instances, pod.Status.PodIP)
+				continue
+			}
+
+			podInfo := &model.Project{}
 			podInfo.AppName = appName
+			podInfo.PodCount++
+			podInfo.Instances = append(podInfo.Instances, pod.Status.PodIP)
 			if domainName, ok := pod.GetLabels()[labels.ObserveMustLabelDomain]; ok {
 				podInfo.DomainName = domainName
+			} else {
+				svcList := &corev1.ServiceList{}
+				svcListOptions := &client.ListOptions{}
+				svcListOptions.MatchingLabels(map[string]string{
+					"app": appName + "-svc",
+				})
+				err := cluster.Client.List(ctx, svcListOptions, svcList)
+				if err == nil && len(svcList.Items) > 0 {
+					if domainName, ok := svcList.Items[0].GetLabels()[labels.ObserveMustLabelDomain]; ok {
+						podInfo.DomainName = domainName
+					}
+				}
 			}
 
 			nodePro.Projects = append(nodePro.Projects, podInfo)
