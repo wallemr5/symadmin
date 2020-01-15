@@ -3,6 +3,7 @@ package apiManager
 import (
 	"context"
 	"net/http"
+	"sort"
 
 	"github.com/gin-gonic/gin"
 	"gitlab.dmall.com/arch/sym-admin/pkg/apiManager/model"
@@ -55,6 +56,9 @@ func (m *APIManager) GetDeployments(c *gin.Context) {
 			result = append(result, &info)
 		}
 	}
+	sort.Slice(result, func(i, j int) bool {
+		return result[i].Name < result[j].Name
+	})
 
 	c.IndentedJSON(http.StatusOK, result)
 }

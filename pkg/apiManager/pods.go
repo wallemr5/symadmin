@@ -3,9 +3,8 @@ package apiManager
 import (
 	"context"
 	"net/http"
-	"strconv"
-
 	"sort"
+	"strconv"
 
 	"github.com/gin-gonic/gin"
 	"gitlab.dmall.com/arch/sym-admin/pkg/apiManager/model"
@@ -131,6 +130,9 @@ func (m *APIManager) GetPod(c *gin.Context) {
 			})
 			pods = append(pods, apiPod)
 		}
+		sort.Slice(pods, func(i, j int) bool {
+			return pods[i].Name < pods[j].Name
+		})
 
 		ofCluster := &model.PodOfCluster{
 			ClusterName: cluster.Name,
@@ -138,6 +140,9 @@ func (m *APIManager) GetPod(c *gin.Context) {
 		}
 		clusterPods = append(clusterPods, ofCluster)
 	}
+	sort.Slice(clusterPods, func(i, j int) bool {
+		return clusterPods[i].ClusterName < clusterPods[j].ClusterName
+	})
 
 	c.IndentedJSON(http.StatusOK, clusterPods)
 }
@@ -189,6 +194,9 @@ func (m *APIManager) GetPodEvent(c *gin.Context) {
 			}
 		}
 	}
+	sort.Slice(result, func(i, j int) bool {
+		return result[i].LastTime.Before(&result[j].LastTime)
+	})
 
 	c.IndentedJSON(http.StatusOK, result)
 }

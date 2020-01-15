@@ -3,6 +3,7 @@ package apiManager
 import (
 	"context"
 	"net/http"
+	"sort"
 
 	"github.com/gin-gonic/gin"
 	"gitlab.dmall.com/arch/sym-admin/pkg/apiManager/model"
@@ -62,6 +63,9 @@ func (m *APIManager) GetNodeInfo(c *gin.Context) {
 			nodes = append(nodes, nodeInfo)
 		}
 	}
+	sort.Slice(nodes, func(i, j int) bool {
+		return nodes[i].Name < nodes[j].Name
+	})
 
 	c.IndentedJSON(http.StatusOK, nodes)
 }

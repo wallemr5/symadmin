@@ -3,6 +3,7 @@ package apiManager
 import (
 	"context"
 	"net/http"
+	"sort"
 
 	"github.com/gin-gonic/gin"
 	"gitlab.dmall.com/arch/sym-admin/pkg/apiManager/model"
@@ -60,6 +61,9 @@ func (m *APIManager) GetEndpoints(c *gin.Context) {
 		}
 		endpointsOfCluster = append(endpointsOfCluster, &ofCluster)
 	}
+	sort.Slice(endpointsOfCluster, func(i, j int) bool {
+		return endpointsOfCluster[i].ClusterName < endpointsOfCluster[j].ClusterName
+	})
 
 	c.IndentedJSON(http.StatusOK, endpointsOfCluster)
 }

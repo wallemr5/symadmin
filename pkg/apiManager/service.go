@@ -3,6 +3,7 @@ package apiManager
 import (
 	"context"
 	"net/http"
+	"sort"
 
 	"github.com/gin-gonic/gin"
 	"gitlab.dmall.com/arch/sym-admin/pkg/apiManager/model"
@@ -50,6 +51,9 @@ func (m *APIManager) GetServices(c *gin.Context) {
 			svcResult = append(svcResult, info)
 		}
 	}
+	sort.Slice(svcResult, func(i, j int) bool {
+		return svcResult[i].ClusterName < svcResult[j].ClusterName
+	})
 
 	c.IndentedJSON(http.StatusOK, svcResult)
 }
