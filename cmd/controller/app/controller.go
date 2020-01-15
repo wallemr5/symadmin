@@ -26,6 +26,7 @@ import (
 	ctrlmanager "sigs.k8s.io/controller-runtime/pkg/manager"
 	"sigs.k8s.io/controller-runtime/pkg/runtime/signals"
 
+	k8smanager "gitlab.dmall.com/arch/sym-admin/pkg/k8s/manager"
 	"gitlab.dmall.com/arch/sym-admin/pkg/manager"
 	logf "sigs.k8s.io/controller-runtime/pkg/runtime/log"
 )
@@ -47,9 +48,10 @@ func NewControllerCmd(cli *DksCli) *cobra.Command {
 			}
 
 			mgr, err := ctrlmanager.New(cfg, ctrlmanager.Options{
-				Scheme:             k8sclient.GetScheme(),
-				MetricsBindAddress: "0",
-				LeaderElection:     opt.EnableLeaderElection,
+				Scheme:                  k8sclient.GetScheme(),
+				MetricsBindAddress:      "0",
+				LeaderElection:          opt.EnableLeaderElection,
+				LeaderElectionNamespace: opt.LeaderElectionNamespace,
 				// Port:               9443,
 				SyncPeriod: &opt.ResyncPeriod,
 			})
@@ -58,7 +60,11 @@ func NewControllerCmd(cli *DksCli) *cobra.Command {
 			}
 
 			stopCh := signals.SetupSignalHandler()
-			dksMgr, err := manager.NewDksManager(mgr, opt, "controller")
+			k8sCli := k8smanager.MasterClient{
+				KubeCli: cli.GetKubeInterfaceOrDie(),
+				Manager: mgr,
+			}
+			dksMgr, err := manager.NewDksManager(k8sCli, opt, "controller")
 			if err != nil {
 				klog.Fatalf("unable to NewDksManager err: %v", err)
 			}
@@ -89,6 +95,8 @@ func NewControllerCmd(cli *DksCli) *cobra.Command {
 	cmd.PersistentFlags().StringVar(&opt.HTTPAddr, "http-addr", opt.HTTPAddr, "HTTPAddr for some info")
 	cmd.PersistentFlags().BoolVar(&opt.EnableLeaderElection, "enable-leader", opt.EnableLeaderElection,
 		"Enable leader election for controller manager. Enabling this will ensure there is only one active controller manager.")
+	cmd.PersistentFlags().StringVar(&opt.LeaderElectionNamespace, "leader-namespaces", opt.LeaderElectionNamespace,
+		"the LeaderElectionNamespace is only one active controller manager.")
 	cmd.PersistentFlags().BoolVar(&opt.GinLogEnabled, "enable-ginlog", opt.GinLogEnabled, "Enabled will open gin run log.")
 	cmd.PersistentFlags().BoolVar(&opt.PprofEnabled, "enable-pprof", opt.PprofEnabled, "Enabled will open endpoint for go pprof.")
 	cmd.PersistentFlags().BoolVar(&opt.MasterEnabled, "enable-master", opt.MasterEnabled, "Enable master controller")

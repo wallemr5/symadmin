@@ -26,7 +26,6 @@ import (
 	k8smanager "gitlab.dmall.com/arch/sym-admin/pkg/k8s/manager"
 	"gitlab.dmall.com/arch/sym-admin/pkg/router"
 	"k8s.io/klog"
-	"sigs.k8s.io/controller-runtime/pkg/manager"
 )
 
 type ManagerOption struct {
@@ -37,13 +36,14 @@ type ManagerOption struct {
 	Repos              map[string]string
 
 	// use expose /metrics, /read, /live, /pprof.
-	HTTPAddr             string
-	EnableLeaderElection bool
-	GinLogEnabled        bool
-	PprofEnabled         bool
-	MasterEnabled        bool
-	WorkerEnabled        bool
-	Debug                bool
+	HTTPAddr                string
+	LeaderElectionNamespace string
+	EnableLeaderElection    bool
+	GinLogEnabled           bool
+	PprofEnabled            bool
+	MasterEnabled           bool
+	WorkerEnabled           bool
+	Debug                   bool
 }
 
 type DksManager struct {
@@ -56,22 +56,23 @@ type DksManager struct {
 
 func DefaultManagerOption() *ManagerOption {
 	return &ManagerOption{
-		HTTPAddr:             ":8080",
-		Threadiness:          1,
-		GoroutineThreshold:   1000,
-		ResyncPeriod:         30 * time.Minute,
-		EnableLeaderElection: false,
-		GinLogEnabled:        true,
-		PprofEnabled:         true,
-		MasterEnabled:        false,
-		WorkerEnabled:        false,
+		HTTPAddr:                ":8080",
+		Threadiness:             1,
+		GoroutineThreshold:      1000,
+		ResyncPeriod:            30 * time.Minute,
+		EnableLeaderElection:    true,
+		LeaderElectionNamespace: "sym-admin",
+		GinLogEnabled:           true,
+		PprofEnabled:            true,
+		MasterEnabled:           false,
+		WorkerEnabled:           false,
 		Repos: map[string]string{
 			"dmall": "http://chartmuseum.dmall.com",
 		},
 	}
 }
 
-func NewDksManager(mgr manager.Manager, opt *ManagerOption, componentName string) (*DksManager, error) {
+func NewDksManager(cli k8smanager.MasterClient, opt *ManagerOption, componentName string) (*DksManager, error) {
 	routerOptions := &router.Options{
 		GinLogEnabled:    opt.GinLogEnabled,
 		MetricsEnabled:   true,
@@ -97,7 +98,7 @@ func NewDksManager(mgr manager.Manager, opt *ManagerOption, componentName string
 	}
 	if opt.MasterEnabled {
 		klog.Info("start init multi cluster manager ... ")
-		kMgr, err := k8smanager.NewManager(mgr, k8smanager.DefaultClusterManagerOption())
+		kMgr, err := k8smanager.NewManager(cli, k8smanager.DefaultClusterManagerOption())
 		if err != nil {
 			klog.Fatalf("unable to new k8s manager err: %v", err)
 		}

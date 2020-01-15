@@ -11,8 +11,10 @@ import (
 
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/util/wait"
+	"k8s.io/client-go/kubernetes"
 	"k8s.io/klog"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
@@ -33,12 +35,18 @@ type ClusterManagerOption struct {
 	LabelSelector map[string]string
 }
 
+type MasterClient struct {
+	KubeCli kubernetes.Interface
+	manager.Manager
+}
+
 type ClusterManager struct {
-	clusters  []*Cluster
-	mu        *sync.RWMutex
-	MasterMgr manager.Manager
-	Opt       *ClusterManagerOption
-	PreInit   func()
+	MasterClient
+	mu       *sync.RWMutex
+	Opt      *ClusterManagerOption
+	clusters []*Cluster
+	PreInit  func()
+	Started  bool
 }
 
 func DefaultClusterManagerOption() *ClusterManagerOption {
@@ -68,14 +76,21 @@ func convertToKubeconfig(cm *corev1.ConfigMap) (string, bool) {
 	return kubeconfig, true
 }
 
-func NewManager(mgr manager.Manager, opt *ClusterManagerOption) (*ClusterManager, error) {
+func NewManager(cli MasterClient, opt *ClusterManagerOption) (*ClusterManager, error) {
 	cMgr := &ClusterManager{
-		MasterMgr: mgr,
-		clusters:  make([]*Cluster, 0, 4),
-		mu:        &sync.RWMutex{},
-		Opt:       opt,
+		MasterClient: cli,
+		clusters:     make([]*Cluster, 0, 4),
+		mu:           &sync.RWMutex{},
+		Opt:          opt,
 	}
 
+	err := cMgr.preStart()
+	if err != nil {
+		klog.Errorf("preStart cluster err: %v", err)
+		return nil, err
+	}
+
+	cMgr.Started = true
 	return cMgr, nil
 }
 
@@ -87,25 +102,44 @@ func (m *ClusterManager) AddPreInit(preInit func()) {
 	m.PreInit = preInit
 }
 
-// getClusterByConfigmap
-func (m *ClusterManager) getClusterByConfigmap() ([]*corev1.ConfigMap, error) {
-	configmaps := &corev1.ConfigMapList{}
-	err := m.MasterMgr.GetClient().List(context.Background(), &client.ListOptions{
-		LabelSelector: labels.SelectorFromSet(m.Opt.LabelSelector),
-		Namespace:     m.Opt.Namespace,
-	}, configmaps)
-	if err != nil {
-		if apierrors.IsNotFound(err) {
+// getClusterConfigmap
+func (m *ClusterManager) getClusterConfigmap() ([]*corev1.ConfigMap, error) {
+	cms := make([]*corev1.ConfigMap, 0, 4)
+	if m.Started {
+		configmaps := &corev1.ConfigMapList{}
+		err := m.Manager.GetClient().List(context.Background(), &client.ListOptions{
+			LabelSelector: labels.SelectorFromSet(m.Opt.LabelSelector),
+			Namespace:     m.Opt.Namespace,
+		}, configmaps)
+		if err != nil {
+			if apierrors.IsNotFound(err) {
+				return nil, err
+			}
+
+			klog.Errorf("failed to ConfigMapList ls :%v, err: %v", m.Opt.LabelSelector, err)
+			return nil, err
+		}
+		for i := range configmaps.Items {
+			cms = append(cms, &configmaps.Items[i])
+		}
+
+	} else {
+		cmList, err := m.KubeCli.CoreV1().ConfigMaps(m.Opt.Namespace).List(metav1.ListOptions{LabelSelector: labels.SelectorFromSet(m.Opt.LabelSelector).String()})
+		if err != nil {
+			klog.Errorf("unable to get cluster configmap err: %v", err)
+		}
+		if err != nil {
+			if apierrors.IsNotFound(err) {
+				return nil, err
+			}
+
+			klog.Errorf("failed to ConfigMapList ls :%v, err: %v", m.Opt.LabelSelector, err)
 			return nil, err
 		}
 
-		klog.Errorf("failed to ConfigMapList ls :%v, err: %v", m.Opt.LabelSelector, err)
-		return nil, err
-	}
-
-	cms := make([]*corev1.ConfigMap, 0, 4)
-	for i := range configmaps.Items {
-		cms = append(cms, &configmaps.Items[i])
+		for i := range cmList.Items {
+			cms = append(cms, &cmList.Items[i])
+		}
 	}
 
 	sort.Slice(cms, func(i, j int) bool {
@@ -213,7 +247,7 @@ func (m *ClusterManager) preStart() error {
 	ctx, cancel := context.WithTimeout(context.Background(), time.Minute)
 	defer cancel()
 
-	configmaps, err := m.getClusterByConfigmap()
+	configmaps, err := m.getClusterConfigmap()
 	if err != nil {
 		klog.Errorf("unable to get cluster configmap err: %v", err)
 		return err
@@ -243,10 +277,6 @@ func (m *ClusterManager) preStart() error {
 		klog.Infof("add cluster name: %s ", cm.Name)
 	}
 
-	if m.PreInit != nil {
-		m.PreInit()
-	}
-
 	return nil
 }
 
@@ -256,8 +286,9 @@ func (m *ClusterManager) cluterCheck() {
 
 // Start timer check cluster health
 func (m *ClusterManager) Start(stopCh <-chan struct{}) error {
-	m.preStart()
-
+	if m.PreInit != nil {
+		m.PreInit()
+	}
 	klog.Info("start cluster manager check loop ... ")
 	wait.Until(m.cluterCheck, time.Minute, stopCh)
 	return nil

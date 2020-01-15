@@ -26,7 +26,9 @@ import (
 	ctrlmanager "sigs.k8s.io/controller-runtime/pkg/manager"
 	logf "sigs.k8s.io/controller-runtime/pkg/runtime/log"
 	"sigs.k8s.io/controller-runtime/pkg/runtime/signals"
+
 	// ctrl "sigs.k8s.io/controller-runtime"
+	k8smanager "gitlab.dmall.com/arch/sym-admin/pkg/k8s/manager"
 )
 
 var (
@@ -59,7 +61,12 @@ func NewAPICmd(cli *DksCli) *cobra.Command {
 			}
 
 			stopCh := signals.SetupSignalHandler()
-			apiMgr, err := apiManager.NewAPIManager(mgr, opt, "controller")
+
+			k8sCli := k8smanager.MasterClient{
+				KubeCli: cli.GetKubeInterfaceOrDie(),
+				Manager: mgr,
+			}
+			apiMgr, err := apiManager.NewAPIManager(k8sCli, opt, "controller")
 			if err != nil {
 				klog.Fatalf("unable to NewDksManager err: %v", err)
 			}

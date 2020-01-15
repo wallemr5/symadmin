@@ -12,7 +12,6 @@ import (
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/klog"
-	"sigs.k8s.io/controller-runtime/pkg/manager"
 )
 
 // Option ...
@@ -48,7 +47,7 @@ func DefaultOption() *Option {
 }
 
 // NewAPIManager ...
-func NewAPIManager(mgr manager.Manager, opt *Option, componentName string) (*APIManager, error) {
+func NewAPIManager(cli k8smanager.MasterClient, opt *Option, componentName string) (*APIManager, error) {
 	healthHander := healthcheck.NewHealthHandler()
 	healthHander.AddLivenessCheck("goroutine_threshold",
 		healthcheck.GoroutineCountCheck(opt.GoroutineThreshold))
@@ -59,7 +58,7 @@ func NewAPIManager(mgr manager.Manager, opt *Option, componentName string) (*API
 	}
 
 	klog.Info("start init multi cluster manager ... ")
-	kMgr, err := k8smanager.NewManager(mgr, k8smanager.DefaultClusterManagerOption())
+	kMgr, err := k8smanager.NewManager(cli, k8smanager.DefaultClusterManagerOption())
 	if err != nil {
 		klog.Fatalf("unable to new k8s manager err: %v", err)
 	}
