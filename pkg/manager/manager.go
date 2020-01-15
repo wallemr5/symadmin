@@ -100,7 +100,7 @@ func NewDksManager(cli k8smanager.MasterClient, opt *ManagerOption, componentNam
 	}
 	if opt.MasterEnabled {
 		klog.Info("start init multi cluster manager ... ")
-		kMgr, err := k8smanager.NewManager(cli, k8smanager.DefaultClusterManagerOption(), dksMgr.ClusterAddName)
+		kMgr, err := k8smanager.NewManager(cli, k8smanager.DefaultClusterManagerOption(false), dksMgr.ClusterAddName)
 		if err != nil {
 			klog.Fatalf("unable to new k8s manager err: %v", err)
 		}

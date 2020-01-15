@@ -39,16 +39,19 @@ type ErrorResponse struct {
 
 // Project ...
 type Project struct {
-	DomainName string `json:"domainName,omitempty"`
-	PodIP      string `json:"podIp,omitempty"`
+	AppName    string   `json:"appName,omitempty"`
+	DomainName string   `json:"domainName,omitempty"`
+	PodCount   int      `json:"podCount,omitempty"`
+	Instances  []string `json:"instances,omitempty"`
 }
 
 // NodeProjects ...
 type NodeProjects struct {
-	NodeName string     `json:"nodeName,omitempty"`
-	NodeIP   string     `json:"nodeIp,omitempty"`
-	PodCount int        `json:"podCount,omitempty"`
-	Projects []*Project `json:"projects,omitempty"`
+	ClusterName string     `json:"clusterName,omitempty"`
+	NodeName    string     `json:"nodeName,omitempty"`
+	NodeIP      string     `json:"nodeIp,omitempty"`
+	PodCount    int        `json:"podCount,omitempty"`
+	Projects    []*Project `json:"projects,omitempty"`
 }
 
 // Endpoints ...
@@ -77,11 +80,12 @@ type NodeInfo struct {
 
 // ServiceInfo ...
 type ServiceInfo struct {
-	NameSpace string               `json:"namespace,omitempty"`
-	ClusterIP string               `json:"clusterIp,omitempty"`
-	Type      string               `json:"type,omitempty"`
-	Ports     []corev1.ServicePort `json:"ports,omitempty"`
-	Selector  map[string]string    `json:"selector,omitempty"`
+	ClusterName string               `json:"clusterName,omitempty"`
+	NameSpace   string               `json:"namespace,omitempty"`
+	ClusterIP   string               `json:"clusterIp,omitempty"`
+	Type        string               `json:"type,omitempty"`
+	Ports       []corev1.ServicePort `json:"ports,omitempty"`
+	Selector    map[string]string    `json:"selector,omitempty"`
 }
 
 // DeploymentInfo ...

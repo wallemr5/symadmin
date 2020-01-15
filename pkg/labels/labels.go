@@ -27,6 +27,7 @@ const (
 	ObserveMustLabelGroupName   = "sym-group"
 	ObserveMustLabelAppName     = "app"
 	ObserveMustLabelVersion     = "version"
+	ObserveMustLabelDomain      = "lightningDomain0"
 )
 
 const (

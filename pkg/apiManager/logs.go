@@ -20,7 +20,7 @@ import (
 func (m *APIManager) HandleLogs(c *gin.Context) {
 	clusterName := c.Param("name")
 	podName := c.Param("podName")
-	namespace := c.DefaultQuery("namespace", "default")
+	namespace := c.Param("namespace")
 	container := c.DefaultQuery("container", "")
 	tailLines, _ := strconv.ParseInt(c.DefaultQuery("tail", "10"), 10, 64)
 	limitBytes, _ := strconv.ParseInt(c.DefaultQuery("limitBytes", "2048"), 10, 64)
@@ -101,7 +101,7 @@ func (m *APIManager) HandleLogs(c *gin.Context) {
 // HandleFileLogs get log files in a pod
 func (m *APIManager) HandleFileLogs(c *gin.Context) {
 	clusterName := c.Param("name")
-	namespace := c.DefaultQuery("namespace", "default")
+	namespace := c.Param("namespace")
 	podName := c.Param("podName")
 	tailLines := c.DefaultQuery("tail", "10")
 

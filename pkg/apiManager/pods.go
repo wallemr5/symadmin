@@ -3,10 +3,12 @@ package apiManager
 import (
 	"context"
 	"net/http"
+	"sort"
 	"strconv"
 
 	"github.com/gin-gonic/gin"
 	"gitlab.dmall.com/arch/sym-admin/pkg/apiManager/model"
+	"gitlab.dmall.com/arch/sym-admin/pkg/labels"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -15,17 +17,23 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
-//GetNodeProject ...
+// GetNodeProject ...
 func (m *APIManager) GetNodeProject(c *gin.Context) {
 	clusterName := c.Param("name")
-	nodeIP := c.Param("ip")
+	nodeName := c.Param("nodeName")
 
 	clusters := m.K8sMgr.GetAll(clusterName)
-	ctx := context.Background()
-	pods := &model.NodeProjects{}
-	listOptions := &client.ListOptions{}
-	//listOptions.MatchingField("spec.nodeName",nodeIP)
 
+	nodePro := &model.NodeProjects{
+		Projects: make([]*model.Project, 0),
+	}
+
+	listOptions := &client.ListOptions{}
+	listOptions.MatchingField("spec.nodeName", nodeName)
+
+	var isFind bool
+	var findProject *model.Project
+	ctx := context.Background()
 	for _, cluster := range clusters {
 		podList := &corev1.PodList{}
 		err := cluster.Client.List(ctx, listOptions, podList)
@@ -39,23 +47,72 @@ func (m *APIManager) GetNodeProject(c *gin.Context) {
 		}
 
 		for i := range podList.Items {
+			var ok bool
+			var appName string
+
+			isFind = false
 			pod := &podList.Items[i]
-			if pod.Status.HostIP == nodeIP {
-				dm := pod.GetLabels()
-				//if dm,ok := dm["lightningDomain0"];ok{
-				if dm, ok := dm["app"]; ok {
-					pods.Projects = append(pods.Projects, &model.Project{
-						DomainName: dm,
-						PodIP:      pod.Status.PodIP,
-					})
+			if appName, ok = pod.GetLabels()[labels.ObserveMustLabelAppName]; !ok {
+				continue
+			}
+
+			if _, ok = pod.GetLabels()[labels.ObserveMustLabelGroupName]; !ok {
+				continue
+			}
+
+			for _, p := range nodePro.Projects {
+				if p.AppName == appName {
+					findProject = p
+					isFind = true
+					break
 				}
 			}
+
+			if isFind && findProject != nil {
+				nodePro.PodCount++
+				findProject.PodCount++
+				findProject.Instances = append(findProject.Instances, pod.Status.PodIP)
+				continue
+			}
+
+			podInfo := &model.Project{}
+			podInfo.AppName = appName
+			podInfo.PodCount++
+			podInfo.Instances = append(podInfo.Instances, pod.Status.PodIP)
+			if domainName, ok := pod.GetLabels()[labels.ObserveMustLabelDomain]; ok {
+				podInfo.DomainName = domainName
+			} else {
+				svcList := &corev1.ServiceList{}
+				svcListOptions := &client.ListOptions{}
+				svcListOptions.MatchingLabels(map[string]string{
+					"app": appName + "-svc",
+				})
+				err := cluster.Client.List(ctx, svcListOptions, svcList)
+				if err == nil && len(svcList.Items) > 0 {
+					if domainName, ok := svcList.Items[0].GetLabels()[labels.ObserveMustLabelDomain]; ok {
+						podInfo.DomainName = domainName
+					}
+				}
+			}
+
+			nodePro.Projects = append(nodePro.Projects, podInfo)
+			nodePro.PodCount++
+			if nodePro.NodeIP == "" {
+				nodePro.NodeIP = pod.Status.HostIP
+			}
 		}
-		pods.PodCount = len(pods.Projects)
-		pods.NodeIP = nodeIP
+
+		if nodePro.PodCount > 0 {
+			nodePro.ClusterName = cluster.Name
+			break
+		}
 	}
 
-	c.IndentedJSON(http.StatusOK, pods)
+	sort.Slice(nodePro.Projects, func(i, j int) bool {
+		return nodePro.Projects[i].AppName < nodePro.Projects[j].AppName
+	})
+
+	c.IndentedJSON(http.StatusOK, nodePro)
 }
 
 // GetPod ...
@@ -102,6 +159,9 @@ func (m *APIManager) GetPod(c *gin.Context) {
 			})
 			pods = append(pods, apiPod)
 		}
+		sort.Slice(pods, func(i, j int) bool {
+			return pods[i].Name < pods[j].Name
+		})
 
 		ofCluster := &model.PodOfCluster{
 			ClusterName: cluster.Name,
@@ -109,6 +169,9 @@ func (m *APIManager) GetPod(c *gin.Context) {
 		}
 		clusterPods = append(clusterPods, ofCluster)
 	}
+	sort.Slice(clusterPods, func(i, j int) bool {
+		return clusterPods[i].ClusterName < clusterPods[j].ClusterName
+	})
 
 	c.IndentedJSON(http.StatusOK, clusterPods)
 }
@@ -117,7 +180,7 @@ func (m *APIManager) GetPod(c *gin.Context) {
 func (m *APIManager) GetPodEvent(c *gin.Context) {
 	clusterName := c.Param("name")
 	podName := c.Param("podName")
-	namespace := c.DefaultQuery("namespace", "")
+	namespace := c.Param("namespace")
 	limit, _ := strconv.ParseInt(c.DefaultQuery("limit", "10"), 10, 64)
 	clusters := m.K8sMgr.GetAll(clusterName)
 
@@ -160,6 +223,9 @@ func (m *APIManager) GetPodEvent(c *gin.Context) {
 			}
 		}
 	}
+	sort.Slice(result, func(i, j int) bool {
+		return result[i].LastTime.Before(&result[j].LastTime)
+	})
 
 	c.IndentedJSON(http.StatusOK, result)
 }
@@ -168,7 +234,7 @@ func (m *APIManager) GetPodEvent(c *gin.Context) {
 func (m *APIManager) DeletePodByName(c *gin.Context) {
 	clusterName := c.Param("name")
 	podName := c.Param("podName")
-	namespace := c.DefaultQuery("namespace", "default")
+	namespace := c.Param("namespace")
 
 	cluster, err := m.K8sMgr.Get(clusterName)
 	if err != nil {
@@ -201,7 +267,7 @@ func (m *APIManager) DeletePodByName(c *gin.Context) {
 func (m *APIManager) DeletePodByGroup(c *gin.Context) {
 	clusterName := c.Param("name")
 	appName := c.Param("appName")
-	namespace := c.DefaultQuery("namespace", "default")
+	namespace := c.Param("namespace")
 	group, ok := c.GetQuery("group")
 	if !ok {
 		AbortHTTPError(c, GetPodNotGroup, "no group label", nil)

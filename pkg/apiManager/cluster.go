@@ -2,6 +2,7 @@ package apiManager
 
 import (
 	"net/http"
+	"sort"
 
 	"github.com/gin-gonic/gin"
 	"gitlab.dmall.com/arch/sym-admin/pkg/apiManager/model"
@@ -19,6 +20,9 @@ func (m *APIManager) GetClusters(c *gin.Context) {
 			Status: string(c.Status),
 		})
 	}
+	sort.Slice(status, func(i, j int) bool {
+		return status[i].Name < status[j].Name
+	})
 
 	c.IndentedJSON(http.StatusOK, status)
 }

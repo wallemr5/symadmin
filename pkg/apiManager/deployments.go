@@ -3,6 +3,7 @@ package apiManager
 import (
 	"context"
 	"net/http"
+	"sort"
 
 	"github.com/gin-gonic/gin"
 	"gitlab.dmall.com/arch/sym-admin/pkg/apiManager/model"
@@ -15,11 +16,16 @@ import (
 // GetDeployments get all deployments in assigned namespace
 func (m *APIManager) GetDeployments(c *gin.Context) {
 	clusterName := c.Param("name")
-	namespace := c.DefaultQuery("namespace", "default")
+	appName := c.Param("appName")
+	namespace := c.DefaultQuery("namespace", "")
+
 	clusters := m.K8sMgr.GetAll(clusterName)
 
 	ctx := context.Background()
 	listOptions := &client.ListOptions{Namespace: namespace}
+	listOptions.MatchingLabels(map[string]string{
+		"app": appName,
+	})
 	result := []*model.DeploymentInfo{}
 	for _, cluster := range clusters {
 		deployments := &appv1.DeploymentList{}
@@ -50,6 +56,9 @@ func (m *APIManager) GetDeployments(c *gin.Context) {
 			result = append(result, &info)
 		}
 	}
+	sort.Slice(result, func(i, j int) bool {
+		return result[i].Name < result[j].Name
+	})
 
 	c.IndentedJSON(http.StatusOK, result)
 }
