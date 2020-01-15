@@ -23,10 +23,10 @@ e.g. <br/>
 var GetNodeProjectDesc = `
 Get all pods on a node: <br/>
 name: url param,the unique cluster name and all <br/>
-ip: url param,the unique node ip. <br/>
+nodeName: url param,the unique node name. <br/>
 <br/>
 e.g. <br/>
-<a href="/api/cluster/all/nodeIp/10.13.135.17">/api/cluster/all/nodeIp/10.13.135.17</a><br/>
+<a href="/api/cluster/all/nodeName/10.13.135.17/project">/api/cluster/all/nodeIp/10.13.135.17/project</a><br/>
 `
 
 // DeletePodByGroupDesc ...

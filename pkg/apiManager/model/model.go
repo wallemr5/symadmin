@@ -39,16 +39,18 @@ type ErrorResponse struct {
 
 // Project ...
 type Project struct {
-	DomainName string `json:"domainName,omitempty"`
+	AppName    string `json:"appName,omitempty"`
 	PodIP      string `json:"podIp,omitempty"`
+	DomainName string `json:"domainName,omitempty"`
 }
 
 // NodeProjects ...
 type NodeProjects struct {
-	NodeName string     `json:"nodeName,omitempty"`
-	NodeIP   string     `json:"nodeIp,omitempty"`
-	PodCount int        `json:"podCount,omitempty"`
-	Projects []*Project `json:"projects,omitempty"`
+	ClusterName string     `json:"clusterName,omitempty"`
+	NodeName    string     `json:"nodeName,omitempty"`
+	NodeIP      string     `json:"nodeIp,omitempty"`
+	PodCount    int        `json:"podCount,omitempty"`
+	Projects    []*Project `json:"projects,omitempty"`
 }
 
 // Endpoints ...

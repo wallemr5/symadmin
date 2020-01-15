@@ -13,6 +13,7 @@ import (
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
+	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/util/wait"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/klog"
@@ -33,6 +34,7 @@ const (
 type ClusterManagerOption struct {
 	Namespace     string
 	LabelSelector map[string]string
+	IsApi         bool
 }
 
 type MasterClient struct {
@@ -49,12 +51,13 @@ type ClusterManager struct {
 	Started  bool
 }
 
-func DefaultClusterManagerOption() *ClusterManagerOption {
+func DefaultClusterManagerOption(isApi bool) *ClusterManagerOption {
 	return &ClusterManagerOption{
 		Namespace: "default",
 		LabelSelector: map[string]string{
 			"ClusterOwer": "sym-admin",
 		},
+		IsApi: isApi,
 	}
 }
 
@@ -270,6 +273,16 @@ func (m *ClusterManager) preStart() error {
 		if !c.healthCheck() {
 			klog.Errorf("cluster: %s check offline", cm.Name)
 			continue
+		}
+
+		if m.Opt.IsApi {
+			// add field index must before cache start
+			if err := c.Mgr.GetFieldIndexer().IndexField(&corev1.Pod{}, "spec.nodeName", func(rawObj runtime.Object) []string {
+				pod := rawObj.(*corev1.Pod)
+				return []string{pod.Spec.NodeName}
+			}); err != nil {
+				klog.Warningf("cluster name: %s add field index spec.nodeName, err: %#v", c.Name, err)
+			}
 		}
 
 		c.StartCache(ctx.Done())

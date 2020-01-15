@@ -5,8 +5,11 @@ import (
 	"net/http"
 	"strconv"
 
+	"sort"
+
 	"github.com/gin-gonic/gin"
 	"gitlab.dmall.com/arch/sym-admin/pkg/apiManager/model"
+	"gitlab.dmall.com/arch/sym-admin/pkg/labels"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -15,17 +18,21 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
-//GetNodeProject ...
+// GetNodeProject ...
 func (m *APIManager) GetNodeProject(c *gin.Context) {
 	clusterName := c.Param("name")
-	nodeIP := c.Param("ip")
+	nodeName := c.Param("nodeName")
 
 	clusters := m.K8sMgr.GetAll(clusterName)
-	ctx := context.Background()
-	pods := &model.NodeProjects{}
-	listOptions := &client.ListOptions{}
-	//listOptions.MatchingField("spec.nodeName",nodeIP)
 
+	nodePro := &model.NodeProjects{
+		Projects: make([]*model.Project, 0),
+	}
+
+	listOptions := &client.ListOptions{}
+	listOptions.MatchingField("spec.nodeName", nodeName)
+
+	ctx := context.Background()
 	for _, cluster := range clusters {
 		podList := &corev1.PodList{}
 		err := cluster.Client.List(ctx, listOptions, podList)
@@ -39,23 +46,45 @@ func (m *APIManager) GetNodeProject(c *gin.Context) {
 		}
 
 		for i := range podList.Items {
+			var ok bool
+			var appNmae string
 			pod := &podList.Items[i]
-			if pod.Status.HostIP == nodeIP {
-				dm := pod.GetLabels()
-				//if dm,ok := dm["lightningDomain0"];ok{
-				if dm, ok := dm["app"]; ok {
-					pods.Projects = append(pods.Projects, &model.Project{
-						DomainName: dm,
-						PodIP:      pod.Status.PodIP,
-					})
-				}
+
+			if appNmae, ok = pod.GetLabels()[labels.ObserveMustLabelAppName]; !ok {
+				continue
+			}
+
+			if _, ok = pod.GetLabels()[labels.ObserveMustLabelGroupName]; !ok {
+				continue
+			}
+
+			podInfo := &model.Project{
+				PodIP: pod.Status.PodIP,
+			}
+
+			podInfo.AppName = appNmae
+			if domainName, ok := pod.GetLabels()[labels.ObserveMustLabelDomain]; ok {
+				podInfo.DomainName = domainName
+			}
+
+			nodePro.Projects = append(nodePro.Projects, podInfo)
+			nodePro.PodCount++
+			if nodePro.NodeIP == "" {
+				nodePro.NodeIP = pod.Status.HostIP
 			}
 		}
-		pods.PodCount = len(pods.Projects)
-		pods.NodeIP = nodeIP
+
+		if nodePro.PodCount > 0 {
+			nodePro.ClusterName = cluster.Name
+			break
+		}
 	}
 
-	c.IndentedJSON(http.StatusOK, pods)
+	sort.Slice(nodePro.Projects, func(i, j int) bool {
+		return nodePro.Projects[i].AppName < nodePro.Projects[j].AppName
+	})
+
+	c.IndentedJSON(http.StatusOK, nodePro)
 }
 
 // GetPod ...

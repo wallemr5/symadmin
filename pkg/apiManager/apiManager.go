@@ -57,7 +57,7 @@ func NewAPIManager(cli k8smanager.MasterClient, opt *Option, componentName strin
 	}
 
 	klog.Info("start init multi cluster manager ... ")
-	k8sMgr, err := k8smanager.NewManager(cli, k8smanager.DefaultClusterManagerOption())
+	k8sMgr, err := k8smanager.NewManager(cli, k8smanager.DefaultClusterManagerOption(true))
 	if err != nil {
 		klog.Fatalf("unable to new k8s manager err: %v", err)
 	}
@@ -155,7 +155,7 @@ func (m *APIManager) Routes() []*router.Route {
 		},
 		{
 			Method:  "GET",
-			Path:    "/api/cluster/:name/nodeIp/:ip",
+			Path:    "/api/cluster/:name/nodeName/:nodeName/project",
 			Handler: m.GetNodeProject,
 			Desc:    GetNodeProjectDesc,
 		},
