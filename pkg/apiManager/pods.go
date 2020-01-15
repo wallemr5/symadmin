@@ -46,10 +46,11 @@ func (m *APIManager) GetNodeProject(c *gin.Context) {
 
 		for i := range podList.Items {
 			var ok bool
-			var appNmae string
+			var appName string
+			podIP := make([]string, 0)
 			pod := &podList.Items[i]
 
-			if appNmae, ok = pod.GetLabels()[labels.ObserveMustLabelAppName]; !ok {
+			if appName, ok = pod.GetLabels()[labels.ObserveMustLabelAppName]; !ok {
 				continue
 			}
 
@@ -58,10 +59,10 @@ func (m *APIManager) GetNodeProject(c *gin.Context) {
 			}
 
 			podInfo := &model.Project{
-				PodIP: pod.Status.PodIP,
+				PodIPs: append(podIP),
 			}
 
-			podInfo.AppName = appNmae
+			podInfo.AppName = appName
 			if domainName, ok := pod.GetLabels()[labels.ObserveMustLabelDomain]; ok {
 				podInfo.DomainName = domainName
 			}
