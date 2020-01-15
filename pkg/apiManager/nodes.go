@@ -21,15 +21,13 @@ func (m *APIManager) GetNodeInfo(c *gin.Context) {
 
 	ctx := context.Background()
 	nodes := make([]model.NodeInfo, 0, 4)
-	listOptions := &client.ListOptions{
-		LabelSelector: nil,
-		FieldSelector: nil,
-		Namespace:     "",
-		Raw:           nil,
+	listOptions := &client.ListOptions{}
+
+	if nodeName != "all" {
+		listOptions.MatchingLabels(map[string]string{
+			"kubernetes.io/hostname": nodeName,
+		})
 	}
-	listOptions.MatchingLabels(map[string]string{
-		"nodeName": nodeName,
-	})
 
 	for _, cluster := range clusters {
 		nodeList := &corev1.NodeList{}
