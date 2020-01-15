@@ -96,6 +96,46 @@ func (m *APIManager) GetTerminal(c *gin.Context) {
 	}
 }
 
+// ExecOnceWithHTTP ...
+func (m *APIManager) ExecOnceWithHTTP(c *gin.Context) {
+	clusterName := c.Param("name")
+	namespace := c.DefaultQuery("namespace", "default")
+	tty, _ := strconv.ParseBool(c.DefaultQuery("tty", "false"))
+	podName, ok := c.GetQuery("pod")
+	if !ok {
+		AbortHTTPError(c, ParamInvalidError, "", errors.New("can not get pod name"))
+		return
+	}
+
+	cmd, ok := c.GetQuery("cmd")
+	if !ok {
+		AbortHTTPError(c, ParamInvalidError, "", errors.New("no command to exec"))
+		return
+	}
+
+	containerName, ok := c.GetQuery("container")
+	if !ok {
+		AbortHTTPError(c, ParamInvalidError, "", errors.New("can not get container"))
+		return
+	}
+
+	cluster, err := m.K8sMgr.Get(clusterName)
+	if err != nil {
+		klog.Errorf("get cluster error: %+v", err)
+		AbortHTTPError(c, GetClusterError, "", err)
+		return
+	}
+
+	result, err := RunCmdOnceInContainer(cluster, namespace, podName, containerName, cmd, tty)
+	if err != nil {
+		klog.Errorf("run cmd once in container error: %v", err)
+		AbortHTTPError(c, ExecCmdError, "", err)
+		return
+	}
+
+	c.IndentedJSON(http.StatusOK, result)
+}
+
 // GetFiles get the log file of the specified directory
 func (m *APIManager) GetFiles(c *gin.Context) {
 	clusterName := c.Param("name")
@@ -218,8 +258,10 @@ func RunCmdOnceInContainer(cluster *k8smanager.Cluster, namespace, pod, containe
 	}
 
 	parameterCodec := runtime.NewParameterCodec(scheme)
+	cmd = strings.ReplaceAll(cmd, "'", "")
+	klog.Infof("exec cmd: %s", cmd)
 	req.VersionedParams(&core_v1.PodExecOptions{
-		Command:   []string{cmd},
+		Command:   strings.Fields(cmd),
 		Container: container,
 		Stdin:     false,
 		Stdout:    true,
@@ -325,15 +367,16 @@ func (ws *WsConnection) ReadLoop() {
 func (ws *WsConnection) WriteLoop() {
 Loop:
 	for {
+	Select:
 		select {
 		case msg := <-ws.outChan:
 			if err := ws.conn.WriteMessage(msg.MessageType, msg.Data); err != nil {
 				klog.Errorf("error in write websocket message: %v", err)
-				continue
+				break Loop
 			}
 		case <-ws.closeChan:
 			ws.Close()
-			break Loop
+			break Select
 		}
 	}
 

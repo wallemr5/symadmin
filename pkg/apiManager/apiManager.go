@@ -1,9 +1,8 @@
 package apiManager
 
 import (
-	"time"
-
 	"fmt"
+	"time"
 
 	workloadv1beta1 "gitlab.dmall.com/arch/sym-admin/pkg/apis/workload/v1beta1"
 	"gitlab.dmall.com/arch/sym-admin/pkg/healthcheck"
@@ -12,6 +11,7 @@ import (
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/klog"
+	"sigs.k8s.io/controller-runtime/pkg/manager"
 )
 
 // Option ...
@@ -47,7 +47,7 @@ func DefaultOption() *Option {
 }
 
 // NewAPIManager ...
-func NewAPIManager(cli k8smanager.MasterClient, opt *Option, componentName string) (*APIManager, error) {
+func NewAPIManager(mgr manager.Manager, opt *Option, componentName string) (*APIManager, error) {
 	healthHander := healthcheck.NewHealthHandler()
 	healthHander.AddLivenessCheck("goroutine_threshold",
 		healthcheck.GoroutineCountCheck(opt.GoroutineThreshold))
@@ -58,7 +58,7 @@ func NewAPIManager(cli k8smanager.MasterClient, opt *Option, componentName strin
 	}
 
 	klog.Info("start init multi cluster manager ... ")
-	kMgr, err := k8smanager.NewManager(cli, k8smanager.DefaultClusterManagerOption())
+	k8sMgr, err := k8smanager.NewManager(mgr, k8smanager.DefaultClusterManagerOption())
 	if err != nil {
 		klog.Fatalf("unable to new k8s manager err: %v", err)
 	}
@@ -76,40 +76,41 @@ func NewAPIManager(cli k8smanager.MasterClient, opt *Option, componentName strin
 	rt.AddRoutes("health", healthHander.Routes())
 	rt.AddRoutes("cluster", apiMgr.Routes())
 	apiMgr.Router = rt
-	apiMgr.K8sMgr = kMgr
+	apiMgr.K8sMgr = k8sMgr
 	apiMgr.K8sMgr.AddPreInit(func() {
 		klog.Infof("preInit manager cluster informer ... ")
 		for _, c := range apiMgr.K8sMgr.GetAll() {
+			clusterName := c.Name
 			advDeployInformer, _ := c.Cache.GetInformer(&workloadv1beta1.AdvDeployment{})
-			apiMgr.HealthHander.AddReadinessCheck(fmt.Sprintf("%s_%s", c.Name, "advDeploy_cache_sync"), func() error {
+			apiMgr.HealthHander.AddReadinessCheck(fmt.Sprintf("%s_%s", clusterName, "advDeploy_cache_sync"), func() error {
 				if advDeployInformer.HasSynced() {
 					return nil
 				}
-				return fmt.Errorf("cluster:%s AdvDeployment cache not sync", c.Name)
+				return fmt.Errorf("cluster:%s AdvDeployment cache not sync", clusterName)
 			})
 
 			podInformer, _ := c.Cache.GetInformer(&corev1.Pod{})
-			apiMgr.HealthHander.AddReadinessCheck(fmt.Sprintf("%s_%s", c.Name, "pod_cache_sync"), func() error {
+			apiMgr.HealthHander.AddReadinessCheck(fmt.Sprintf("%s_%s", clusterName, "pod_cache_sync"), func() error {
 				if podInformer.HasSynced() {
 					return nil
 				}
-				return fmt.Errorf("cluster:%s pod cache not sync", c.Name)
+				return fmt.Errorf("cluster:%s pod cache not sync", clusterName)
 			})
 
 			deploymentInformer, _ := c.Cache.GetInformer(&appsv1.Deployment{})
-			apiMgr.HealthHander.AddReadinessCheck(fmt.Sprintf("%s_%s", c.Name, "deployment_cache_sync"), func() error {
+			apiMgr.HealthHander.AddReadinessCheck(fmt.Sprintf("%s_%s", clusterName, "deployment_cache_sync"), func() error {
 				if deploymentInformer.HasSynced() {
 					return nil
 				}
-				return fmt.Errorf("cluster:%s deployment cache not sync", c.Name)
+				return fmt.Errorf("cluster:%s deployment cache not sync", clusterName)
 			})
 
 			statefulSetInformer, _ := c.Cache.GetInformer(&appsv1.StatefulSet{})
-			apiMgr.HealthHander.AddReadinessCheck(fmt.Sprintf("%s_%s", c.Name, "statefulset_cache_sync"), func() error {
+			apiMgr.HealthHander.AddReadinessCheck(fmt.Sprintf("%s_%s", clusterName, "statefulset_cache_sync"), func() error {
 				if statefulSetInformer.HasSynced() {
 					return nil
 				}
-				return fmt.Errorf("cluster:%s statefulset cache not sync", c.Name)
+				return fmt.Errorf("cluster:%s statefulset cache not sync", clusterName)
 			})
 
 			nodeInformer, _ := c.Cache.GetInformer(&corev1.Node{})
@@ -117,15 +118,15 @@ func NewAPIManager(cli k8smanager.MasterClient, opt *Option, componentName strin
 				if nodeInformer.HasSynced() {
 					return nil
 				}
-				return fmt.Errorf("cluster:%s node cache not sync", c.Name)
+				return fmt.Errorf("cluster:%s node cache not sync", clusterName)
 			})
 
 			serviceInformer, _ := c.Cache.GetInformer(&corev1.Service{})
-			apiMgr.HealthHander.AddReadinessCheck(fmt.Sprintf("%s_%s", c.Name, "service_cache_sync"), func() error {
+			apiMgr.HealthHander.AddReadinessCheck(fmt.Sprintf("%s_%s", clusterName, "service_cache_sync"), func() error {
 				if serviceInformer.HasSynced() {
 					return nil
 				}
-				return fmt.Errorf("cluster:%s service cache not sync", c.Name)
+				return fmt.Errorf("cluster:%s service cache not sync", clusterName)
 			})
 
 			c.Cache.GetInformer(&corev1.Event{})
@@ -169,7 +170,8 @@ func (m *APIManager) Routes() []*router.Route {
 			Method:  "DELETE",
 			Path:    "/api/cluster/:name/appPod/:appName/pods/:podName",
 			Handler: m.DeletePodByName,
-			Desc:    DeletePodByNameDesc},
+			Desc:    DeletePodByNameDesc,
+		},
 		{
 			Method:  "GET",
 			Path:    "/api/cluster/:name/endpointName/:endpointName",
@@ -186,7 +188,14 @@ func (m *APIManager) Routes() []*router.Route {
 			Method:  "GET",
 			Path:    "/api/cluster/:name/terminal",
 			Handler: m.GetTerminal,
-			Desc:    GetTerminalDesc},
+			Desc:    GetTerminalDesc,
+		},
+		{
+			Method:  "GET",
+			Path:    "/api/cluster/:name/exec",
+			Handler: m.ExecOnceWithHTTP,
+			Desc:    ExecOnceWithHTTPDesc,
+		},
 		{
 			Method:  "GET",
 			Path:    "/api/cluster/:name/service/:appName",
