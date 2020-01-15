@@ -2,7 +2,7 @@ apiVersion: v1
 kind: ServiceAccount
 metadata:
   name: {{ .Values.rbac.name }}
-  namespace: {{ .Values.rbac.namespace }}
+  namespace: {{ .Release.Namespace }}
 
 ---
 apiVersion: {{ include "rbac_api_version" . }}
@@ -27,7 +27,7 @@ metadata:
 subjects:
 - kind: ServiceAccount
   name: {{ .Values.rbac.name }}
-  namespace: {{ .Values.rbac.namespace }}
+  namespace: {{ .Release.Namespace }}
 roleRef:
   kind: ClusterRole
   name: {{- printf " %s-role" .Values.rbac.name | trunc 63 }}

@@ -20,6 +20,8 @@ type Handler interface {
 	AddReadinessCheck(name string, check Check)
 	LiveEndpoint(ctx *gin.Context)
 	ReadyEndpoint(ctx *gin.Context)
+	RemoveLivenessCheck(name string)
+	RemoveReadinessCheck(name string)
 }
 
 // basicHandler is a basic Handler implementation.
@@ -29,13 +31,29 @@ type basicHandler struct {
 	readinessChecks map[string]Check
 }
 
-// NewHandler creates a new basic Handler
-func NewHealthHandler() Handler {
+var (
+	handler Handler
+	mu      sync.Mutex
+)
+
+func GetHealthHandler() Handler {
+	if handler != nil {
+		return handler
+	}
+
+	mu.Lock()
+	defer mu.Unlock()
+
+	if handler != nil {
+		return handler
+	}
+
 	h := &basicHandler{
 		livenessChecks:  make(map[string]Check),
 		readinessChecks: make(map[string]Check),
 	}
-	return h
+	handler = h
+	return handler
 }
 
 func (s *basicHandler) Routes() []*router.Route {
@@ -76,6 +94,20 @@ func (s *basicHandler) AddReadinessCheck(name string, check Check) {
 	s.checksMutex.Lock()
 	defer s.checksMutex.Unlock()
 	s.readinessChecks[name] = check
+}
+
+func (s *basicHandler) RemoveLivenessCheck(name string) {
+	s.checksMutex.Lock()
+	defer s.checksMutex.Unlock()
+
+	delete(s.livenessChecks, name)
+}
+
+func (s *basicHandler) RemoveReadinessCheck(name string) {
+	s.checksMutex.Lock()
+	defer s.checksMutex.Unlock()
+
+	delete(s.readinessChecks, name)
 }
 
 func (s *basicHandler) collectChecks(checks map[string]Check, resultsOut map[string]string, statusOut *int) {

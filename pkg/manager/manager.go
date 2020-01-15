@@ -49,9 +49,10 @@ type ManagerOption struct {
 type DksManager struct {
 	Opt *ManagerOption
 
-	Router       *router.Router
-	HealthHander healthcheck.Handler
-	K8sMgr       *k8smanager.ClusterManager
+	Router         *router.Router
+	HealthHander   healthcheck.Handler
+	K8sMgr         *k8smanager.ClusterManager
+	ClusterAddName chan map[string]string
 }
 
 func DefaultManagerOption() *ManagerOption {
@@ -82,7 +83,7 @@ func NewDksManager(cli k8smanager.MasterClient, opt *ManagerOption, componentNam
 		MetricsSubsystem: componentName,
 	}
 
-	healthHander := healthcheck.NewHealthHandler()
+	healthHander := healthcheck.GetHealthHandler()
 	healthHander.AddLivenessCheck("goroutine_threshold",
 		healthcheck.GoroutineCountCheck(opt.GoroutineThreshold))
 
@@ -92,13 +93,14 @@ func NewDksManager(cli k8smanager.MasterClient, opt *ManagerOption, componentNam
 	// rt.AddRoutes("cluster", mgr.Routes())
 
 	dksMgr := &DksManager{
-		Opt:          opt,
-		Router:       rt,
-		HealthHander: healthHander,
+		Opt:            opt,
+		Router:         rt,
+		HealthHander:   healthHander,
+		ClusterAddName: make(chan map[string]string, 1),
 	}
 	if opt.MasterEnabled {
 		klog.Info("start init multi cluster manager ... ")
-		kMgr, err := k8smanager.NewManager(cli, k8smanager.DefaultClusterManagerOption())
+		kMgr, err := k8smanager.NewManager(cli, k8smanager.DefaultClusterManagerOption(), dksMgr.ClusterAddName)
 		if err != nil {
 			klog.Fatalf("unable to new k8s manager err: %v", err)
 		}

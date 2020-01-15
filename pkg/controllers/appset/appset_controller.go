@@ -156,7 +156,33 @@ func NewAppSetController(mgr manager.Manager, cMgr *pkgmanager.DksManager) (*App
 
 	c.CustomImpl = customImpl
 	c.Client = mgr.GetClient()
+	go c.ClusterChange()
 	return c, customImpl
+}
+
+func (r *AppSetReconciler) ClusterChange() {
+	for {
+		select {
+		case list, ok := <-r.DksMgr.ClusterAddName:
+			if !ok {
+				return
+			}
+			for name := range list {
+				cluster, err := r.DksMgr.K8sMgr.Get(name)
+				if err != nil {
+					klog.Errorf("get cluster[%s] faile: %+v", cluster.Name, err)
+					break
+				}
+				advDeploymentInformer, err := cluster.Cache.GetInformer(&workloadv1beta1.AdvDeployment{})
+				if err != nil {
+					klog.Errorf("cluster name:%s can't add AdvDeployment InformerEntry, err: %+v", cluster.Name, err)
+					break
+				}
+				advDeploymentInformer.AddEventHandler(customctrl.HandlerWraps(r.CustomImpl.EnqueueMulti))
+				klog.Infof("cluster name:%s AddEventHandler AdvDeployment key to queue", cluster.Name)
+			}
+		}
+	}
 }
 
 // CustomReconcile for multi cluster reconcile

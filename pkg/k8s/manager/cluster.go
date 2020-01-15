@@ -23,7 +23,8 @@ const (
 	// ClusterReady means the cluster is ready to accept workloads.
 	ClusterReady ClusterStatusType = "Ready"
 	// ClusterOffline means the cluster is temporarily down or not reachable
-	ClusterOffline ClusterStatusType = "Offline"
+	ClusterOffline  ClusterStatusType = "Offline"
+	ClusterMaintain ClusterStatusType = "Maintaining"
 )
 
 type Cluster struct {

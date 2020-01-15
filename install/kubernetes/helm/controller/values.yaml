@@ -22,14 +22,13 @@ healthPath:
 
 rbac:
   name: sym-controller
-  namespace: sym
   rules:
   - apiGroups: ["workload.dmall.com"]
     resources: ["*"]
     verbs: ["*"]
   - apiGroups: [""]
     resources: ["pods", "services", "endpoints", "configmaps"]
-    verbs: ["get", "list", "watch"]
+    verbs: ["get", "list", "watch", "update"]
   - apiGroups: ["apps"]
     resources: ["deployments"]
     verbs: ["get", "list", "watch"]
