@@ -23,6 +23,8 @@ type ContainerStatus struct {
 // Pod ...
 type Pod struct {
 	Name            string             `json:"name,omitempty"`
+	Namespace       string             `json:"namespace,omitempty"`
+	ClusterName     string             `json:"clusterName,omitempty"`
 	NodeIP          string             `json:"nodeIp,omitempty"`
 	PodIP           string             `json:"podIp,omitempty"`
 	ImageVersion    string             `json:"imageVersion,omitempty"`
@@ -67,6 +69,7 @@ type Endpoint struct {
 // NodeInfo ...
 type NodeInfo struct {
 	Name          string `json:"name,omitempty"`
+	ClusterName   string `json:"clusterName,omitempty"`
 	HostIP        string `json:"hostIp,omitempty"`
 	KernelVersion string `json:"kernelVersion,omitempty"`
 	Architecture  string `json:"architecture,omitempty"`
@@ -90,7 +93,7 @@ type ServiceInfo struct {
 
 // DeploymentInfo ...
 type DeploymentInfo struct {
-	Cluster             string                `json:"cluster,omitempty"`
+	ClusterName         string                `json:"clusterName,omitempty"`
 	NameSpace           string                `json:"namespace,omitempty"`
 	Name                string                `json:"name,omitempty"`
 	DesiredReplicas     *int32                `json:"desiredReplicas,omitempty"`
@@ -115,14 +118,14 @@ type PodOfCluster struct {
 
 // Event ...
 type Event struct {
-	Cluster    string      `json:"cluster,omitempty"`
-	Namespace  string      `json:"namespace,omitempty"`
-	ObjectKind string      `json:"objectKind,omitempty"`
-	ObjectName string      `json:"objectName,omitempty"`
-	Type       string      `json:"type,omitempty"`
-	Count      int32       `json:"count,omitempty"`
-	FirstTime  metav1.Time `json:"firstTime,omitempty"`
-	LastTime   metav1.Time `json:"lastTime,omitempty"`
-	Message    string      `json:"message,omitempty"`
-	Reason     string      `json:"reason,omitempty"`
+	ClusterName string      `json:"clusterName,omitempty"`
+	Namespace   string      `json:"namespace,omitempty"`
+	ObjectKind  string      `json:"objectKind,omitempty"`
+	ObjectName  string      `json:"objectName,omitempty"`
+	Type        string      `json:"type,omitempty"`
+	Count       int32       `json:"count,omitempty"`
+	FirstTime   metav1.Time `json:"firstTime,omitempty"`
+	LastTime    metav1.Time `json:"lastTime,omitempty"`
+	Message     string      `json:"message,omitempty"`
+	Reason      string      `json:"reason,omitempty"`
 }

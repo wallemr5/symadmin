@@ -160,16 +160,16 @@ func (m *APIManager) GetPodEvent(c *gin.Context) {
 
 		for _, event := range events.Items {
 			item := &model.Event{
-				Cluster:    cluster.GetName(),
-				Namespace:  event.GetNamespace(),
-				ObjectName: event.InvolvedObject.Name,
-				ObjectKind: event.InvolvedObject.Kind,
-				Type:       event.Type,
-				Count:      event.Count,
-				FirstTime:  event.FirstTimestamp,
-				LastTime:   event.LastTimestamp,
-				Message:    event.Message,
-				Reason:     event.Reason,
+				ClusterName: cluster.GetName(),
+				Namespace:   event.GetNamespace(),
+				ObjectName:  event.InvolvedObject.Name,
+				ObjectKind:  event.InvolvedObject.Kind,
+				Type:        event.Type,
+				Count:       event.Count,
+				FirstTime:   event.FirstTimestamp,
+				LastTime:    event.LastTimestamp,
+				Message:     event.Message,
+				Reason:      event.Reason,
 			}
 			if podName == "all" {
 				result = append(result, item)
@@ -281,6 +281,8 @@ func getPodByAppName(clusters []*k8smanager.Cluster, appName, group string) ([]*
 			pod := &podList.Items[i]
 			apiPod := &model.Pod{
 				Name:            pod.GetName(),
+				Namespace:       pod.Namespace,
+				ClusterName:     cluster.GetName(),
 				NodeIP:          pod.Status.HostIP,
 				PodIP:           pod.Status.PodIP,
 				ImageVersion:    "",
@@ -310,4 +312,53 @@ func getPodByAppName(clusters []*k8smanager.Cluster, appName, group string) ([]*
 		return clusterPods[i].ClusterName < clusterPods[j].ClusterName
 	})
 	return clusterPods, nil
+}
+
+// return Pod list， not PodOfCluster
+func getPodListByAppName(clusters []*k8smanager.Cluster, appName, group string) ([]*model.Pod, error) {
+	ctx := context.Background()
+	pods := make([]*model.Pod, 0, 4)
+	listOptions := &client.ListOptions{}
+	listOptions.MatchingLabels(map[string]string{
+		"app":   appName,
+		"group": group,
+	})
+	for _, cluster := range clusters {
+		//pods := make([]*model.Pod, 0, 4)
+		podList := &corev1.PodList{}
+		err := cluster.Client.List(ctx, listOptions, podList)
+		if err != nil {
+			if apierrors.IsNotFound(err) {
+				continue
+			}
+			return nil, err
+		}
+
+		for i := range podList.Items {
+			pod := &podList.Items[i]
+			apiPod := &model.Pod{
+				Name:            pod.GetName(),
+				Namespace:       pod.Namespace,
+				ClusterName:     cluster.GetName(),
+				NodeIP:          pod.Status.HostIP,
+				PodIP:           pod.Status.PodIP,
+				ImageVersion:    "",
+				StartTime:       pod.Status.StartTime.String(),
+				ContainerStatus: nil,
+			}
+			apiPod.ContainerStatus = append(apiPod.ContainerStatus, &model.ContainerStatus{
+				Name:         pod.Status.ContainerStatuses[0].Name,
+				Ready:        pod.Status.ContainerStatuses[0].Ready,
+				RestartCount: pod.Status.ContainerStatuses[0].RestartCount,
+				Image:        pod.Status.ContainerStatuses[0].Image,
+				ContainerID:  pod.Status.ContainerStatuses[0].ContainerID,
+			})
+			pods = append(pods, apiPod)
+		}
+		sort.Slice(pods, func(i, j int) bool {
+			return pods[i].Name < pods[j].Name
+		})
+	}
+
+	return pods, nil
 }

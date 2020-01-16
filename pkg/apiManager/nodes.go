@@ -48,6 +48,7 @@ func (m *APIManager) GetNodeInfo(c *gin.Context) {
 			memory = memory / 1024 / 1024 / 1024
 			nodeInfo := model.NodeInfo{
 				Name:          node.Name,
+				ClusterName:   cluster.GetName(),
 				HostIP:        node.Status.Addresses[0].Address,
 				Status:        string(node.Status.Conditions[len(node.Status.Conditions)-1].Type),
 				CPU:           cpu,

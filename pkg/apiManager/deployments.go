@@ -53,7 +53,7 @@ func getDeployments(clusters []*k8smanager.Cluster, namespace, appName, group st
 		for _, deployment := range deployments.Items {
 			info := model.DeploymentInfo{
 				Name:                deployment.GetName(),
-				Cluster:             cluster.GetName(),
+				ClusterName:         cluster.GetName(),
 				NameSpace:           deployment.GetNamespace(),
 				DesiredReplicas:     deployment.Spec.Replicas,
 				UpdatedReplicas:     deployment.Status.UpdatedReplicas,
