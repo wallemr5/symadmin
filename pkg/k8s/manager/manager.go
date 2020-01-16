@@ -56,7 +56,7 @@ func DefaultClusterManagerOption(isApi bool) *ClusterManagerOption {
 	return &ClusterManagerOption{
 		Namespace: "default",
 		LabelSelector: map[string]string{
-			"ClusterOwer": "sym-admin",
+			"ClusterOwner": "sym-admin",
 		},
 		IsApi: isApi,
 	}
