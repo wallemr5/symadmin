@@ -26,6 +26,8 @@ import (
 	"github.com/gofrs/uuid"
 	workloadv1beta1 "gitlab.dmall.com/arch/sym-admin/pkg/apis/workload/v1beta1"
 	"gitlab.dmall.com/arch/sym-admin/pkg/customctrl"
+	"gitlab.dmall.com/arch/sym-admin/pkg/healthcheck"
+	k8smanager "gitlab.dmall.com/arch/sym-admin/pkg/k8s/manager"
 	"gitlab.dmall.com/arch/sym-admin/pkg/labels"
 	pkgmanager "gitlab.dmall.com/arch/sym-admin/pkg/manager"
 	"gitlab.dmall.com/arch/sym-admin/pkg/utils"
@@ -114,17 +116,14 @@ func NewAppSetController(mgr manager.Manager, cMgr *pkgmanager.DksManager) (*App
 	// Create a new custom controller
 	customImpl := customctrl.NewImpl(c, controllerName, nil, &cMgr.Opt.Threadiness, labels.ObservedNamespace...)
 
+	c.CustomImpl = customImpl
+	c.Client = mgr.GetClient()
+
 	for _, cluster := range cMgr.K8sMgr.GetAll() {
-		advDeploymentInformer, err := cluster.Cache.GetInformer(&workloadv1beta1.AdvDeployment{})
+		err := c.registryResource(cluster)
 		if err != nil {
-			klog.Errorf("cluster name:%s can't add AdvDeployment InformerEntry, err: %+v", cluster.Name, err)
 			return nil, nil
 		}
-		advDeploymentInformer.AddEventHandler(customctrl.HandlerWraps(customImpl.EnqueueMulti))
-		klog.Infof("cluster name:%s AddEventHandler AdvDeployment key to queue", cluster.Name)
-
-		cluster.Cache.GetInformer(&corev1.Pod{})
-		cluster.Cache.GetInformer(&corev1.Service{})
 	}
 
 	appSetInformer, err := mgr.GetCache().GetInformer(&workloadv1beta1.AppSet{})
@@ -154,16 +153,35 @@ func NewAppSetController(mgr manager.Manager, cMgr *pkgmanager.DksManager) (*App
 		klog.Fatal("Can't add runnable for PolicyTrigger")
 	}
 
-	c.CustomImpl = customImpl
-	c.Client = mgr.GetClient()
 	go c.ClusterChange()
+
 	return c, customImpl
+}
+
+func (r *AppSetReconciler) registryResource(cluster *k8smanager.Cluster) error {
+	advDeploymentInformer, err := cluster.Cache.GetInformer(&workloadv1beta1.AdvDeployment{})
+	if err != nil {
+		klog.Errorf("cluster name:%s can't add AdvDeployment InformerEntry, err: %+v", cluster.Name, err)
+		return err
+	}
+	advDeploymentInformer.AddEventHandler(customctrl.HandlerWraps(r.CustomImpl.EnqueueMulti))
+	klog.Infof("cluster name:%s AddEventHandler AdvDeployment key to queue", cluster.Name)
+
+	healthHander := healthcheck.GetHealthHandler()
+	healthHander.AddReadinessCheck(fmt.Sprintf("%s_%s", cluster.Name, "advDeploy_cache_sync"), func() error {
+		if advDeploymentInformer.HasSynced() {
+			return nil
+		}
+		return fmt.Errorf("cluster:%s AdvDeployment cache not sync", cluster.Name)
+	})
+
+	return nil
 }
 
 func (r *AppSetReconciler) ClusterChange() {
 	for {
 		select {
-		case list, ok := <-r.DksMgr.ClusterAddName:
+		case list, ok := <-r.DksMgr.K8sMgr.ClusterAddInfo:
 			if !ok {
 				return
 			}
@@ -173,13 +191,7 @@ func (r *AppSetReconciler) ClusterChange() {
 					klog.Errorf("get cluster[%s] faile: %+v", cluster.Name, err)
 					break
 				}
-				advDeploymentInformer, err := cluster.Cache.GetInformer(&workloadv1beta1.AdvDeployment{})
-				if err != nil {
-					klog.Errorf("cluster name:%s can't add AdvDeployment InformerEntry, err: %+v", cluster.Name, err)
-					break
-				}
-				advDeploymentInformer.AddEventHandler(customctrl.HandlerWraps(r.CustomImpl.EnqueueMulti))
-				klog.Infof("cluster name:%s AddEventHandler AdvDeployment key to queue", cluster.Name)
+				r.registryResource(cluster)
 			}
 		}
 	}

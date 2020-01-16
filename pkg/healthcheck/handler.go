@@ -2,6 +2,7 @@ package healthcheck
 
 import (
 	"net/http"
+	"strings"
 	"sync"
 
 	"github.com/gin-gonic/gin"
@@ -100,14 +101,22 @@ func (s *basicHandler) RemoveLivenessCheck(name string) {
 	s.checksMutex.Lock()
 	defer s.checksMutex.Unlock()
 
-	delete(s.livenessChecks, name)
+	for n := range s.livenessChecks {
+		if strings.HasPrefix(n, name) {
+			delete(s.livenessChecks, n)
+		}
+	}
 }
 
 func (s *basicHandler) RemoveReadinessCheck(name string) {
 	s.checksMutex.Lock()
 	defer s.checksMutex.Unlock()
 
-	delete(s.readinessChecks, name)
+	for n := range s.readinessChecks {
+		if strings.HasPrefix(n, name) {
+			delete(s.readinessChecks, n)
+		}
+	}
 }
 
 func (s *basicHandler) collectChecks(checks map[string]Check, resultsOut map[string]string, statusOut *int) {

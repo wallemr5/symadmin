@@ -8,7 +8,6 @@ import (
 	"sync"
 	"time"
 
-	workloadv1beta1 "gitlab.dmall.com/arch/sym-admin/pkg/apis/workload/v1beta1"
 	"gitlab.dmall.com/arch/sym-admin/pkg/healthcheck"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
@@ -50,7 +49,7 @@ type ClusterManager struct {
 	clusters       []*Cluster
 	PreInit        func()
 	Started        bool
-	clusterAddName chan map[string]string
+	ClusterAddInfo chan map[string]string
 }
 
 func DefaultClusterManagerOption(isApi bool) *ClusterManagerOption {
@@ -81,13 +80,13 @@ func convertToKubeconfig(cm *corev1.ConfigMap) (string, bool) {
 	return kubeconfig, true
 }
 
-func NewManager(cli MasterClient, opt *ClusterManagerOption, clusterAddName chan map[string]string) (*ClusterManager, error) {
+func NewManager(cli MasterClient, opt *ClusterManagerOption) (*ClusterManager, error) {
 	cMgr := &ClusterManager{
 		MasterClient:   cli,
 		clusters:       make([]*Cluster, 0, 4),
 		mu:             &sync.RWMutex{},
 		Opt:            opt,
-		clusterAddName: clusterAddName,
+		ClusterAddInfo: make(chan map[string]string),
 	}
 
 	err := cMgr.preStart()
@@ -301,7 +300,8 @@ func (m *ClusterManager) cluterCheck() {
 	klog.V(4).Info("cluster configmap check.")
 	configmaps, err := m.getClusterConfigmap()
 	if err != nil {
-		klog.Fatalf("unable to get cluster configmap err: %v", err)
+		klog.Errorf("unable to get cluster configmap err: %v", err)
+		return
 	}
 
 	expectList := map[string]string{}
@@ -348,8 +348,8 @@ func (m *ClusterManager) cluterCheck() {
 	healthHander := healthcheck.GetHealthHandler()
 	for _, cls := range delList {
 		klog.Infof("delete cluster:%s connect", cls.Name)
+		healthHander.RemoveLivenessCheck(cls.Name)
 		cls.Stop()
-		healthHander.RemoveLivenessCheck(fmt.Sprintf("%s_%s", cls.Name, "advDeploy_cache_sync"))
 	}
 
 	for name, conf := range addList {
@@ -366,7 +366,12 @@ func (m *ClusterManager) cluterCheck() {
 	})
 	m.clusters = newClusters
 
-	m.clusterAddName <- addList
+	t := time.After(time.Second * 5)
+	select {
+	case m.ClusterAddInfo <- addList:
+	case <-t:
+		klog.Infof("add cluster info timeout:%+v", addList)
+	}
 	return
 }
 
@@ -377,17 +382,6 @@ func (m *ClusterManager) addNewClusters(name string, kubeconfig string) (*Cluste
 		klog.Errorf("cluster: %s new client err: %v", name, err)
 		return nil, err
 	}
-
-	klog.V(4).Infof("cluster:%s add AdvDeployment cache", name)
-	healthHander := healthcheck.GetHealthHandler()
-
-	advDeployInformer, _ := nc.Cache.GetInformer(&workloadv1beta1.AdvDeployment{})
-	healthHander.AddReadinessCheck(fmt.Sprintf("%s_%s", name, "advDeploy_cache_sync"), func() error {
-		if advDeployInformer.HasSynced() {
-			return nil
-		}
-		return fmt.Errorf("cluster:%s AdvDeployment cache not sync", name)
-	})
 
 	ctx, cancel := context.WithTimeout(context.Background(), time.Minute)
 	defer cancel()
