@@ -30,9 +30,9 @@ type Option struct {
 type APIManager struct {
 	Opt *Option
 
-	Router       *router.Router
-	HealthHander healthcheck.Handler
-	K8sMgr       *k8smanager.ClusterManager
+	Router        *router.Router
+	HealthHandler healthcheck.Handler
+	K8sMgr        *k8smanager.ClusterManager
 }
 
 // DefaultOption ...
@@ -47,13 +47,13 @@ func DefaultOption() *Option {
 
 // NewAPIManager ...
 func NewAPIManager(cli k8smanager.MasterClient, opt *Option, componentName string) (*APIManager, error) {
-	healthHander := healthcheck.GetHealthHandler()
-	healthHander.AddLivenessCheck("goroutine_threshold",
+	healthHandler := healthcheck.GetHealthHandler()
+	healthHandler.AddLivenessCheck("goroutine_threshold",
 		healthcheck.GoroutineCountCheck(opt.GoroutineThreshold))
 
 	apiMgr := &APIManager{
-		Opt:          opt,
-		HealthHander: healthHander,
+		Opt:           opt,
+		HealthHandler: healthHandler,
 	}
 
 	klog.Info("start init multi cluster manager ... ")
@@ -72,7 +72,7 @@ func NewAPIManager(cli k8smanager.MasterClient, opt *Option, componentName strin
 	}
 	rt := router.NewRouter(routerOptions)
 	rt.AddRoutes("index", rt.DefaultRoutes())
-	rt.AddRoutes("health", healthHander.Routes())
+	rt.AddRoutes("health", healthHandler.Routes())
 	rt.AddRoutes("cluster", apiMgr.Routes())
 	apiMgr.Router = rt
 	apiMgr.K8sMgr = k8sMgr
@@ -89,10 +89,10 @@ func NewAPIManager(cli k8smanager.MasterClient, opt *Option, componentName strin
 }
 
 func (m *APIManager) registryResource(cluster *k8smanager.Cluster) error {
-	healthHander := healthcheck.GetHealthHandler()
+	healthHandler := healthcheck.GetHealthHandler()
 	clusterName := cluster.Name
 	advDeployInformer, _ := cluster.Cache.GetInformer(&workloadv1beta1.AdvDeployment{})
-	healthHander.AddReadinessCheck(fmt.Sprintf("%s_%s", clusterName, "advDeploy_cache_sync"), func() error {
+	healthHandler.AddReadinessCheck(fmt.Sprintf("%s_%s", clusterName, "advDeploy_cache_sync"), func() error {
 		if advDeployInformer.HasSynced() {
 			return nil
 		}
@@ -100,7 +100,7 @@ func (m *APIManager) registryResource(cluster *k8smanager.Cluster) error {
 	})
 
 	podInformer, _ := cluster.Cache.GetInformer(&corev1.Pod{})
-	healthHander.AddReadinessCheck(fmt.Sprintf("%s_%s", clusterName, "pod_cache_sync"), func() error {
+	healthHandler.AddReadinessCheck(fmt.Sprintf("%s_%s", clusterName, "pod_cache_sync"), func() error {
 		if podInformer.HasSynced() {
 			return nil
 		}
@@ -108,7 +108,7 @@ func (m *APIManager) registryResource(cluster *k8smanager.Cluster) error {
 	})
 
 	deploymentInformer, _ := cluster.Cache.GetInformer(&appsv1.Deployment{})
-	healthHander.AddReadinessCheck(fmt.Sprintf("%s_%s", clusterName, "deployment_cache_sync"), func() error {
+	healthHandler.AddReadinessCheck(fmt.Sprintf("%s_%s", clusterName, "deployment_cache_sync"), func() error {
 		if deploymentInformer.HasSynced() {
 			return nil
 		}
@@ -116,7 +116,7 @@ func (m *APIManager) registryResource(cluster *k8smanager.Cluster) error {
 	})
 
 	statefulSetInformer, _ := cluster.Cache.GetInformer(&appsv1.StatefulSet{})
-	healthHander.AddReadinessCheck(fmt.Sprintf("%s_%s", clusterName, "statefulset_cache_sync"), func() error {
+	healthHandler.AddReadinessCheck(fmt.Sprintf("%s_%s", clusterName, "statefulset_cache_sync"), func() error {
 		if statefulSetInformer.HasSynced() {
 			return nil
 		}
@@ -124,7 +124,7 @@ func (m *APIManager) registryResource(cluster *k8smanager.Cluster) error {
 	})
 
 	nodeInformer, _ := cluster.Cache.GetInformer(&corev1.Node{})
-	healthHander.AddReadinessCheck(fmt.Sprintf("%s_%s", clusterName, "node_cache_sync"), func() error {
+	healthHandler.AddReadinessCheck(fmt.Sprintf("%s_%s", clusterName, "node_cache_sync"), func() error {
 		if nodeInformer.HasSynced() {
 			return nil
 		}
@@ -132,7 +132,7 @@ func (m *APIManager) registryResource(cluster *k8smanager.Cluster) error {
 	})
 
 	serviceInformer, _ := cluster.Cache.GetInformer(&corev1.Service{})
-	healthHander.AddReadinessCheck(fmt.Sprintf("%s_%s", clusterName, "service_cache_sync"), func() error {
+	healthHandler.AddReadinessCheck(fmt.Sprintf("%s_%s", clusterName, "service_cache_sync"), func() error {
 		if serviceInformer.HasSynced() {
 			return nil
 		}

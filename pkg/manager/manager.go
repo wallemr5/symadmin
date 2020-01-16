@@ -49,9 +49,9 @@ type ManagerOption struct {
 type DksManager struct {
 	Opt *ManagerOption
 
-	Router       *router.Router
-	HealthHander healthcheck.Handler
-	K8sMgr       *k8smanager.ClusterManager
+	Router        *router.Router
+	HealthHandler healthcheck.Handler
+	K8sMgr        *k8smanager.ClusterManager
 }
 
 func DefaultManagerOption() *ManagerOption {
@@ -82,19 +82,19 @@ func NewDksManager(cli k8smanager.MasterClient, opt *ManagerOption, componentNam
 		MetricsSubsystem: componentName,
 	}
 
-	healthHander := healthcheck.GetHealthHandler()
-	healthHander.AddLivenessCheck("goroutine_threshold",
+	healthHandler := healthcheck.GetHealthHandler()
+	healthHandler.AddLivenessCheck("goroutine_threshold",
 		healthcheck.GoroutineCountCheck(opt.GoroutineThreshold))
 
 	rt := router.NewRouter(routerOptions)
 	rt.AddRoutes("index", rt.DefaultRoutes())
-	rt.AddRoutes("health", healthHander.Routes())
+	rt.AddRoutes("health", healthHandler.Routes())
 	// rt.AddRoutes("cluster", mgr.Routes())
 
 	dksMgr := &DksManager{
-		Opt:          opt,
-		Router:       rt,
-		HealthHander: healthHander,
+		Opt:           opt,
+		Router:        rt,
+		HealthHandler: healthHandler,
 	}
 	if opt.MasterEnabled {
 		klog.Info("start init multi cluster manager ... ")
@@ -108,7 +108,7 @@ func NewDksManager(cli k8smanager.MasterClient, opt *ManagerOption, componentNam
 			klog.Infof("preInit manager cluster informer ... ")
 			for _, c := range dksMgr.K8sMgr.GetAll() {
 				advDeployInformer, _ := c.Cache.GetInformer(&workloadv1beta1.AdvDeployment{})
-				dksMgr.HealthHander.AddReadinessCheck(fmt.Sprintf("%s_%s", c.Name, "advDeploy_cache_sync"), func() error {
+				dksMgr.HealthHandler.AddReadinessCheck(fmt.Sprintf("%s_%s", c.Name, "advDeploy_cache_sync"), func() error {
 					if advDeployInformer.HasSynced() {
 						return nil
 					}

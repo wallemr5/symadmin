@@ -61,7 +61,7 @@ func DefaultClusterManagerOption(isAPI bool) *ClusterManagerOption {
 	return &ClusterManagerOption{
 		Namespace: "default",
 		LabelSelector: map[string]string{
-			"ClusterOwer": "sym-admin",
+			"ClusterOwner": "sym-admin",
 		},
 		IsAPI: isAPI,
 	}
@@ -355,10 +355,10 @@ func (m *ClusterManager) cluterCheck() {
 		return
 	}
 
-	healthHander := healthcheck.GetHealthHandler()
+	healthHandler := healthcheck.GetHealthHandler()
 	for _, cls := range delList {
 		klog.Infof("delete cluster:%s connect", cls.Name)
-		healthHander.RemoveLivenessCheck(cls.Name)
+		healthHandler.RemoveLivenessCheck(cls.Name)
 		cls.Stop()
 	}
 
