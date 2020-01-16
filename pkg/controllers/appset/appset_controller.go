@@ -167,8 +167,8 @@ func (r *AppSetReconciler) registryResource(cluster *k8smanager.Cluster) error {
 	advDeploymentInformer.AddEventHandler(customctrl.HandlerWraps(r.CustomImpl.EnqueueMulti))
 	klog.Infof("cluster name:%s AddEventHandler AdvDeployment key to queue", cluster.Name)
 
-	healthHander := healthcheck.GetHealthHandler()
-	healthHander.AddReadinessCheck(fmt.Sprintf("%s_%s", cluster.Name, "advDeploy_cache_sync"), func() error {
+	healthHandler := healthcheck.GetHealthHandler()
+	healthHandler.AddReadinessCheck(fmt.Sprintf("%s_%s", cluster.Name, "advDeploy_cache_sync"), func() error {
 		if advDeploymentInformer.HasSynced() {
 			return nil
 		}

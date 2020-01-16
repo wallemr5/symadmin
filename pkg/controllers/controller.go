@@ -17,14 +17,14 @@ var AddToManagerWithCMFuncs []func(manager.Manager, *pkgmanager.DksManager) erro
 func AddToManager(m manager.Manager, dksMgr *pkgmanager.DksManager) error {
 	if dksMgr != nil {
 		// for _, c := range cMgr.Manager.AllWorker() {
-		// 	cMgr.HealthHander.AddReadinessCheck(fmt.Sprintf("%s_%s", c.Name, "deploy_cache_sync"),
+		// 	cMgr.HealthHandler.AddReadinessCheck(fmt.Sprintf("%s_%s", c.Name, "deploy_cache_sync"),
 		// 		func() error {
 		// 			if c.DeploymentInformer.Informer().HasSynced() {
 		// 				return nil
 		// 			}
 		// 			return fmt.Errorf("cluster:%s deploy cache not sync", c.Name)
 		// 		})
-		// 	cMgr.HealthHander.AddReadinessCheck(fmt.Sprintf("%s_%s", c.Name, "node_cache_sync"),
+		// 	cMgr.HealthHandler.AddReadinessCheck(fmt.Sprintf("%s_%s", c.Name, "node_cache_sync"),
 		// 		func() error {
 		// 			if c.NodeInformer.Informer().HasSynced() {
 		// 				return nil
@@ -33,7 +33,7 @@ func AddToManager(m manager.Manager, dksMgr *pkgmanager.DksManager) error {
 		// 		})
 		// }
 		//
-		// cMgr.HealthHander.AddLivenessCheck("cluster_db_nochanged",
+		// cMgr.HealthHandler.AddLivenessCheck("cluster_db_nochanged",
 		// 	func() error {
 		// 		if !cMgr.Manager.ClusterDb.IsChanged() {
 		// 			return nil

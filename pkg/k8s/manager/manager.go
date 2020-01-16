@@ -345,10 +345,10 @@ func (m *ClusterManager) cluterCheck() {
 		return
 	}
 
-	healthHander := healthcheck.GetHealthHandler()
+	healthHandler := healthcheck.GetHealthHandler()
 	for _, cls := range delList {
 		klog.Infof("delete cluster:%s connect", cls.Name)
-		healthHander.RemoveLivenessCheck(cls.Name)
+		healthHandler.RemoveLivenessCheck(cls.Name)
 		cls.Stop()
 	}
 
