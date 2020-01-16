@@ -14,6 +14,7 @@ import (
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
+	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	"k8s.io/client-go/util/retry"
 	"k8s.io/klog"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -187,10 +188,11 @@ func (r *AdvDeploymentReconciler) updateStatus(ctx context.Context, advDeploy *w
 			return nil
 		}
 
-		//getErr := r.Client.Get(ctx, nsName, obj)
-		//if getErr != nil {
-		//	utilruntime.HandleError(fmt.Errorf("getting updated Status advDeploy: [%s/%s] err: %v", advDeploy.Namespace, advDeploy.Name, err))
-		//}
+		// Get the advdeploy again when updating is failed.
+		getErr := r.Client.Get(ctx, nsName, obj)
+		if getErr != nil {
+			utilruntime.HandleError(fmt.Errorf("getting updated Status advDeploy: [%s/%s] err: %v", advDeploy.Namespace, advDeploy.Name, err))
+		}
 		return updateErr
 	})
 	return err

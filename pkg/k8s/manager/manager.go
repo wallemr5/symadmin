@@ -406,5 +406,18 @@ func (m *ClusterManager) Start(stopCh <-chan struct{}) error {
 	}
 	klog.Info("start cluster manager check loop ... ")
 	wait.Until(m.cluterCheck, time.Minute, stopCh)
+
+	klog.Info("close manager info")
+	m.stop()
 	return nil
+}
+
+func (m *ClusterManager) stop() {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+
+	for _, cluster := range m.clusters {
+		cluster.Stop()
+	}
+	close(m.ClusterAddInfo)
 }
