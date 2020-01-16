@@ -144,21 +144,16 @@ func (m *APIManager) registryResource(cluster *k8smanager.Cluster) error {
 	return nil
 }
 
+// ClusterChange ...
 func (m *APIManager) ClusterChange() {
-	for {
-		select {
-		case list, ok := <-m.K8sMgr.ClusterAddInfo:
-			if !ok {
-				return
+	for list := range m.K8sMgr.ClusterAddInfo {
+		for name := range list {
+			cluster, err := m.K8sMgr.Get(name)
+			if err != nil {
+				klog.Errorf("get cluster[%s] faile: %+v", cluster.Name, err)
+				break
 			}
-			for name := range list {
-				cluster, err := m.K8sMgr.Get(name)
-				if err != nil {
-					klog.Errorf("get cluster[%s] faile: %+v", cluster.Name, err)
-					break
-				}
-				m.registryResource(cluster)
-			}
+			m.registryResource(cluster)
 		}
 	}
 }
@@ -173,6 +168,12 @@ func (m *APIManager) Routes() []*router.Route {
 			Path:    "/api/cluster/:name",
 			Handler: m.GetClusters,
 			Desc:    GetClusterDesc,
+		},
+		{
+			Method:  "GET",
+			Path:    "/api/cluster/:name/namespace/:namespace/app/:appName/resource",
+			Handler: m.GetClusterResource,
+			Desc:    GetClusterResourceDesc,
 		},
 		{
 			Method:  "GET",

@@ -17,6 +17,7 @@ import (
 func (m *APIManager) GetEndpoints(c *gin.Context) {
 	clusterName := c.Param("name")
 	appName := c.Param("appName")
+	group := c.DefaultQuery("group", "")
 	clusters := m.K8sMgr.GetAll(clusterName)
 
 	ctx := context.Background()
@@ -24,7 +25,8 @@ func (m *APIManager) GetEndpoints(c *gin.Context) {
 	eps := make([]*model.Endpoint, 0, 4)
 	listOptions := &client.ListOptions{}
 	listOptions.MatchingLabels(map[string]string{
-		"app": appName + "-svc",
+		"app":   appName + "-svc",
+		"group": group,
 	})
 	for _, cluster := range clusters {
 		endpointList := &corev1.EndpointsList{}

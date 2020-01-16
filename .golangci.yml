@@ -250,7 +250,7 @@ linters:
   disable-all: false
   presets:
     - bugs
-    - unused
+    # - unused
   fast: false
 
 

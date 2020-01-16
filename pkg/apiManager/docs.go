@@ -9,14 +9,27 @@ e.g. <br/>
 <a href="/api/cluster/all">/api/cluster/all</a><br/>
 `
 
+// GetClusterResourceDesc ...
+var GetClusterResourceDesc = `
+Get cluster resources, include pods,services and deployments.<br/>
+name: url param,the unique cluster name and all <br/>
+namespace: url param, namespace name <br/>
+appName: url param,the unique app name. <br/>
+group: query string, the unique group name. <br/>
+<br/>
+e.g. <br/>
+<a href="/api/cluster/all/namespace/default/app/bbcc/resource?group=blue">/api/cluster/all/namespace/default/app/bbcc/resource?group=blue</a><br/>
+`
+
 // GetPodDesc ...
 var GetPodDesc = `
 Get all the pods which an app belongs: <br/>
 name: url param,the unique cluster name and all <br/>
-appName: url param,the unique app name. <br>
+appName: url param,the unique app name. <br/>
+group: query string, the unique group name. <br/>
 <br/>
 e.g. <br/>
-<a href="/api/cluster/all/appPod/bbcc">/api/cluster/all/appPod/bbcc</a><br/>
+<a href="/api/cluster/all/appPod/bbcc?group=blue">/api/cluster/all/appPod/bbcc?group=blue</a><br/>
 `
 
 // GetNodeProjectDesc ...
@@ -57,9 +70,10 @@ var GetEndpointsDesc = `
 Get all endpoint by name: <br/>
 name: url param, the unique cluster name and all. <br/>
 appName: url param,the unique app name. <br/>
+group: query string, the unique group label. <br/>
 <br/>
 e.g. <br/>
-<a href="/api/cluster/all/endpoints/bbcc">/api/cluster/all/endpoints/bbcc</a><br/>
+<a href="/api/cluster/all/endpoints/bbcc?group=blue">/api/cluster/all/endpoints/bbcc?group=blue</a><br/>
 `
 
 // GetNodeInfoDesc ...
@@ -109,9 +123,10 @@ var GetServicesDesc = `
 Get all services for a specific app in the cluster. <br/>
 name: url param, the unique cluster name and all. <br/>
 appName: url param, the unique app name. <br/>
+group: query string, the unique group name. <br/>
 <br/>
 e.g. <br/>
-<a href="/api/cluster/all/service/bbcc">/api/cluster/all/service/bbcc</a><br/>
+<a href="/api/cluster/all/service/bbcc?group=blue">/api/cluster/all/service/bbcc?=blue</a><br/>
 `
 
 // GetDeploymentsDesc ...
@@ -119,9 +134,10 @@ var GetDeploymentsDesc = `
 Get all deployments in assigned namespace. <br/>
 name: url param, the unique cluster name and all. <br/>
 namespace: query string, the unique namespace in a cluster. Default is 'default' namespace. <br/>
+group: query string, the unique group name. <br/>
 <br/>
 e.g. <br/>
-<a href="/api/cluster/all/deployment/bbcc">/api/cluster/all/deployment/bbcc</a><br/>
+<a href="/api/cluster/all/deployment/bbcc?group=blue>/api/cluster/all/deployment/bbcc?group=blue</a><br/>
 `
 
 // GetPodEventDesc ...

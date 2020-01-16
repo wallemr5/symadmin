@@ -7,6 +7,7 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"gitlab.dmall.com/arch/sym-admin/pkg/apiManager/model"
+	k8smanager "gitlab.dmall.com/arch/sym-admin/pkg/k8s/manager"
 	appv1 "k8s.io/api/apps/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/klog"
@@ -17,14 +18,26 @@ import (
 func (m *APIManager) GetDeployments(c *gin.Context) {
 	clusterName := c.Param("name")
 	appName := c.Param("appName")
+	group := c.DefaultQuery("group", "")
 	namespace := c.DefaultQuery("namespace", "")
-
 	clusters := m.K8sMgr.GetAll(clusterName)
 
+	result, err := getDeployments(clusters, namespace, appName, group)
+	if err != nil {
+		klog.Errorf("failed to get deployments: %v", err)
+		AbortHTTPError(c, GetDeploymentError, "", err)
+		return
+	}
+
+	c.IndentedJSON(http.StatusOK, result)
+}
+
+func getDeployments(clusters []*k8smanager.Cluster, namespace, appName, group string) ([]*model.DeploymentInfo, error) {
 	ctx := context.Background()
 	listOptions := &client.ListOptions{Namespace: namespace}
 	listOptions.MatchingLabels(map[string]string{
-		"app": appName,
+		"app":   appName,
+		"group": group,
 	})
 	result := []*model.DeploymentInfo{}
 	for _, cluster := range clusters {
@@ -34,9 +47,7 @@ func (m *APIManager) GetDeployments(c *gin.Context) {
 			if apierrors.IsNotFound(err) {
 				continue
 			}
-			klog.Errorf("failed to get %s deployments: %v", cluster.GetName(), err)
-			AbortHTTPError(c, GetDeploymentError, "", err)
-			return
+			return nil, err
 		}
 
 		for _, deployment := range deployments.Items {
@@ -59,6 +70,5 @@ func (m *APIManager) GetDeployments(c *gin.Context) {
 	sort.Slice(result, func(i, j int) bool {
 		return result[i].Name < result[j].Name
 	})
-
-	c.IndentedJSON(http.StatusOK, result)
+	return result, nil
 }

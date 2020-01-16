@@ -26,22 +26,26 @@ var (
 	logger = logf.KBLog.WithName("controller")
 )
 
+// key config
 const (
 	KeyKubeconfig = "kubeconfig.yaml"
 	KeyStauts     = "status"
 )
 
+// ClusterManagerOption ...
 type ClusterManagerOption struct {
 	Namespace     string
 	LabelSelector map[string]string
-	IsApi         bool
+	IsAPI         bool
 }
 
+// MasterClient ...
 type MasterClient struct {
 	KubeCli kubernetes.Interface
 	manager.Manager
 }
 
+// ClusterManager ...
 type ClusterManager struct {
 	MasterClient
 	mu             *sync.RWMutex
@@ -52,13 +56,14 @@ type ClusterManager struct {
 	ClusterAddInfo chan map[string]string
 }
 
-func DefaultClusterManagerOption(isApi bool) *ClusterManagerOption {
+// DefaultClusterManagerOption ...
+func DefaultClusterManagerOption(isAPI bool) *ClusterManagerOption {
 	return &ClusterManagerOption{
 		Namespace: "default",
 		LabelSelector: map[string]string{
 			"ClusterOwer": "sym-admin",
 		},
-		IsApi: isApi,
+		IsAPI: isAPI,
 	}
 }
 
@@ -80,6 +85,7 @@ func convertToKubeconfig(cm *corev1.ConfigMap) (string, bool) {
 	return kubeconfig, true
 }
 
+// NewManager ...
 func NewManager(cli MasterClient, opt *ClusterManagerOption) (*ClusterManager, error) {
 	cMgr := &ClusterManager{
 		MasterClient:   cli,
@@ -99,6 +105,7 @@ func NewManager(cli MasterClient, opt *ClusterManagerOption) (*ClusterManager, e
 	return cMgr, nil
 }
 
+// AddPreInit ...
 func (m *ClusterManager) AddPreInit(preInit func()) {
 	if m.PreInit != nil {
 		klog.Errorf("cluster manager already have preInit func ")
@@ -107,7 +114,7 @@ func (m *ClusterManager) AddPreInit(preInit func()) {
 	m.PreInit = preInit
 }
 
-// getClusterConfigmap
+// getClusterConfigmap ...
 func (m *ClusterManager) getClusterConfigmap() ([]*corev1.ConfigMap, error) {
 	cms := make([]*corev1.ConfigMap, 0, 4)
 	if m.Started {
@@ -186,6 +193,7 @@ func (m *ClusterManager) GetAll(name ...string) []*Cluster {
 	return list
 }
 
+// Add ...
 func (m *ClusterManager) Add(cluster *Cluster) error {
 	if _, err := m.Get(cluster.Name); err == nil {
 		return fmt.Errorf("cluster name: %s is already add to manager", cluster.Name)
@@ -201,6 +209,7 @@ func (m *ClusterManager) Add(cluster *Cluster) error {
 	return nil
 }
 
+// Delete ...
 func (m *ClusterManager) Delete(cluster *Cluster) error {
 	if cluster == nil {
 		return nil
@@ -222,6 +231,7 @@ func (m *ClusterManager) Delete(cluster *Cluster) error {
 	return nil
 }
 
+// Get ...
 func (m *ClusterManager) Get(name string) (*Cluster, error) {
 	m.mu.Lock()
 	defer m.mu.Unlock()
@@ -277,7 +287,7 @@ func (m *ClusterManager) preStart() error {
 			continue
 		}
 
-		if m.Opt.IsApi {
+		if m.Opt.IsAPI {
 			// add field index must before cache start
 			if err := c.Mgr.GetFieldIndexer().IndexField(&corev1.Pod{}, "spec.nodeName", func(rawObj runtime.Object) []string {
 				pod := rawObj.(*corev1.Pod)
@@ -311,7 +321,7 @@ func (m *ClusterManager) cluterCheck() {
 	}
 
 	m.mu.Lock()
-	m.mu.Unlock()
+	defer m.mu.Unlock()
 
 	currentList := map[string]*Cluster{}
 	for _, c := range m.clusters {
@@ -372,7 +382,6 @@ func (m *ClusterManager) cluterCheck() {
 	case <-t:
 		klog.Infof("add cluster info timeout:%+v", addList)
 	}
-	return
 }
 
 func (m *ClusterManager) addNewClusters(name string, kubeconfig string) (*Cluster, error) {

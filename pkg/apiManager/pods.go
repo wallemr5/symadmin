@@ -8,6 +8,7 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"gitlab.dmall.com/arch/sym-admin/pkg/apiManager/model"
+	k8smanager "gitlab.dmall.com/arch/sym-admin/pkg/k8s/manager"
 	"gitlab.dmall.com/arch/sym-admin/pkg/labels"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
@@ -118,62 +119,16 @@ func (m *APIManager) GetNodeProject(c *gin.Context) {
 // GetPod ...
 func (m *APIManager) GetPod(c *gin.Context) {
 	appName := c.Param("appName")
+	group := c.DefaultQuery("group", "")
 	clusterName := c.Param("name")
 	clusters := m.K8sMgr.GetAll(clusterName)
-	ctx := context.Background()
-	clusterPods := make([]*model.PodOfCluster, 0, 4)
-
-	listOptions := &client.ListOptions{}
-	listOptions.MatchingLabels(map[string]string{
-		"app": appName,
-	})
-	for _, cluster := range clusters {
-		pods := make([]*model.Pod, 0, 4)
-		podList := &corev1.PodList{}
-		err := cluster.Client.List(ctx, listOptions, podList)
-		if err != nil {
-			if apierrors.IsNotFound(err) {
-				continue
-			}
-			klog.Error(err, "failed to get pods")
-			AbortHTTPError(c, GetPodError, "", err)
-			return
-		}
-
-		for i := range podList.Items {
-			pod := &podList.Items[i]
-			apiPod := &model.Pod{
-				Name:            pod.GetName(),
-				NodeIP:          pod.Status.HostIP,
-				PodIP:           pod.Status.PodIP,
-				ImageVersion:    "",
-				StartTime:       pod.Status.StartTime.String(),
-				ContainerStatus: nil,
-			}
-			apiPod.ContainerStatus = append(apiPod.ContainerStatus, &model.ContainerStatus{
-				Name:         pod.Status.ContainerStatuses[0].Name,
-				Ready:        pod.Status.ContainerStatuses[0].Ready,
-				RestartCount: pod.Status.ContainerStatuses[0].RestartCount,
-				Image:        pod.Status.ContainerStatuses[0].Image,
-				ContainerID:  pod.Status.ContainerStatuses[0].ContainerID,
-			})
-			pods = append(pods, apiPod)
-		}
-		sort.Slice(pods, func(i, j int) bool {
-			return pods[i].Name < pods[j].Name
-		})
-
-		ofCluster := &model.PodOfCluster{
-			ClusterName: cluster.Name,
-			Pods:        pods,
-		}
-		clusterPods = append(clusterPods, ofCluster)
+	result, err := getPodByAppName(clusters, appName, group)
+	if err != nil {
+		klog.Error(err, "failed to get pods")
+		AbortHTTPError(c, GetPodError, "", err)
+		return
 	}
-	sort.Slice(clusterPods, func(i, j int) bool {
-		return clusterPods[i].ClusterName < clusterPods[j].ClusterName
-	})
-
-	c.IndentedJSON(http.StatusOK, clusterPods)
+	c.IndentedJSON(http.StatusOK, result)
 }
 
 // GetPodEvent return pod event
@@ -301,4 +256,58 @@ func (m *APIManager) DeletePodByGroup(c *gin.Context) {
 
 	}
 	c.JSON(http.StatusOK, gin.H{"errorPods": errorPods})
+}
+
+func getPodByAppName(clusters []*k8smanager.Cluster, appName, group string) ([]*model.PodOfCluster, error) {
+	ctx := context.Background()
+	clusterPods := make([]*model.PodOfCluster, 0, 4)
+	listOptions := &client.ListOptions{}
+	listOptions.MatchingLabels(map[string]string{
+		"app":   appName,
+		"group": group,
+	})
+	for _, cluster := range clusters {
+		pods := make([]*model.Pod, 0, 4)
+		podList := &corev1.PodList{}
+		err := cluster.Client.List(ctx, listOptions, podList)
+		if err != nil {
+			if apierrors.IsNotFound(err) {
+				continue
+			}
+			return nil, err
+		}
+
+		for i := range podList.Items {
+			pod := &podList.Items[i]
+			apiPod := &model.Pod{
+				Name:            pod.GetName(),
+				NodeIP:          pod.Status.HostIP,
+				PodIP:           pod.Status.PodIP,
+				ImageVersion:    "",
+				StartTime:       pod.Status.StartTime.String(),
+				ContainerStatus: nil,
+			}
+			apiPod.ContainerStatus = append(apiPod.ContainerStatus, &model.ContainerStatus{
+				Name:         pod.Status.ContainerStatuses[0].Name,
+				Ready:        pod.Status.ContainerStatuses[0].Ready,
+				RestartCount: pod.Status.ContainerStatuses[0].RestartCount,
+				Image:        pod.Status.ContainerStatuses[0].Image,
+				ContainerID:  pod.Status.ContainerStatuses[0].ContainerID,
+			})
+			pods = append(pods, apiPod)
+		}
+		sort.Slice(pods, func(i, j int) bool {
+			return pods[i].Name < pods[j].Name
+		})
+
+		ofCluster := &model.PodOfCluster{
+			ClusterName: cluster.Name,
+			Pods:        pods,
+		}
+		clusterPods = append(clusterPods, ofCluster)
+	}
+	sort.Slice(clusterPods, func(i, j int) bool {
+		return clusterPods[i].ClusterName < clusterPods[j].ClusterName
+	})
+	return clusterPods, nil
 }
