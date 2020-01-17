@@ -146,7 +146,7 @@ func FillImageVersion(name string, podSpec *corev1.PodSpec) string {
 
 	for i := range podSpec.Containers {
 		c := &podSpec.Containers[i]
-		if c.Name == name {
+		if strings.HasPrefix(c.Name, name) {
 			fullName := strings.Split(c.Image, ":")
 			if len(fullName) > 1 {
 				return fullName[1]
