@@ -320,13 +320,20 @@ func getPodListByAppName(clusters []*k8smanager.Cluster, appName, group string) 
 	pods := make([]*model.Pod, 0, 4)
 	listOptions := &client.ListOptions{}
 	listOptions.MatchingLabels(map[string]string{
-		"app":   appName,
-		"group": group,
+		"app":       appName,
+		"sym-group": group,
+	})
+	endpointsListOptions := &client.ListOptions{}
+	endpointsListOptions.MatchingLabels(map[string]string{
+		"app":       appName + "-svc",
+		"sym-group": group,
 	})
 	for _, cluster := range clusters {
-		//pods := make([]*model.Pod, 0, 4)
 		podList := &corev1.PodList{}
 		err := cluster.Client.List(ctx, listOptions, podList)
+		// look up endpoint
+		endpointList := &corev1.EndpointsList{}
+		err = cluster.Client.List(ctx, endpointsListOptions, endpointList)
 		if err != nil {
 			if apierrors.IsNotFound(err) {
 				continue
@@ -342,19 +349,38 @@ func getPodListByAppName(clusters []*k8smanager.Cluster, appName, group string) 
 				ClusterName:     cluster.GetName(),
 				NodeIP:          pod.Status.HostIP,
 				PodIP:           pod.Status.PodIP,
+				Phase:           pod.Status.Phase,
 				ImageVersion:    "",
 				StartTime:       pod.Status.StartTime.String(),
 				ContainerStatus: nil,
 			}
-			apiPod.ContainerStatus = append(apiPod.ContainerStatus, &model.ContainerStatus{
-				Name:         pod.Status.ContainerStatuses[0].Name,
-				Ready:        pod.Status.ContainerStatuses[0].Ready,
-				RestartCount: pod.Status.ContainerStatuses[0].RestartCount,
-				Image:        pod.Status.ContainerStatuses[0].Image,
-				ContainerID:  pod.Status.ContainerStatuses[0].ContainerID,
-			})
+
+			apiPod.HasEndpoint = false
+			for i := range endpointList.Items {
+				ep := &endpointList.Items[i]
+				for _, ss := range ep.Subsets {
+					for _, addr := range ss.Addresses {
+						if addr.TargetRef.Name == apiPod.Name {
+							apiPod.HasEndpoint = true
+							break
+						}
+					}
+				}
+			}
+
+			for i := range pod.Status.ContainerStatuses {
+				apiPod.RestartCount += pod.Status.ContainerStatuses[i].RestartCount
+				apiPod.ContainerStatus = append(apiPod.ContainerStatus, &model.ContainerStatus{
+					Name:         pod.Status.ContainerStatuses[i].Name,
+					Ready:        pod.Status.ContainerStatuses[i].Ready,
+					RestartCount: pod.Status.ContainerStatuses[i].RestartCount,
+					Image:        pod.Status.ContainerStatuses[i].Image,
+					ContainerID:  pod.Status.ContainerStatuses[i].ContainerID,
+				})
+			}
 			pods = append(pods, apiPod)
 		}
+
 		sort.Slice(pods, func(i, j int) bool {
 			return pods[i].Name < pods[j].Name
 		})

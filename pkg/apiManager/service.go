@@ -35,8 +35,8 @@ func getService(clusters []*k8smanager.Cluster, appName, group string) ([]*model
 	result := make([]*model.ServiceInfo, 0, 4)
 	options := &client.ListOptions{}
 	options.MatchingLabels(map[string]string{
-		"app":   appName + "-svc", // 协商service selector 需要加"-svc"加后缀
-		"group": group,
+		"app": appName + "-svc", // 协商service selector 需要加"-svc"加后缀
+		//"group": group,
 	})
 	for _, cluster := range clusters {
 		svclist := &corev1.ServiceList{}
@@ -52,6 +52,7 @@ func getService(clusters []*k8smanager.Cluster, appName, group string) ([]*model
 			serviceSpec := service.Spec
 
 			info := &model.ServiceInfo{
+				Name:        service.Name,
 				ClusterName: cluster.Name,
 				NameSpace:   service.Namespace,
 				ClusterIP:   serviceSpec.ClusterIP,

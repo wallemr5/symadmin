@@ -24,12 +24,15 @@ type ContainerStatus struct {
 type Pod struct {
 	Name            string             `json:"name,omitempty"`
 	Namespace       string             `json:"namespace,omitempty"`
-	ClusterName     string             `json:"clusterName,omitempty"`
-	NodeIP          string             `json:"nodeIp,omitempty"`
-	PodIP           string             `json:"podIp,omitempty"`
+	ClusterName     string             `json:"clusterCode,omitempty"`
+	NodeIP          string             `json:"nodeIP,omitempty"`
+	Phase           corev1.PodPhase    `json:"phase,omitempty"`
+	RestartCount    int32              `json:"restartCount,omitempty"`
+	PodIP           string             `json:"podIP,omitempty"`
 	ImageVersion    string             `json:"imageVersion,omitempty"`
 	StartTime       string             `json:"startTime,omitempty"`
 	ContainerStatus []*ContainerStatus `json:"containerStatus,omitempty"`
+	HasEndpoint     bool               `json:"endpoints,omitempty"`
 }
 
 // ErrorResponse describes responses when an error occurred
@@ -49,7 +52,7 @@ type Project struct {
 
 // NodeProjects ...
 type NodeProjects struct {
-	ClusterName string     `json:"clusterName,omitempty"`
+	ClusterName string     `json:"clusterCode,omitempty"`
 	NodeName    string     `json:"nodeName,omitempty"`
 	NodeIP      string     `json:"nodeIp,omitempty"`
 	PodCount    int        `json:"podCount,omitempty"`
@@ -62,15 +65,16 @@ type Endpoint struct {
 	Namespace         string `json:"namespace,omitempty"`
 	CreationTimestamp string `json:"creationTimes,omitempty"`
 	Release           string `json:"release,omitempty"`
-	ClusterName       string `json:"clusterName,omitempty"`
+	ClusterName       string `json:"clusterCode,omitempty"`
 	Subsets           string `json:"subsets,omitempty"`
+	TargetRefName     string `json:"targetRefName,omitempty"`
 }
 
 // NodeInfo ...
 type NodeInfo struct {
 	Name          string `json:"name,omitempty"`
-	ClusterName   string `json:"clusterName,omitempty"`
-	HostIP        string `json:"hostIp,omitempty"`
+	ClusterName   string `json:"clusterCode,omitempty"`
+	HostIP        string `json:"hostIP,omitempty"`
 	KernelVersion string `json:"kernelVersion,omitempty"`
 	Architecture  string `json:"architecture,omitempty"`
 	MemorySize    int64  `json:"memorySize,omitempty"`
@@ -83,7 +87,8 @@ type NodeInfo struct {
 
 // ServiceInfo ...
 type ServiceInfo struct {
-	ClusterName string               `json:"clusterName,omitempty"`
+	Name        string               `json:"name,omitempty"`
+	ClusterName string               `json:"clusterCode,omitempty"`
 	NameSpace   string               `json:"namespace,omitempty"`
 	ClusterIP   string               `json:"clusterIp,omitempty"`
 	Type        string               `json:"type,omitempty"`
@@ -93,7 +98,7 @@ type ServiceInfo struct {
 
 // DeploymentInfo ...
 type DeploymentInfo struct {
-	ClusterName         string                `json:"clusterName,omitempty"`
+	ClusterName         string                `json:"clusterCode,omitempty"`
 	NameSpace           string                `json:"namespace,omitempty"`
 	Name                string                `json:"name,omitempty"`
 	DesiredReplicas     *int32                `json:"desiredReplicas,omitempty"`
@@ -107,7 +112,7 @@ type DeploymentInfo struct {
 }
 
 type EndpointsOfCluster struct {
-	ClusterName string      `json:"clusterName,omitempty"`
+	ClusterName string      `json:"clusterCode,omitempty"`
 	Endpoint    []*Endpoint `json:"endpoint,omitempty"`
 }
 
@@ -118,7 +123,7 @@ type PodOfCluster struct {
 
 // Event ...
 type Event struct {
-	ClusterName string      `json:"clusterName,omitempty"`
+	ClusterName string      `json:"clusterCode,omitempty"`
 	Namespace   string      `json:"namespace,omitempty"`
 	ObjectKind  string      `json:"objectKind,omitempty"`
 	ObjectName  string      `json:"objectName,omitempty"`

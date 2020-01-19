@@ -58,8 +58,8 @@ func (m *APIManager) GetClusterResource(c *gin.Context) {
 	}
 
 	c.IndentedJSON(http.StatusOK, gin.H{
-		"services":    services,
-		"pods":        pods,
-		"deployments": deployments,
+		"services": services,
+		"pods":     pods,
+		"deploys":  deployments,
 	})
 }
