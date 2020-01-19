@@ -11,7 +11,11 @@ spec:
       type: integer
     - JSONPath: .status.aggrStatus.available
       description: The number of pods ready.
-      name: AVAILABEL
+      name: AVAILABLE
+      type: integer
+    - JSONPath: .status.aggrStatus.unAvailable
+      description: The number of pods unAvailable.
+      name: UNAVAILABLE
       type: integer
     - JSONPath: .status.aggrStatus.version
       description: The image version.
@@ -58,7 +62,11 @@ spec:
       type: integer
     - JSONPath: .status.aggrStatus.available
       description: The number of pods ready.
-      name: AVAILABEL
+      name: AVAILABLE
+      type: integer
+    - JSONPath: .status.aggrStatus.unAvailable
+      description: The number of pods unAvailable.
+      name: UNAVAILABLE
       type: integer
     - JSONPath: .status.aggrStatus.version
       description: The image version.
