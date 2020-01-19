@@ -2,6 +2,7 @@ package apiManager
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"io/ioutil"
 	"net/http"
@@ -88,14 +89,15 @@ func (m *APIManager) HandleLogs(c *gin.Context) {
 	}
 	defer req.Close()
 
-	result, err := ioutil.ReadAll(req)
+	read, err := ioutil.ReadAll(req)
 	if err != nil {
 		klog.Errorf("get pod log error: %v", err)
 		AbortHTTPError(c, GetPodLogsError, "", err)
 		return
 	}
+	result := json.RawMessage(read)
 
-	c.IndentedJSON(http.StatusOK, gin.H{"logs": string(result)})
+	c.IndentedJSON(http.StatusOK, gin.H{"logs": result})
 }
 
 // HandleFileLogs get log files in a pod
