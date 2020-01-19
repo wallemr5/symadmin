@@ -22,11 +22,20 @@ spec:
       containers:
         - name: {{ .Chart.Name }}
           image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
-          imagePullPolicy: {{ .Values.image.pullPolicy }}
-          {{- with .Values.image.args }}
           args:
-            {{- toYaml . | nindent 10 }}
+          - "controller"
+          - "-v"
+          - {{ .Values.image.logLevel | quote | default "4" }}
+          {{- if .Values.image.master }}
+          - "--enable-worker"
           {{- end }}
+          {{- if .Values.image.worker }}
+          - "--enable-worker"
+          {{- end }}
+          {{- if .Values.image.debug }}
+          - "--debug"
+          {{- end }}
+          
           ports:
             - name: http
               containerPort: {{ .Values.service.port }}
