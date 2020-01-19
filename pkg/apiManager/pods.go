@@ -331,6 +331,12 @@ func getPodListByAppName(clusters []*k8smanager.Cluster, appName, group string) 
 	for _, cluster := range clusters {
 		podList := &corev1.PodList{}
 		err := cluster.Client.List(ctx, listOptions, podList)
+		if err != nil {
+			if apierrors.IsNotFound(err) {
+				continue
+			}
+			return nil, err
+		}
 		// look up endpoint
 		endpointList := &corev1.EndpointsList{}
 		err = cluster.Client.List(ctx, endpointsListOptions, endpointList)
