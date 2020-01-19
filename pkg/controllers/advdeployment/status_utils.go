@@ -95,18 +95,18 @@ func (r *AdvDeploymentReconciler) GetServiceByByLabels(ctx context.Context, advD
 	}
 }
 
-// RecalculateStatus According to running deployments, calculate the advDeployment's status
+// RecalculateStatus According to the status of running deployments, calculate the advDeployment's status
 func (r *AdvDeploymentReconciler) RecalculateStatus(ctx context.Context, advDeploy *workloadv1beta1.AdvDeployment) (*workloadv1beta1.AdvDeploymentAggrStatus, error) {
 	deploys, err := r.GetDeployListByByLabels(ctx, advDeploy)
 	if err != nil {
-		return nil, errors.Wrapf(err, "Find all deployments with application name [%s] has an error", advDeploy.Name)
+		return nil, errors.Wrapf(err, "Find all relative deployments with application name [%s] has an error", advDeploy.Name)
 	}
 
 	var statefulSets []*appsv1.StatefulSet
 	if len(deploys) == 0 {
 		statefulSets, err = r.GetStatefulSetByLabels(ctx, advDeploy)
 		if err != nil {
-			return nil, errors.Wrapf(err, "Find all statefulSet with application name [%s] has an error", advDeploy.Name)
+			return nil, errors.Wrapf(err, "Find all relative statefulSet with application name [%s] has an error", advDeploy.Name)
 		}
 	}
 
@@ -170,7 +170,7 @@ func (r *AdvDeploymentReconciler) updateStatus(ctx context.Context, advDeploy *w
 		return err
 	}
 
-	if equality.Semantic.DeepEqual(&obj.Status.AggrStatus, recalStatus) {
+	if obj.Status.ObservedGeneration == obj.ObjectMeta.Generation && equality.Semantic.DeepEqual(&obj.Status.AggrStatus, recalStatus) {
 		klog.V(4).Infof("advDeploy[%s]'s status is equivalent with recalculated status, so no need to update it again", advDeploy.Name)
 		return nil
 	}
