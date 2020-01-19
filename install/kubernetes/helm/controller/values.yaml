@@ -11,6 +11,7 @@ image:
   master: true
   worker: false
   debug: true
+  leader: false
 
 nameOverride: ""
 fullnameOverride: ""

@@ -27,13 +27,16 @@ spec:
           - "-v"
           - {{ .Values.image.logLevel | quote | default "4" }}
           {{- if .Values.image.master }}
-          - "--enable-worker"
+          - "--enable-master"
           {{- end }}
           {{- if .Values.image.worker }}
           - "--enable-worker"
           {{- end }}
           {{- if .Values.image.debug }}
           - "--debug"
+          {{- end }}
+          {{- if .Values.image.leader }}
+          - "--enable-leader"
           {{- end }}
           
           ports:
