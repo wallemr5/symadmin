@@ -19,7 +19,8 @@ func init() {
 // +kubebuilder:subresource:status
 // +kubebuilder:resource:shortName=as
 // +kubebuilder:printcolumn:name="DESIRED",type="integer",JSONPath=".status.aggrStatus.desired",description="The desired number of pods."
-// +kubebuilder:printcolumn:name="AVAILABEL",type="integer",JSONPath=".status.aggrStatus.available",description="The number of pods ready."
+// +kubebuilder:printcolumn:name="AVAILABLE",type="integer",JSONPath=".status.aggrStatus.available",description="The number of pods ready."
+// +kubebuilder:printcolumn:name="UNAVAILABLE",type="integer",JSONPath=".status.aggrStatus.unAvailable",description="The number of pods unAvailable."
 // +kubebuilder:printcolumn:name="VERSION",type="string",JSONPath=".status.aggrStatus.version",description="The image version."
 // +kubebuilder:printcolumn:name="STATUS",type="string",JSONPath=".status.aggrStatus.status",description="The app run status."
 // +kubebuilder:printcolumn:name="AGE",type="date",JSONPath=".metadata.creationTimestamp",description="CreationTimestamp is a timestamp representing the server time when this object was created. "
@@ -152,7 +153,7 @@ type AggrAppSetStatus struct {
 	Version     string    `json:"version,omitempty"`
 	Desired     int32     `json:"desired"`
 	Available   int32     `json:"available"`
-	UnAvailable int32     `json:"unAvailable,omitempty"`
+	UnAvailable int32     `json:"unAvailable"`
 
 	Clusters   []*ClusterAppActual `json:"clusters,omitempty"`
 	Pods       []*Pod              `json:"pods,omitempty"`
