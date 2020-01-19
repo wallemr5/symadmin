@@ -8,7 +8,7 @@ image:
   repository: registry.cn-hangzhou.aliyuncs.com/r2d2/sym-admin-controller
   tag: v0.0.1
   pullPolicy: Always
-  args: ["controller", "--enable-worker", "-v", "4", "--debug"]
+  args: ["controller", "--enable-worker", "--enable-master", "-v", "4", "--debug"]
 
 nameOverride: ""
 fullnameOverride: ""

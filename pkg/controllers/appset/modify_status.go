@@ -60,9 +60,9 @@ func buildAppSetStatus(ctx context.Context, dksManger *k8smanager.ClusterManager
 		}
 
 		// aggregate status
-		as.Available += obj.Status.AggrStatus.Desired
+		as.Available += obj.Status.AggrStatus.Available
 		as.UnAvailable += obj.Status.AggrStatus.UnAvailable
-		as.Desired += obj.Status.AggrStatus.Desired
+		// as.Desired += obj.Status.AggrStatus.Desired
 		if obj.ObjectMeta.Generation != obj.Status.ObservedGeneration || obj.Status.AggrStatus.Status != workloadv1beta1.AppStatusRuning {
 			klog.V(4).Infof("%s: cluster[%s] status is %s, meta generation:%d, observedGeneration:%d", req.NamespacedName, cluster.Name, obj.Status.AggrStatus.Status, obj.ObjectMeta.Generation, obj.Status.ObservedGeneration)
 			finalStatus = workloadv1beta1.AppStatusInstalling
@@ -118,6 +118,11 @@ func buildAppSetStatus(ctx context.Context, dksManger *k8smanager.ClusterManager
 		as.Status = workloadv1beta1.AppStatusRuning
 	} else {
 		as.Status = workloadv1beta1.AppStatusInstalling
+	}
+	if app.Spec.Replicas == nil {
+		as.Desired = 0
+	} else {
+		as.Desired = *app.Spec.Replicas
 	}
 	klog.V(4).Infof("%s: build AppSet.Status.Aggregate.Status judgeStatus:%s available:%d replicas:%d, finalStatus:%s", req.NamespacedName, finalStatus, as.Available, *app.Spec.Replicas, as.Status)
 
