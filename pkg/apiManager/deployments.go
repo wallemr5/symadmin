@@ -36,8 +36,8 @@ func getDeployments(clusters []*k8smanager.Cluster, namespace, appName, group st
 	ctx := context.Background()
 	listOptions := &client.ListOptions{Namespace: namespace}
 	listOptions.MatchingLabels(map[string]string{
-		"app":   appName,
-		"group": group,
+		"app":       appName,
+		"sym-group": group,
 	})
 	result := []*model.DeploymentInfo{}
 	for _, cluster := range clusters {

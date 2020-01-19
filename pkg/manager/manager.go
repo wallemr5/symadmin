@@ -60,7 +60,7 @@ func DefaultManagerOption() *ManagerOption {
 		Threadiness:             1,
 		GoroutineThreshold:      1000,
 		ResyncPeriod:            30 * time.Minute,
-		EnableLeaderElection:    true,
+		EnableLeaderElection:    false,
 		LeaderElectionNamespace: "sym-admin",
 		GinLogEnabled:           true,
 		PprofEnabled:            true,

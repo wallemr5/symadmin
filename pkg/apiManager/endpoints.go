@@ -25,8 +25,8 @@ func (m *APIManager) GetEndpoints(c *gin.Context) {
 	eps := make([]*model.Endpoint, 0, 4)
 	listOptions := &client.ListOptions{}
 	listOptions.MatchingLabels(map[string]string{
-		"app":   appName + "-svc",
-		"group": group,
+		"app":       appName + "-svc",
+		"sym-group": group,
 	})
 	for _, cluster := range clusters {
 		endpointList := &corev1.EndpointsList{}
@@ -49,6 +49,7 @@ func (m *APIManager) GetEndpoints(c *gin.Context) {
 						Subsets:           addr.IP,
 						Name:              ep.Name,
 						Namespace:         ep.Namespace,
+						TargetRefName:     addr.TargetRef.Name,
 						CreationTimestamp: ep.ObjectMeta.CreationTimestamp.Time.String(),
 						Release:           "",
 						ClusterName:       ep.ClusterName,

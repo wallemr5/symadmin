@@ -7,8 +7,11 @@ replicaCount: 1
 image:
   repository: registry.cn-hangzhou.aliyuncs.com/r2d2/sym-admin-controller
   tag: v0.0.1
-  pullPolicy: Always
-  args: ["controller", "--enable-worker", "--enable-master", "-v", "4", "--debug"]
+  logLevel: 4
+  master: true
+  worker: false
+  debug: true
+  leader: false
 
 nameOverride: ""
 fullnameOverride: ""
