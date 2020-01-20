@@ -93,13 +93,13 @@ docker-push-release: docker-build
 	docker push ${IMG_CTL}:${VERSION}
 
 helm-master:
-	helm upgrade --install sym-ctl --namespace sym-admin --set image.tag=${VERSION},image.worker=true,image.master=false ./install/Kubernetes/helm/controller
+	helm upgrade --install sym-ctl --namespace sym-admin --set image.tag=${VERSION},image.worker=false,image.master=true ./install/Kubernetes/helm/controller
 
 helm-master-worker:
 	helm upgrade --install sym-ctl --namespace sym-admin --set image.tag=${VERSION},image.worker=true,image.master=true ./install/Kubernetes/helm/controller
 
 helm-worker:
-	helm upgrade --install sym-ctl --namespace sym-admin --set image.tag=${VERSION},image.worker=true ./install/Kubernetes/helm/controller
+	helm upgrade --install sym-ctl --namespace sym-admin --set image.tag=${VERSION},image.worker=true,image.master=false ./install/Kubernetes/helm/controller
 
 # find or download controller-gen
 # download controller-gen if necessary
