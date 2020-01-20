@@ -1,4 +1,4 @@
-VERSION ?= v0.0.3
+VERSION ?= v0.0.4
 # Image URL to use all building/pushing image targets
 IMG_REG ?= registry.cn-hangzhou.aliyuncs.com/r2d2
 IMG_CTL := $(IMG_REG)/sym-admin-controller
@@ -88,8 +88,11 @@ docekr-push-api: manager-api
 	docker build -t ${IMG_API}:${VERSION} -f ./install/Dockerfile-api .
 	docker push ${IMG_API}:${VERSION}
 
-helm-upgrade:
+helm-master:
 	helm upgrade --install sym-ctl --namespace sym-admin --set image.tag=${VERSION},image.worker=true,image.master=true ./install/Kubernetes/helm/controller
+
+helm-worker:
+	helm upgrade --install sym-ctl --namespace sym-admin --set image.tag=${VERSION},image.worker=true ./install/Kubernetes/helm/controller
 
 # find or download controller-gen
 # download controller-gen if necessary
