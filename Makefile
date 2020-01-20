@@ -88,8 +88,14 @@ docekr-push-api: manager-api
 	docker build -t ${IMG_API}:${VERSION} -f ./install/Dockerfile-api .
 	docker push ${IMG_API}:${VERSION}
 
-helm-upgrade:
+helm-master:
 	helm upgrade --install sym-ctl --namespace sym-admin --set image.tag=${VERSION},image.worker=true,image.master=false ./install/Kubernetes/helm/controller
+
+helm-master-worker:
+	helm upgrade --install sym-ctl --namespace sym-admin --set image.tag=${VERSION},image.worker=true,image.master=true ./install/Kubernetes/helm/controller
+
+helm-worker:
+	helm upgrade --install sym-ctl --namespace sym-admin --set image.tag=${VERSION},image.worker=true ./install/Kubernetes/helm/controller
 
 # find or download controller-gen
 # download controller-gen if necessary

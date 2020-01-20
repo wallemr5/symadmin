@@ -192,3 +192,24 @@ filepath: query string, the log file path in a container. <br/>
 e.g. <br/>
 <a href="/api/cluster/tcc-bj5-dks-monit-01/namespace/default/pods/bbcc-xx-xx/logs/file?container=bbcc&filepath=thanos.shipper.json">/api/cluster/tcc-bj5-dks-monit-01/namespace/default/pods/bbcc-xx-xx/logs/file?container=bbcc&filepath=xx/xx.log</a><br/>
 `
+
+// GetHelmReleasesDesc ...
+var GetHelmReleasesDesc = `
+Get helm releases for a specific app name. </br>
+name: url param, the unique cluster name and all. <br/>
+appName: url param, the unique app name and all. <br/>
+group: query string, the unique group name.
+<br/>
+e.g.<br/>
+<a href="/api/cluster/tcc-bj5-dks-test-01/appPod/aabb-9000/helm?group=blue">/api/cluster/tcc-bj5-dks-test-01/appPod/aabb-9000/helm?group=blue</a><br/>
+`
+
+// GetHelmReleaseInfoDesc ...
+var GetHelmReleaseInfoDesc = `
+Get helm releases for a specific app name. </br>
+name: url param, the unique cluster name and all. <br/>
+releaseName: url param, the unique release name. <br/>
+<br/>
+e.g.<br/>
+<a href="/api/cluster/tcc-bj5-dks-test-01/helm/aabb-9000-rz01a-blue">/api/cluster/tcc-bj5-dks-test-01/helm/aabb-9000-rz01a-blue</a><br/>
+`

@@ -209,25 +209,39 @@ func (m *ClusterManager) Add(cluster *Cluster) error {
 	return nil
 }
 
+func (m *ClusterManager) GetClusterIndex(name string) (int, bool) {
+	for i, r := range m.clusters {
+		if r.Name == name {
+			return i, true
+		}
+	}
+	return 0, false
+}
+
 // Delete ...
-func (m *ClusterManager) Delete(cluster *Cluster) error {
-	if cluster == nil {
+func (m *ClusterManager) Delete(name string) error {
+	if name == "" {
 		return nil
 	}
 
 	m.mu.Lock()
 	defer m.mu.Unlock()
 
-	newClusters := make([]*Cluster, 0, 4)
-	for _, c := range m.clusters {
-		if cluster.Name == c.Name {
-			continue
-		}
-
-		newClusters = append(newClusters, c)
+	if len(m.clusters) == 0 {
+		klog.Errorf("clusters list is empty, nothing to delete")
+		return nil
 	}
 
-	m.clusters = newClusters
+	index, ok := m.GetClusterIndex(name)
+	if !ok {
+		klog.Warningf("cluster:%s  is not found in the registries list, nothing to delete", name)
+		return nil
+	}
+
+	clusters := m.clusters
+	clusters = append(clusters[:index], clusters[index+1:]...)
+	m.clusters = clusters
+	klog.Infof("cluster:%s for the cluster %s has been deleted.", name)
 	return nil
 }
 

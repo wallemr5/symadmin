@@ -28,6 +28,7 @@ import (
 
 	k8smanager "gitlab.dmall.com/arch/sym-admin/pkg/k8s/manager"
 	"gitlab.dmall.com/arch/sym-admin/pkg/manager"
+	"gitlab.dmall.com/arch/sym-admin/pkg/utils"
 	logf "sigs.k8s.io/controller-runtime/pkg/runtime/log"
 )
 
@@ -64,23 +65,30 @@ func NewControllerCmd(cli *DksCli) *cobra.Command {
 				KubeCli: cli.GetKubeInterfaceOrDie(),
 				Manager: mgr,
 			}
+
 			dksMgr, err := manager.NewDksManager(k8sCli, opt, "controller")
 			if err != nil {
 				klog.Fatalf("unable to NewDksManager err: %v", err)
 			}
 
-			// add http server Runnable
-			mgr.Add(dksMgr.Router)
+			components := &utils.Components{}
+
+			// add http server Runnable to components
+			components.Add(dksMgr.Router)
 
 			if dksMgr.K8sMgr != nil {
-				// add k8s cluster manager Runnable
-				mgr.Add(dksMgr.K8sMgr)
+				// add k8s cluster manager Runnable to components
+				components.Add(dksMgr.K8sMgr)
 			}
+
 			// Setup all Controllers
 			klog.Info("Setting up controller")
 			if err := controller.AddToManager(mgr, dksMgr); err != nil {
 				klog.Fatalf("unable to register controllers to the manager err: %v", err)
 			}
+
+			klog.Infof("start custom components")
+			go components.Start(stopCh)
 
 			logger.Info("zap debug", "ResyncPeriod", opt.ResyncPeriod)
 			klog.Info("starting manager")

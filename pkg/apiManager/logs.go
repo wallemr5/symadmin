@@ -94,8 +94,7 @@ func (m *APIManager) HandleLogs(c *gin.Context) {
 		AbortHTTPError(c, GetPodLogsError, "", err)
 		return
 	}
-
-	c.IndentedJSON(http.StatusOK, gin.H{"logs": string(result)})
+	c.Data(http.StatusOK, "", result)
 }
 
 // HandleFileLogs get log files in a pod
