@@ -1,4 +1,4 @@
-VERSION ?= v0.0.4
+VERSION ?= v0.0.5
 # Image URL to use all building/pushing image targets
 IMG_REG ?= registry.cn-hangzhou.aliyuncs.com/r2d2
 IMG_CTL := $(IMG_REG)/sym-admin-controller
@@ -9,7 +9,7 @@ CRD_OPTIONS ?= "crd:trivialVersions=true"
 # This repo's root import path (under GOPATH).
 ROOT := gitlab.dmall.com/arch/sym-admin
 
-GO_VERSION := 1.13.5
+GO_VERSION := 1.13.6
 ARCH     ?= $(shell go env GOARCH)
 BuildDate = $(shell date +'%Y-%m-%dT%H:%M:%SZ')
 Commit    = $(shell git rev-parse --short HEAD)
@@ -87,6 +87,10 @@ docker-push-controller: manager-controller
 docekr-push-api: manager-api
 	docker build -t ${IMG_API}:${VERSION} -f ./install/Dockerfile-api .
 	docker push ${IMG_API}:${VERSION}
+
+docker-push-release: docker-build
+	docker build -t ${IMG_CTL}:${VERSION} -f ./install/Dockerfile-ctl .
+	docker push ${IMG_CTL}:${VERSION}
 
 helm-master:
 	helm upgrade --install sym-ctl --namespace sym-admin --set image.tag=${VERSION},image.worker=true,image.master=false ./install/Kubernetes/helm/controller
