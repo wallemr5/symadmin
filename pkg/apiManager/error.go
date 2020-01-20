@@ -34,11 +34,13 @@ const (
 	CreateSPDYExecutorError = 5005
 
 	// OtherError
-	GetClusterError     = 9001
-	GetEndpointError    = 9002
-	GetNodeError        = 9003
-	ParseTimeStampError = 9004
-	AddToSchemeError    = 9005
+	GetClusterError       = 9001
+	GetEndpointError      = 9002
+	GetNodeError          = 9003
+	ParseTimeStampError   = 9004
+	AddToSchemeError      = 9005
+	CreateHelmClientError = 9006
+	GetHelmReleasesError  = 9007
 )
 
 // AbortHTTPError ...

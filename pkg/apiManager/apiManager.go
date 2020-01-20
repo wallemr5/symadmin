@@ -183,6 +183,18 @@ func (m *APIManager) Routes() []*router.Route {
 		},
 		{
 			Method:  "GET",
+			Path:    "/api/cluster/:name/appPod/:appName/helm",
+			Handler: m.GetHelmReleases,
+			Desc:    GetHelmReleasesDesc,
+		},
+		{
+			Method:  "GET",
+			Path:    "/api/cluster/:name/helm/:releaseName",
+			Handler: m.GetHelmReleaseInfo,
+			Desc:    GetHelmReleaseInfoDesc,
+		},
+		{
+			Method:  "GET",
 			Path:    "/api/cluster/:name/nodeProject/:nodeName",
 			Handler: m.GetNodeProject,
 			Desc:    GetNodeProjectDesc,
