@@ -240,18 +240,6 @@ func (r *AppSetReconciler) CustomReconcile(ctx context.Context, req customctrl.C
 		return reconcile.Result{}, nil
 	}
 
-	// update generation
-	if app.ObjectMeta.Generation != app.Status.ObservedGeneration {
-		r.recorder.Event(app, corev1.EventTypeNormal, "Apply Success", "Apply spec success, change Status.ObservedGeneration and wait status.")
-		klog.V(4).Infof("%s: update Status.ObservedGeneration with meta.Generation", req.NamespacedName)
-
-		app.Status.ObservedGeneration = app.ObjectMeta.Generation
-
-		if err = r.Client.Status().Update(ctx, app); err != nil {
-			return reconcile.Result{}, err
-		}
-	}
-
 	// update status
 	klog.V(4).Infof("%s: aggregate status", req.NamespacedName)
 	status, _, err := r.ModifyStatus(ctx, req)
