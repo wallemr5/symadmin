@@ -160,6 +160,7 @@ namespace: url param, namespace name <br/>
 podName: url param, the unique pod name. <br/>
 container: query string, the unique container in a pod. <br/>
 path: query string, the log files directory path. <br/>
+fileType: query string, the files type, default is '.log'. <br/>
 
 <br/>
 e.g. <br/>

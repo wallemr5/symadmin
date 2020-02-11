@@ -102,7 +102,7 @@ func (m *APIManager) HandleFileLogs(c *gin.Context) {
 	clusterName := c.Param("name")
 	namespace := c.Param("namespace")
 	podName := c.Param("podName")
-	tailLines := c.DefaultQuery("tail", "10")
+	tailLines := c.DefaultQuery("tailLines", "100")
 
 	containerName, ok := c.GetQuery("container")
 	if !ok {

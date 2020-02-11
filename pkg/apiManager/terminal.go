@@ -142,6 +142,7 @@ func (m *APIManager) GetFiles(c *gin.Context) {
 	namespace := c.Param("namespace")
 	podName := c.Param("podName")
 	path := c.DefaultQuery("path", "")
+	fileType := c.DefaultQuery("fileType", ".log")
 
 	containerName, ok := c.GetQuery("container")
 	if !ok {
@@ -169,7 +170,14 @@ func (m *APIManager) GetFiles(c *gin.Context) {
 	}
 
 	files := strings.Split(result, "\n")
-	c.IndentedJSON(http.StatusOK, files)
+	var listfile []string
+	for _, file := range files {
+		ok := strings.HasSuffix(file, fileType)
+		if ok {
+			listfile = append(listfile, file)
+		}
+	}
+	c.IndentedJSON(http.StatusOK, listfile)
 }
 
 func startProcess(cluster *k8smanager.Cluster, namespace, podName, container string,
