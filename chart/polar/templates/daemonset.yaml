@@ -1,0 +1,76 @@
+apiVersion: {{ template "daemonset_api_version" . }}
+kind: DaemonSet
+metadata:
+  name: {{ include "polar.fullname" . }}
+  labels:
+    app.kubernetes.io/name: {{ include "polar.name" . }}
+    helm.sh/chart: {{ include "polar.chart" . }}
+    app.kubernetes.io/instance: {{ .Release.Name }}
+    app.kubernetes.io/managed-by: {{ .Release.Service }}
+spec:
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: {{ include "polar.name" . }}
+      app.kubernetes.io/instance: {{ .Release.Name }}
+      app: {{ include "polar.name" . }}
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: {{ include "polar.name" . }}
+        app.kubernetes.io/instance: {{ .Release.Name }}
+        app: {{ include "polar.name" . }}
+    spec:
+      hostNetwork: {{ .Values.hostNetwork }}
+      terminationGracePeriodSeconds: 30
+      {{- if .Values.priorityClassName }}
+      priorityClassName: {{ .Values.priorityClassName | quote }}
+      {{- end }}
+      containers:
+        - name: {{ .Chart.Name }}
+          image:  "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
+          imagePullPolicy: {{ .Values.image.pullPolicy | default "IfNotPresent" | quote }}
+          args:
+            - "-c"
+            - "polar.yml"
+          securityContext:
+            privileged: true
+          env:
+            - name: NODE_NAME
+              valueFrom:
+                fieldRef:
+                  fieldPath: spec.nodeName
+          volumeMounts:
+            - name: config
+              mountPath: "/polar.yml"
+              subPath: polar.yml
+            - name: weblog
+              mountPath: /web/logs
+            - name: localtime
+              mountPath: /etc/localtime
+              readOnly: true
+          resources:
+{{ toYaml .Values.resources | indent 12 }}
+    {{- with .Values.affinity }}
+      affinity:
+{{ toYaml . | indent 8 }}
+    {{- end }}
+{{- if .Values.tolerations }}
+      tolerations:
+  {{ toYaml .Values.tolerations | nindent 8 }}
+{{- end }}
+{{- if .Values.nodeSelector }}
+      nodeSelector:
+{{ toYaml .Values.nodeSelector | indent 8 }}
+{{- end }}
+      volumes:
+      - name: weblog
+        hostPath:
+          path: /web/logs
+      - name: localtime
+        hostPath:
+          path: /etc/localtime
+          type: "FileOrCreate"
+      - name: config
+        configMap:
+          name: {{ include "polar.fullname" . }}-config
+          defaultMode: 420
