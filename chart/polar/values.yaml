@@ -1,0 +1,33 @@
+
+image:
+  repository: registry.cn-hangzhou.aliyuncs.com/dmall/polar
+  tag: v1.0.7
+  pullPolicy: IfNotPresent
+
+
+# Expose the service to the host network
+hostNetwork: true
+
+resources:
+  limits:
+    cpu: 1
+    memory: 1Gi
+  requests:
+    cpu: 500m
+    memory: 512Mi
+
+nodeSelector: {}
+
+tolerations:
+- key: sym-preserve
+  operator: Exists
+
+affinity:
+  nodeAffinity:
+    requiredDuringSchedulingIgnoredDuringExecution:
+      nodeSelectorTerms:
+        - matchExpressions:
+            - key: sym-preserve
+              operator: In
+              values:
+                - monitor
