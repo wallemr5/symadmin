@@ -7,6 +7,7 @@ import (
 	workloadv1beta1 "gitlab.dmall.com/arch/sym-admin/pkg/apis/workload/v1beta1"
 	"gitlab.dmall.com/arch/sym-admin/pkg/healthcheck"
 	k8smanager "gitlab.dmall.com/arch/sym-admin/pkg/k8s/manager"
+	"gitlab.dmall.com/arch/sym-admin/pkg/labels"
 	"gitlab.dmall.com/arch/sym-admin/pkg/router"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
@@ -57,7 +58,7 @@ func NewAPIManager(cli k8smanager.MasterClient, opt *Option, componentName strin
 	}
 
 	klog.Info("start init multi cluster manager ... ")
-	k8sMgr, err := k8smanager.NewManager(cli, k8smanager.DefaultClusterManagerOption(true))
+	k8sMgr, err := k8smanager.NewManager(cli, k8smanager.DefaultClusterManagerOption(true, labels.GetClusterLs()))
 	if err != nil {
 		klog.Fatalf("unable to new k8s manager err: %v", err)
 	}

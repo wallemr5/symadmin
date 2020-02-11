@@ -57,13 +57,11 @@ type ClusterManager struct {
 }
 
 // DefaultClusterManagerOption ...
-func DefaultClusterManagerOption(isAPI bool) *ClusterManagerOption {
+func DefaultClusterManagerOption(isAPI bool, ls map[string]string) *ClusterManagerOption {
 	return &ClusterManagerOption{
-		Namespace: "default",
-		LabelSelector: map[string]string{
-			"ClusterOwner": "sym-admin",
-		},
-		IsAPI: isAPI,
+		Namespace:     "default",
+		LabelSelector: ls,
+		IsAPI:         isAPI,
 	}
 }
 

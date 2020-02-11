@@ -102,3 +102,9 @@ func IsValidGroup(group string) bool {
 	}
 	return false
 }
+
+func GetClusterLs() map[string]string {
+	return map[string]string{
+		"ClusterOwner": "sym-admin",
+	}
+}

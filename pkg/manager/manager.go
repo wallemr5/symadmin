@@ -24,6 +24,7 @@ import (
 	workloadv1beta1 "gitlab.dmall.com/arch/sym-admin/pkg/apis/workload/v1beta1"
 	"gitlab.dmall.com/arch/sym-admin/pkg/healthcheck"
 	k8smanager "gitlab.dmall.com/arch/sym-admin/pkg/k8s/manager"
+	"gitlab.dmall.com/arch/sym-admin/pkg/labels"
 	"gitlab.dmall.com/arch/sym-admin/pkg/router"
 	"k8s.io/klog"
 )
@@ -98,7 +99,7 @@ func NewDksManager(cli k8smanager.MasterClient, opt *ManagerOption, componentNam
 	}
 	if opt.MasterEnabled {
 		klog.Info("start init multi cluster manager ... ")
-		kMgr, err := k8smanager.NewManager(cli, k8smanager.DefaultClusterManagerOption(false))
+		kMgr, err := k8smanager.NewManager(cli, k8smanager.DefaultClusterManagerOption(false, labels.GetClusterLs()))
 		if err != nil {
 			klog.Fatalf("unable to new k8s manager err: %v", err)
 		}
