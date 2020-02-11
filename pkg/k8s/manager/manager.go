@@ -325,6 +325,10 @@ func (m *ClusterManager) cluterCheck() {
 		klog.Errorf("unable to get cluster configmap err: %v", err)
 		return
 	}
+	// If not leader, informer resource cache is empty
+	if len(configmaps) == 0 {
+		return
+	}
 
 	expectList := map[string]string{}
 	for _, cm := range configmaps {
