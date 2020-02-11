@@ -18,6 +18,7 @@ package advdeployment
 
 import (
 	"context"
+
 	"gitlab.dmall.com/arch/sym-admin/pkg/labels"
 
 	"github.com/go-logr/logr"
@@ -37,6 +38,7 @@ import (
 	"time"
 
 	"github.com/pkg/errors"
+	"gitlab.dmall.com/arch/sym-admin/pkg/helm/v2repo"
 	k8sclient "gitlab.dmall.com/arch/sym-admin/pkg/k8s/client"
 	"gitlab.dmall.com/arch/sym-admin/pkg/utils"
 	"k8s.io/client-go/kubernetes"
@@ -58,7 +60,7 @@ type AdvDeploymentReconciler struct {
 	Mgr     manager.Manager
 	KubeCli kubernetes.Interface
 	Cfg     *rest.Config
-	HelmEnv *HelmIndexSyncer
+	HelmEnv *v2repo.HelmIndexSyncer
 }
 
 // Add add controller to runtime manager
@@ -117,7 +119,7 @@ func Add(mgr manager.Manager, cMgr *pkgmanager.DksManager) error {
 	if err != nil {
 		klog.Errorf("Initializing a helm env has an error:%v", err)
 	}
-	r.HelmEnv = NewDefaultHelmIndexSyncer(helmv2env)
+	r.HelmEnv = v2repo.NewDefaultHelmIndexSyncer(helmv2env)
 
 	klog.Infof("add helm repo index syncer Runnable")
 	mgr.Add(r.HelmEnv)
