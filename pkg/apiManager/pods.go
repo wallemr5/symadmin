@@ -218,6 +218,52 @@ func (m *APIManager) DeletePodByName(c *gin.Context) {
 	c.Status(http.StatusOK)
 }
 
+// GetPodByName ...
+func (m *APIManager) GetPodByName(c *gin.Context) {
+	clusterName := c.Param("name")
+	podName := c.Param("podName")
+	namespace := c.Param("namespace")
+
+	cluster, err := m.K8sMgr.Get(clusterName)
+	if err != nil {
+		klog.Errorf("get cluster error: %v", err)
+		AbortHTTPError(c, GetClusterError, "", err)
+		return
+	}
+
+	ctx := context.Background()
+	pod := &corev1.Pod{}
+	err = cluster.Client.Get(ctx, types.NamespacedName{
+		Namespace: namespace,
+		Name:      podName,
+	}, pod)
+	if err != nil {
+		klog.Errorf("get pod error: %v", err)
+		AbortHTTPError(c, GetPodError, "", err)
+		return
+	}
+
+	apiPod := &model.Pod{
+		Name:            pod.GetName(),
+		Namespace:       pod.Namespace,
+		ClusterName:     cluster.GetName(),
+		NodeIP:          pod.Status.HostIP,
+		PodIP:           pod.Status.PodIP,
+		ImageVersion:    "",
+		StartTime:       pod.Status.StartTime.String(),
+		ContainerStatus: nil,
+	}
+	apiPod.ContainerStatus = append(apiPod.ContainerStatus, &model.ContainerStatus{
+		Name:         pod.Status.ContainerStatuses[0].Name,
+		Ready:        pod.Status.ContainerStatuses[0].Ready,
+		RestartCount: pod.Status.ContainerStatuses[0].RestartCount,
+		Image:        pod.Status.ContainerStatuses[0].Image,
+		ContainerID:  pod.Status.ContainerStatuses[0].ContainerID,
+	})
+
+	c.IndentedJSON(http.StatusOK, apiPod)
+}
+
 // DeletePodByGroup ...
 func (m *APIManager) DeletePodByGroup(c *gin.Context) {
 	clusterName := c.Param("name")
