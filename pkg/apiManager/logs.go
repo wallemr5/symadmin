@@ -130,5 +130,5 @@ func (m *APIManager) HandleFileLogs(c *gin.Context) {
 		return
 	}
 
-	c.IndentedJSON(http.StatusOK, result)
+	c.Data(http.StatusOK, "", result)
 }

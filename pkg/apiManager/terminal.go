@@ -169,7 +169,7 @@ func (m *APIManager) GetFiles(c *gin.Context) {
 		return
 	}
 
-	files := strings.Split(result, "\n")
+	files := strings.Split(string(result), "\n")
 	var listfile []string
 	for _, file := range files {
 		ok := strings.HasSuffix(file, fileType)
@@ -252,7 +252,7 @@ func startProcess(cluster *k8smanager.Cluster, namespace, podName, container str
 }
 
 // RunCmdOnceInContainer ...
-func RunCmdOnceInContainer(cluster *k8smanager.Cluster, namespace, pod, container, cmd string, tty bool) (string, error) {
+func RunCmdOnceInContainer(cluster *k8smanager.Cluster, namespace, pod, container, cmd string, tty bool) ([]byte, error) {
 	req := cluster.KubeCli.CoreV1().RESTClient().Post().
 		Resource("pods").
 		Name(pod).
@@ -262,7 +262,7 @@ func RunCmdOnceInContainer(cluster *k8smanager.Cluster, namespace, pod, containe
 	scheme := runtime.NewScheme()
 	if err := core_v1.AddToScheme(scheme); err != nil {
 		klog.Errorf("error adding to scheme: %v", err)
-		return "", err
+		return nil, err
 	}
 
 	parameterCodec := runtime.NewParameterCodec(scheme)
@@ -280,7 +280,7 @@ func RunCmdOnceInContainer(cluster *k8smanager.Cluster, namespace, pod, containe
 	exec, err := remotecommand.NewSPDYExecutor(cluster.RestConfig, "POST", req.URL())
 	if err != nil {
 		klog.Errorf("error while creating Executor: %+v", err)
-		return "", err
+		return nil, err
 	}
 
 	var stdout, stderr bytes.Buffer
@@ -292,13 +292,13 @@ func RunCmdOnceInContainer(cluster *k8smanager.Cluster, namespace, pod, containe
 	})
 	if err != nil {
 		klog.Errorf("get exec streaming error: %v", err)
-		return "", err
+		return nil, err
 	}
 
 	if stderr.Len() > 0 {
-		return stderr.String(), nil
+		return stderr.Bytes(), nil
 	}
-	return stdout.String(), nil
+	return stdout.Bytes(), nil
 }
 
 // InitWebsocket ...
