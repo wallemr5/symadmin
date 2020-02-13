@@ -18,10 +18,11 @@ package main
 
 import (
 	"fmt"
-	"gitlab.dmall.com/arch/sym-admin/cmd/controller/app"
 	"math/rand"
 	"os"
 	"time"
+
+	"gitlab.dmall.com/arch/sym-admin/cmd/controller/app"
 )
 
 func main() {
