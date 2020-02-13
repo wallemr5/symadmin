@@ -15,6 +15,11 @@ import (
 
 func (r *AppSetReconciler) Recover(ctx context.Context, req customctrl.CustomRequest) (reconcile.Result, error) {
 
+	if req.ClusterName == "" {
+		klog.V(4).Info("AppSet event not care")
+		return reconcile.Result{}, nil
+	}
+
 	cli, err := r.DksMgr.K8sMgr.Get(req.ClusterName)
 	if err != nil {
 		return reconcile.Result{}, err

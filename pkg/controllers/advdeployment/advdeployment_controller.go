@@ -18,33 +18,29 @@ package advdeployment
 
 import (
 	"context"
-
-	"gitlab.dmall.com/arch/sym-admin/pkg/labels"
+	"time"
 
 	"github.com/go-logr/logr"
 	"github.com/gofrs/uuid"
+	"github.com/pkg/errors"
 	workloadv1beta1 "gitlab.dmall.com/arch/sym-admin/pkg/apis/workload/v1beta1"
 	helmv2 "gitlab.dmall.com/arch/sym-admin/pkg/helm/v2"
+	"gitlab.dmall.com/arch/sym-admin/pkg/helm/v2repo"
+	k8sclient "gitlab.dmall.com/arch/sym-admin/pkg/k8s/client"
+	"gitlab.dmall.com/arch/sym-admin/pkg/labels"
 	pkgmanager "gitlab.dmall.com/arch/sym-admin/pkg/manager"
+	"gitlab.dmall.com/arch/sym-admin/pkg/utils"
 	appsv1 "k8s.io/api/apps/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
+	"k8s.io/client-go/kubernetes"
+	"k8s.io/client-go/rest"
 	"k8s.io/klog"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-
-	"sigs.k8s.io/controller-runtime/pkg/manager"
-	"sigs.k8s.io/controller-runtime/pkg/reconcile"
-
-	"time"
-
-	"github.com/pkg/errors"
-	"gitlab.dmall.com/arch/sym-admin/pkg/helm/v2repo"
-	k8sclient "gitlab.dmall.com/arch/sym-admin/pkg/k8s/client"
-	"gitlab.dmall.com/arch/sym-admin/pkg/utils"
-	"k8s.io/client-go/kubernetes"
-	"k8s.io/client-go/rest"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
 	"sigs.k8s.io/controller-runtime/pkg/handler"
+	"sigs.k8s.io/controller-runtime/pkg/manager"
+	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 	"sigs.k8s.io/controller-runtime/pkg/source"
 )
 
@@ -56,20 +52,22 @@ const (
 type AdvDeploymentReconciler struct {
 	Name string
 	client.Client
-	Log     logr.Logger
-	Mgr     manager.Manager
-	KubeCli kubernetes.Interface
-	Cfg     *rest.Config
-	HelmEnv *v2repo.HelmIndexSyncer
+	Log       logr.Logger
+	Mgr       manager.Manager
+	KubeCli   kubernetes.Interface
+	Cfg       *rest.Config
+	HelmEnv   *v2repo.HelmIndexSyncer
+	IsRecover bool
 }
 
 // Add add controller to runtime manager
 func Add(mgr manager.Manager, cMgr *pkgmanager.DksManager) error {
 	r := &AdvDeploymentReconciler{
-		Name:   "AdvDeployment-controllers",
-		Client: mgr.GetClient(),
-		Mgr:    mgr,
-		Log:    ctrl.Log.WithName("controllers").WithName("AdvDeployment"),
+		Name:      "AdvDeployment-controllers",
+		Client:    mgr.GetClient(),
+		Mgr:       mgr,
+		Log:       ctrl.Log.WithName("controllers").WithName("AdvDeployment"),
+		IsRecover: cMgr.Opt.Recover,
 	}
 
 	r.Cfg = mgr.GetConfig()
@@ -149,6 +147,11 @@ func (r *AdvDeploymentReconciler) Reconcile(req ctrl.Request) (ctrl.Result, erro
 		}
 		klog.V(logLevel).Infof("##### [%s] reconciling is finished. time taken: %v. ", req.NamespacedName, diffTime)
 	}()
+
+	// exec recover logic
+	if r.IsRecover {
+		return r.Recover(req)
+	}
 
 	// At first, find the advDeployment with its namespaced name.
 	advDeploy := &workloadv1beta1.AdvDeployment{}
