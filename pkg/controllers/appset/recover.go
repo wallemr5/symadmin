@@ -5,107 +5,91 @@ import (
 
 	workloadv1beta1 "gitlab.dmall.com/arch/sym-admin/pkg/apis/workload/v1beta1"
 	"gitlab.dmall.com/arch/sym-admin/pkg/customctrl"
-	"gitlab.dmall.com/arch/sym-admin/pkg/utils"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/client-go/util/retry"
 	"k8s.io/klog"
-	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 )
 
 func (r *AppSetReconciler) Recover(ctx context.Context, req customctrl.CustomRequest) (reconcile.Result, error) {
 
-	if req.ClusterName == "" {
-		klog.V(4).Info("AppSet event not care")
-		return reconcile.Result{}, nil
-	}
-
-	cli, err := r.DksMgr.K8sMgr.Get(req.ClusterName)
+	app := &workloadv1beta1.AppSet{}
+	isCreate, err := r.buildAppSet(ctx, req, app)
 	if err != nil {
 		return reconcile.Result{}, err
 	}
-	adv := &workloadv1beta1.AdvDeployment{}
-	if err := cli.Cache.Get(ctx, req.NamespacedName, adv); err != nil {
-		klog.Errorf("Get [%s] AdvDeployment failed: %s", req.ClusterName, err.Error())
-		return reconcile.Result{}, err
-	}
-
-	app := &workloadv1beta1.AppSet{}
-	err = r.GetClient().Get(ctx, req.NamespacedName, app)
-	if err != nil && !apierrors.IsNotFound(err) {
-		return reconcile.Result{}, err
-	}
-
-	var isCreate bool
-	if err == nil {
-		isCreate = true
-	}
-
-	return reconcile.Result{}, apply(r.GetClient(), req, app, adv, isCreate)
-}
-
-func apply(cli client.Client, req customctrl.CustomRequest, app *workloadv1beta1.AppSet, adv *workloadv1beta1.AdvDeployment, isCreate bool) error {
-
-	buildAppSet(req, app, adv, isCreate)
 
 	if isCreate {
-		err := cli.Create(context.TODO(), app)
+		err := r.Client.Create(context.TODO(), app)
 		if err != nil {
 			klog.Error("Create AppSet failed:%s", err.Error())
 		}
-		return err
+		return reconcile.Result{}, err
 	}
 
-	return retry.RetryOnConflict(retry.DefaultRetry, func() error {
+	err = retry.RetryOnConflict(retry.DefaultRetry, func() error {
 
-		updateErr := cli.Update(context.TODO(), app)
+		updateErr := r.Client.Update(context.TODO(), app)
 		if updateErr == nil {
 			klog.V(4).Info("Update AppSet success")
 			return nil
 		}
 
-		getErr := cli.Get(context.TODO(), req.NamespacedName, app)
+		_, getErr := r.buildAppSet(ctx, req, app)
 		if getErr != nil {
 			klog.Errorf("Getting updated AppSet failed: %s", getErr.Error())
 			return getErr
 		}
-		buildAppSet(req, app, adv, isCreate)
 		return updateErr
 	})
+
+	return reconcile.Result{}, err
 }
 
-func buildAppSet(req customctrl.CustomRequest, app *workloadv1beta1.AppSet, adv *workloadv1beta1.AdvDeployment, isCreate bool) {
+func (r *AppSetReconciler) buildAppSet(ctx context.Context, req customctrl.CustomRequest, app *workloadv1beta1.AppSet) (isCreate bool, err error) {
+	app = &workloadv1beta1.AppSet{}
+	err = r.GetClient().Get(ctx, req.NamespacedName, app)
+	if err != nil && !apierrors.IsNotFound(err) {
+		return false, err
+	}
+	if err == nil {
+		isCreate = true
+	}
+
+	advList := []*workloadv1beta1.AdvDeployment{}
+	for _, cluster := range r.DksMgr.K8sMgr.GetAll() {
+		adv := &workloadv1beta1.AdvDeployment{}
+		err = cluster.Client.Get(ctx, req.NamespacedName, adv)
+		if err != nil {
+			klog.Errorf("Get [%s] AdvDeployment failed: %s", cluster.Name, err.Error())
+			continue
+		}
+		advList = append(advList, adv)
+	}
 
 	if isCreate {
-		app.ObjectMeta.Name = adv.ObjectMeta.Name
-		app.ObjectMeta.Namespace = adv.ObjectMeta.Namespace
+		app.ObjectMeta.Name = req.Name
+		app.ObjectMeta.Namespace = req.Namespace
+		app.Spec.ServiceName = advList[0].Spec.ServiceName
 
-		app.Spec.ClusterTopology.Clusters = []*workloadv1beta1.TargetCluster{}
+		advList[0].Spec.PodSpec.DeepCopyInto(&app.Spec.PodSpec)
+	}
+	app.Spec.ClusterTopology.Clusters = []*workloadv1beta1.TargetCluster{}
+	for _, adv := range advList {
 		app.Spec.ClusterTopology.Clusters = append(app.Spec.ClusterTopology.Clusters, &workloadv1beta1.TargetCluster{
 			Name:    req.ClusterName,
 			Mata:    adv.Labels,
 			PodSets: adv.Spec.Topology.PodSets,
 		})
-	} else {
-		for i := range app.Spec.ClusterTopology.Clusters {
-			if app.Spec.ClusterTopology.Clusters[i].Name == req.ClusterName {
-				app.Spec.ClusterTopology.Clusters[i] = &workloadv1beta1.TargetCluster{
-					Name:    req.ClusterName,
-					Mata:    adv.Labels,
-					PodSets: adv.Spec.Topology.PodSets,
-				}
-			}
-		}
 	}
 
-	app.Spec.ServiceName = adv.Spec.ServiceName
-	adv.Spec.PodSpec.DeepCopyInto(&app.Spec.PodSpec)
-
-	var replica int
+	var replica int32
 	for _, cluster := range app.Spec.ClusterTopology.Clusters {
 		for _, ps := range cluster.PodSets {
-			replica += ps.Replicas.IntValue()
+			replica += ps.Replicas.IntVal
 		}
 	}
-	app.Spec.Replicas = utils.IntPointer(int32(replica))
+	app.Spec.Replicas = &replica
+
+	return isCreate, nil
 }
