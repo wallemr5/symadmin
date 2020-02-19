@@ -50,7 +50,7 @@ func (m *APIManager) GetClusterResource(c *gin.Context) {
 		return
 	}
 
-	deployments, err := getDeployments(clusters, namespace, appName, group)
+	deployments, err := getDeployments(clusters, namespace, appName, group, "")
 	if err != nil {
 		klog.Errorf("failed to get deployments: %v", err)
 		AbortHTTPError(c, GetDeploymentError, "", err)

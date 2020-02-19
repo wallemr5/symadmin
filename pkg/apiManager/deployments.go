@@ -19,10 +19,11 @@ func (m *APIManager) GetDeployments(c *gin.Context) {
 	clusterName := c.Param("name")
 	appName := c.Param("appName")
 	group := c.DefaultQuery("group", "")
+	ldcLabel := c.DefaultQuery("ldcLabel", "")
 	namespace := c.DefaultQuery("namespace", "")
 	clusters := m.K8sMgr.GetAll(clusterName)
 
-	result, err := getDeployments(clusters, namespace, appName, group)
+	result, err := getDeployments(clusters, namespace, appName, group, ldcLabel)
 	if err != nil {
 		klog.Errorf("failed to get deployments: %v", err)
 		AbortHTTPError(c, GetDeploymentError, "", err)
@@ -32,13 +33,21 @@ func (m *APIManager) GetDeployments(c *gin.Context) {
 	c.IndentedJSON(http.StatusOK, result)
 }
 
-func getDeployments(clusters []*k8smanager.Cluster, namespace, appName, group string) ([]*model.DeploymentInfo, error) {
+func getDeployments(clusters []*k8smanager.Cluster, namespace, appName, group, ldcLabel string) ([]*model.DeploymentInfo, error) {
 	ctx := context.Background()
 	listOptions := &client.ListOptions{Namespace: namespace}
-	listOptions.MatchingLabels(map[string]string{
-		"app":       appName,
-		"sym-group": group,
-	})
+	options := make(map[string]string)
+	if group != "" {
+		options["sym-group"] = group
+	}
+	if ldcLabel != "" {
+		options["sym-ldc"] = ldcLabel
+	}
+	if appName != "all" {
+		options["app"] = appName
+	}
+
+	listOptions.MatchingLabels(options)
 	result := []*model.DeploymentInfo{}
 	for _, cluster := range clusters {
 		deployments := &appv1.DeploymentList{}
