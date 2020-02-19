@@ -121,6 +121,7 @@ func (r *AdvDeploymentReconciler) RecalculateStatus(ctx context.Context, advDepl
 		podSetStatus.UnAvailable = deploy.Status.UnavailableReplicas
 		podSetStatus.Update = &deploy.Status.UpdatedReplicas
 		podSetStatus.Current = &deploy.Status.Replicas
+		podSetStatus.Ready = &deploy.Status.ReadyReplicas
 
 		status.Available += podSetStatus.Available
 		status.Desired += podSetStatus.Desired
@@ -138,6 +139,7 @@ func (r *AdvDeploymentReconciler) RecalculateStatus(ctx context.Context, advDepl
 		podSetStatus.Desired = *set.Spec.Replicas
 		podSetStatus.Update = &set.Status.UpdatedReplicas
 		podSetStatus.Current = &set.Status.Replicas
+		podSetStatus.Ready = &set.Status.ReadyReplicas
 
 		status.Available += podSetStatus.Available
 		status.Desired += podSetStatus.Desired
