@@ -137,7 +137,7 @@ namespace: query string, the unique namespace in a cluster. Default is 'default'
 group: query string, the unique group name. <br/>
 <br/>
 e.g. <br/>
-<a href="/api/cluster/all/deployment/bbcc?group=blue>/api/cluster/all/deployment/bbcc?group=blue</a><br/>
+<a href="/api/cluster/all/deployment/bbcc?group=blue">/api/cluster/all/deployment/bbcc?group=blue</a><br/>
 `
 
 // GetPodEventDesc ...
