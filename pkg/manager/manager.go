@@ -45,6 +45,7 @@ type ManagerOption struct {
 	MasterEnabled           bool
 	WorkerEnabled           bool
 	Debug                   bool
+	Recover                 bool
 }
 
 type DksManager struct {

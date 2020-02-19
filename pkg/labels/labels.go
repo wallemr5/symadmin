@@ -3,6 +3,7 @@ package labels
 import (
 	"errors"
 	"fmt"
+	"regexp"
 
 	"k8s.io/klog"
 )
@@ -88,6 +89,25 @@ func MakeHelmReleaseFilterWithGroup(appName, group string) (string, error) {
 	}
 
 	return fmt.Sprintf("^%s(-gz|-rz).*(-%s)$", appName, group), nil
+}
+
+// CheckAndGetAppInfo check name format, if throught return app info
+func CheckAndGetAppInfo(name string) (info AppInfo, check bool) {
+	rep, _ := regexp.Compile(`^(.*?)-(gz|rz)(.*?)-(blue|green|canary|svc)$`)
+	check = rep.Match([]byte(name))
+	if !check {
+		return info, false
+	}
+
+	rl := rep.FindStringSubmatch(name)
+	if len(rl) != 5 {
+		return info, false
+	}
+
+	info.Name = rl[1]
+	info.IdcName = fmt.Sprintf("%s%s", rl[2], rl[3])
+	info.Group = rl[4]
+	return info, true
 }
 
 // IsValidGroup ...

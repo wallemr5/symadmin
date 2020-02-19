@@ -113,11 +113,15 @@ func (r *AdvDeploymentReconciler) RecalculateStatus(ctx context.Context, advDepl
 	status := &workloadv1beta1.AdvDeploymentAggrStatus{}
 	for _, deploy := range deploys {
 		podSetStatus := &workloadv1beta1.PodSetStatusInfo{}
+
 		podSetStatus.Name = deploy.Name
 		podSetStatus.Version = utils.FillImageVersion(advDeploy.Name, &deploy.Spec.Template.Spec)
 		podSetStatus.Available = deploy.Status.AvailableReplicas
-		podSetStatus.Desired = deploy.Status.Replicas
+		podSetStatus.Desired = *deploy.Spec.Replicas
 		podSetStatus.UnAvailable = deploy.Status.UnavailableReplicas
+		podSetStatus.Update = &deploy.Status.UpdatedReplicas
+		podSetStatus.Current = &deploy.Status.Replicas
+		podSetStatus.Ready = &deploy.Status.ReadyReplicas
 
 		status.Available += podSetStatus.Available
 		status.Desired += podSetStatus.Desired
@@ -128,14 +132,17 @@ func (r *AdvDeploymentReconciler) RecalculateStatus(ctx context.Context, advDepl
 
 	for _, set := range statefulSets {
 		podSetStatus := &workloadv1beta1.PodSetStatusInfo{}
+
 		podSetStatus.Name = set.Name
 		podSetStatus.Version = utils.FillImageVersion(advDeploy.Name, &set.Spec.Template.Spec)
 		podSetStatus.Available = set.Status.ReadyReplicas
-		podSetStatus.Desired = set.Status.Replicas
+		podSetStatus.Desired = *set.Spec.Replicas
+		podSetStatus.Update = &set.Status.UpdatedReplicas
+		podSetStatus.Current = &set.Status.Replicas
+		podSetStatus.Ready = &set.Status.ReadyReplicas
 
 		status.Available += podSetStatus.Available
 		status.Desired += podSetStatus.Desired
-		status.UnAvailable += podSetStatus.UnAvailable
 
 		status.PodSets = append(status.PodSets, podSetStatus)
 	}
