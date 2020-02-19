@@ -252,6 +252,7 @@ func (m *APIManager) GetPodByName(c *gin.Context) {
 		ImageVersion:    "",
 		StartTime:       pod.Status.StartTime.String(),
 		ContainerStatus: nil,
+		Labels:          pod.GetLabels(),
 	}
 	apiPod.ContainerStatus = append(apiPod.ContainerStatus, &model.ContainerStatus{
 		Name:         pod.Status.ContainerStatuses[0].Name,
@@ -334,6 +335,7 @@ func getPodByAppName(clusters []*k8smanager.Cluster, appName, group string) ([]*
 				ImageVersion:    "",
 				StartTime:       pod.Status.StartTime.String(),
 				ContainerStatus: nil,
+				Labels:          pod.GetLabels(),
 			}
 			apiPod.ContainerStatus = append(apiPod.ContainerStatus, &model.ContainerStatus{
 				Name:         pod.Status.ContainerStatuses[0].Name,
@@ -405,6 +407,7 @@ func getPodListByAppName(clusters []*k8smanager.Cluster, appName, group string) 
 				ImageVersion:    "",
 				StartTime:       pod.Status.StartTime.String(),
 				ContainerStatus: nil,
+				Labels:          pod.GetLabels(),
 			}
 
 			apiPod.HasEndpoint = false

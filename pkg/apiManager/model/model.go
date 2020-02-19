@@ -31,6 +31,7 @@ type Pod struct {
 	PodIP           string             `json:"podIP,omitempty"`
 	ImageVersion    string             `json:"imageVersion,omitempty"`
 	StartTime       string             `json:"startTime,omitempty"`
+	Labels          map[string]string  `json:"labels,omitempty"`
 	ContainerStatus []*ContainerStatus `json:"containerStatus,omitempty"`
 	HasEndpoint     bool               `json:"endpoints,omitempty"`
 }
