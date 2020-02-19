@@ -177,7 +177,7 @@ func (m *APIManager) GetFiles(c *gin.Context) {
 	// listfile = append(listfile, file)
 	// }
 	// }
-	c.IndentedJSON(http.StatusOK, files)
+	c.IndentedJSON(http.StatusOK, files[:len(files)-1])
 }
 
 func startProcess(cluster *k8smanager.Cluster, namespace, podName, container string,
