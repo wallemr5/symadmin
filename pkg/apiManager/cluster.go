@@ -34,6 +34,7 @@ func (m *APIManager) GetClusterResource(c *gin.Context) {
 	appName := c.Param("appName")
 	clusters := m.K8sMgr.GetAll(clusterName)
 	namespace := c.Param("namespace")
+	ldcLabel := c.DefaultQuery("ldcLabel", "")
 	group := c.DefaultQuery("group", "")
 
 	services, err := getService(clusters, appName, group)
@@ -43,7 +44,7 @@ func (m *APIManager) GetClusterResource(c *gin.Context) {
 		return
 	}
 
-	pods, err := getPodListByAppName(clusters, appName, group)
+	pods, err := getPodListByAppName(clusters, appName, group, ldcLabel, namespace)
 	if err != nil {
 		klog.Error(err, "failed to get pods")
 		AbortHTTPError(c, GetPodError, "", err)

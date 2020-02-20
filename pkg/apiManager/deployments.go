@@ -46,8 +46,9 @@ func (m *APIManager) GetDeploymentsStat(c *gin.Context) {
 	if err != nil {
 		klog.Errorf("failed to get deployments: %v", err)
 		c.IndentedJSON(http.StatusBadRequest, gin.H{
-			"success": false,
-			"message": err.Error(),
+			"success":   false,
+			"message":   err.Error(),
+			"resultMap": nil,
 		})
 		return
 	}
@@ -72,7 +73,7 @@ func (m *APIManager) GetDeploymentsStat(c *gin.Context) {
 
 	c.IndentedJSON(http.StatusOK, gin.H{
 		"success":   true,
-		"message":   "",
+		"message":   nil,
 		"resultMap": result,
 	})
 }

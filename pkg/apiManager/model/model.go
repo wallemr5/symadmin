@@ -13,27 +13,32 @@ type ClusterStatus struct {
 
 // ContainerStatus ...
 type ContainerStatus struct {
-	Name         string `json:"name,omitempty"`
-	Ready        bool   `json:"ready,omitempty"`
-	RestartCount int32  `json:"restartCount,omitempty"`
-	Image        string `json:"image,omitempty"`
-	ContainerID  string `json:"containerId,omitempty"`
+	Name         string                           `json:"name,omitempty"`
+	Ready        bool                             `json:"ready,omitempty"`
+	RestartCount int32                            `json:"restartCount,omitempty"`
+	Image        string                           `json:"image,omitempty"`
+	ContainerID  string                           `json:"containerId,omitempty"`
+	LastState    *corev1.ContainerStateTerminated `json:"lastState,omitempty"`
 }
 
 // Pod ...
 type Pod struct {
-	Name            string             `json:"name,omitempty"`
-	Namespace       string             `json:"namespace,omitempty"`
-	ClusterName     string             `json:"clusterCode,omitempty"`
-	NodeIP          string             `json:"nodeIP,omitempty"`
-	Phase           corev1.PodPhase    `json:"phase,omitempty"`
-	RestartCount    int32              `json:"restartCount,omitempty"`
-	PodIP           string             `json:"podIP,omitempty"`
-	ImageVersion    string             `json:"imageVersion,omitempty"`
-	StartTime       string             `json:"startTime,omitempty"`
-	Labels          map[string]string  `json:"labels,omitempty"`
-	ContainerStatus []*ContainerStatus `json:"containerStatus,omitempty"`
-	HasEndpoint     bool               `json:"endpoints,omitempty"`
+	Name         string             `json:"name,omitempty"`
+	Namespace    string             `json:"namespace,omitempty"`
+	ClusterCode  string             `json:"clusterCode,omitempty"`
+	Annotations  map[string]string  `json:"annotations,omitempty"`
+	HostIP       string             `json:"hostIP,omitempty"`
+	Phase        corev1.PodPhase    `json:"phase,omitempty"`
+	Group        string             `json:"group,omitempty"`
+	RestartCount int32              `json:"restartCount,omitempty"`
+	PodIP        string             `json:"podIP,omitempty"`
+	ImageVersion string             `json:"imageVersion,omitempty"`
+	CommitID     string             `json:"commitId,omitempty"`
+	StartTime    string             `json:"startTime,omitempty"`
+	Labels       map[string]string  `json:"labels,omitempty"`
+	Containers   []*ContainerStatus `json:"containers,omitempty"`
+	Endpoints    bool               `json:"endpoints,omitempty"`
+	HasLastState bool               `json:"hasLastState,omitempty"`
 }
 
 // ErrorResponse describes responses when an error occurred
