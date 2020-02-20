@@ -2,7 +2,9 @@ package apiManager
 
 import (
 	"bytes"
+	"context"
 	"errors"
+	"fmt"
 	"net/http"
 	"strconv"
 	"strings"
@@ -13,6 +15,7 @@ import (
 	k8smanager "gitlab.dmall.com/arch/sym-admin/pkg/k8s/manager"
 	core_v1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/tools/remotecommand"
 	"k8s.io/klog"
 )
@@ -138,46 +141,129 @@ func (m *APIManager) ExecOnceWithHTTP(c *gin.Context) {
 
 // GetFiles get the log file of the specified directory
 func (m *APIManager) GetFiles(c *gin.Context) {
-	clusterName := c.Param("name")
-	namespace := c.Param("namespace")
-	podName := c.Param("podName")
-	path := c.DefaultQuery("path", "")
-	// fileType := c.DefaultQuery("fileType", ".log")
+	clusterCode := c.Query("clusterCode")
+	namespace := c.Query("namespace")
+	podName := c.Query("podName")
+	projectCode := c.Query("projectCode")
+	appCode := c.Query("appCode")
+	appName := c.Query("appName")
 
 	containerName, ok := c.GetQuery("container")
 	if !ok {
 		AbortHTTPError(c, ParamInvalidError, "", errors.New("can not get container"))
 		return
 	}
-
-	cluster, err := m.K8sMgr.Get(clusterName)
+	cluster, err := m.K8sMgr.Get(clusterCode)
 	if err != nil {
 		klog.Errorf("get cluster error: %+v", err)
 		AbortHTTPError(c, GetClusterError, "", err)
 		return
 	}
 
-	cmd := "ls"
-	if len(path) > 0 {
-		cmd = cmd + " " + path
+	// Get podIP and containerID
+	ctx := context.Background()
+	pod := &core_v1.Pod{}
+	err = cluster.Client.Get(ctx, types.NamespacedName{
+		Namespace: namespace,
+		Name:      podName,
+	}, pod)
+	if err != nil {
+		klog.Errorf("get pod error: %v", err)
+		AbortHTTPError(c, GetPodError, "", err)
+		return
 	}
 
-	result, err := RunCmdOnceInContainer(cluster, namespace, podName, containerName, cmd, false)
+	podIP := pod.Status.PodIP
+	var containerID string
+	for _, c := range pod.Status.ContainerStatuses {
+		if c.Name == containerName {
+			containerID = c.ContainerID
+		}
+	}
+
+	// New logging rules: /web/logs/app/$projectCode/$appCode/$ip:$port/*.log
+	path := fmt.Sprintf("/web/logs/app/%s/%s/", projectCode, appCode)
+	cmd := "ls " + path
+	result, err := RunCmdOnceInContainer(
+		cluster, namespace, podName, containerName, cmd, false)
 	if err != nil {
 		klog.Errorf("run cmd once in container error: %v", err)
 		AbortHTTPError(c, ExecCmdError, "", err)
 		return
 	}
-
 	files := strings.Split(string(result), "\n")
-	// var listfile []string
-	// for _, file := range files {
-	// ok := strings.HasSuffix(file, fileType)
-	// if ok {
-	// listfile = append(listfile, file)
-	// }
-	// }
-	c.IndentedJSON(http.StatusOK, files[:len(files)-1])
+	var logDirectory string
+	for _, fileName := range files {
+		if strings.HasPrefix(fileName, podIP) {
+			logDirectory = fileName
+			break
+		}
+	}
+
+	if len(logDirectory) > 0 {
+		cmd += logDirectory
+		result, err = RunCmdOnceInContainer(
+			cluster, namespace, podName, containerName, cmd, false)
+		if err != nil {
+			klog.Errorf("run cmd once in container error: %v", err)
+			AbortHTTPError(c, ExecCmdError, "", err)
+			return
+		}
+		files := strings.Split(string(result), "\n")
+		if len(files) > 1 {
+			c.IndentedJSON(http.StatusOK, gin.H{
+				"success": true,
+				"message": nil,
+				"resultMap": gin.H{
+					"result": files[:len(files)-1],
+				},
+			})
+			return
+		}
+	}
+
+	// Old logging rules: /web/logs/app/logback/$appName/$podIP_$containerID/
+	path = fmt.Sprintf("/web/logs/app/logback/%s/", appName)
+	cmd = "ls " + path
+	result, err = RunCmdOnceInContainer(
+		cluster, namespace, podName, containerName, cmd, false)
+	if err != nil {
+		klog.Errorf("run cmd once in container error: %v", err)
+		AbortHTTPError(c, ExecCmdError, "", err)
+		return
+	}
+	files = strings.Split(string(result), "\n")
+	for _, fileName := range files {
+		if strings.HasPrefix(fileName, podIP+"_"+containerID[9:12]) {
+			logDirectory = fileName
+			break
+		}
+	}
+	if len(logDirectory) > 0 {
+		cmd += logDirectory
+		result, err = RunCmdOnceInContainer(
+			cluster, namespace, podName, containerName, cmd, false)
+		if err != nil {
+			klog.Errorf("run cmd once in container error: %v", err)
+			AbortHTTPError(c, ExecCmdError, "", err)
+			return
+		}
+		files = strings.Split(string(result), "\n")
+		if len(files) > 1 {
+			c.IndentedJSON(http.StatusOK, gin.H{
+				"success": true,
+				"message": nil,
+				"resultMap": gin.H{
+					"result": files[:len(files)-1],
+				},
+			})
+			return
+		}
+	}
+	c.IndentedJSON(http.StatusBadRequest, gin.H{
+		"success": false,
+		"message": "no log files found.",
+	})
 }
 
 func startProcess(cluster *k8smanager.Cluster, namespace, podName, container string,
