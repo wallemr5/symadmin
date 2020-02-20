@@ -188,7 +188,16 @@ func (m *APIManager) GetFiles(c *gin.Context) {
 		cluster, namespace, podName, containerName, cmd, false)
 	if err != nil {
 		klog.Errorf("run cmd once in container error: %v", err)
-		AbortHTTPError(c, ExecCmdError, "", err)
+		c.IndentedJSON(http.StatusOK, gin.H{
+			"success": true,
+			"message": nil,
+			"resultMap": gin.H{
+				"result":    []string{},
+				"errorText": []string{err.Error()},
+				"path":      path,
+				"success":   false,
+			},
+		})
 		return
 	}
 	files := strings.Split(string(result), "\n")
@@ -206,7 +215,16 @@ func (m *APIManager) GetFiles(c *gin.Context) {
 			cluster, namespace, podName, containerName, cmd, false)
 		if err != nil {
 			klog.Errorf("run cmd once in container error: %v", err)
-			AbortHTTPError(c, ExecCmdError, "", err)
+			c.IndentedJSON(http.StatusOK, gin.H{
+				"success": true,
+				"message": nil,
+				"resultMap": gin.H{
+					"result":    []string{},
+					"errorText": []string{err.Error()},
+					"path":      path + logDirectory,
+					"success":   false,
+				},
+			})
 			return
 		}
 		files := strings.Split(string(result), "\n")
@@ -215,7 +233,10 @@ func (m *APIManager) GetFiles(c *gin.Context) {
 				"success": true,
 				"message": nil,
 				"resultMap": gin.H{
-					"result": files[:len(files)-1],
+					"result":    files[:len(files)-1],
+					"errorText": nil,
+					"path":      path + logDirectory,
+					"success":   true,
 				},
 			})
 			return
@@ -229,7 +250,16 @@ func (m *APIManager) GetFiles(c *gin.Context) {
 		cluster, namespace, podName, containerName, cmd, false)
 	if err != nil {
 		klog.Errorf("run cmd once in container error: %v", err)
-		AbortHTTPError(c, ExecCmdError, "", err)
+		c.IndentedJSON(http.StatusOK, gin.H{
+			"success": true,
+			"message": nil,
+			"resultMap": gin.H{
+				"result":    []string{},
+				"errorText": []string{err.Error()},
+				"path":      path,
+				"success":   false,
+			},
+		})
 		return
 	}
 	files = strings.Split(string(result), "\n")
@@ -245,7 +275,16 @@ func (m *APIManager) GetFiles(c *gin.Context) {
 			cluster, namespace, podName, containerName, cmd, false)
 		if err != nil {
 			klog.Errorf("run cmd once in container error: %v", err)
-			AbortHTTPError(c, ExecCmdError, "", err)
+			c.IndentedJSON(http.StatusOK, gin.H{
+				"success": true,
+				"message": nil,
+				"resultMap": gin.H{
+					"result":    []string{},
+					"errorText": []string{err.Error()},
+					"path":      path + logDirectory,
+					"success":   false,
+				},
+			})
 			return
 		}
 		files = strings.Split(string(result), "\n")
@@ -254,15 +293,19 @@ func (m *APIManager) GetFiles(c *gin.Context) {
 				"success": true,
 				"message": nil,
 				"resultMap": gin.H{
-					"result": files[:len(files)-1],
+					"result":    files[:len(files)-1],
+					"errorText": nil,
+					"path":      path + logDirectory,
+					"success":   true,
 				},
 			})
 			return
 		}
 	}
 	c.IndentedJSON(http.StatusBadRequest, gin.H{
-		"success": false,
-		"message": "no log files found.",
+		"success":   false,
+		"message":   "no log files found.",
+		"resultMap": nil,
 	})
 }
 
