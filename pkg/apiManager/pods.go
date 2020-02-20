@@ -132,6 +132,7 @@ func (m *APIManager) GetPod(c *gin.Context) {
 	c.IndentedJSON(http.StatusOK, result)
 }
 
+// GetPodByLables ...
 func (m *APIManager) GetPodByLables(c *gin.Context) {
 	clusterName := c.Param("name")
 	appName, ok := c.GetQuery("appName")
@@ -216,7 +217,11 @@ func (m *APIManager) GetPodEvent(c *gin.Context) {
 		return result[i].LastTime.Before(&result[j].LastTime)
 	})
 
-	c.IndentedJSON(http.StatusOK, result)
+	c.IndentedJSON(http.StatusOK, gin.H{
+		"success":   true,
+		"message":   nil,
+		"resultMap": gin.H{"events": result},
+	})
 }
 
 // DeletePodByName ...
