@@ -30,7 +30,7 @@ type Pod struct {
 	HostIP       string             `json:"hostIP,omitempty"`
 	Phase        corev1.PodPhase    `json:"phase,omitempty"`
 	Group        string             `json:"group,omitempty"`
-	RestartCount int32              `json:"restartCount,omitempty"`
+	RestartCount int32              `json:"restartCount"`
 	PodIP        string             `json:"podIP,omitempty"`
 	ImageVersion string             `json:"imageVersion,omitempty"`
 	CommitID     string             `json:"commitId,omitempty"`

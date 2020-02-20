@@ -5,6 +5,7 @@ import (
 	"net/http"
 	"sort"
 	"strconv"
+	"time"
 
 	"github.com/gin-gonic/gin"
 	"gitlab.dmall.com/arch/sym-admin/pkg/apiManager/model"
@@ -283,7 +284,7 @@ func (m *APIManager) GetPodByName(c *gin.Context) {
 		HostIP:       pod.Status.HostIP,
 		PodIP:        pod.Status.PodIP,
 		ImageVersion: "",
-		StartTime:    pod.Status.StartTime.String(),
+		StartTime:    formatTime(pod.Status.StartTime.String()),
 		Containers:   nil,
 		Labels:       pod.GetLabels(),
 	}
@@ -366,7 +367,7 @@ func getPodByAppName(clusters []*k8smanager.Cluster, appName, group string) ([]*
 				HostIP:       pod.Status.HostIP,
 				PodIP:        pod.Status.PodIP,
 				ImageVersion: "",
-				StartTime:    pod.Status.StartTime.String(),
+				StartTime:    formatTime(pod.Status.StartTime.String()),
 				Containers:   nil,
 				Labels:       pod.GetLabels(),
 			}
@@ -454,7 +455,7 @@ func getPodListByAppName(clusters []*k8smanager.Cluster, appName, group, ldcLabe
 				Phase:        pod.Status.Phase,
 				ImageVersion: pod.GetAnnotations()["buildNumber_0"],
 				CommitID:     pod.GetAnnotations()["gitCommit_0"],
-				StartTime:    pod.Status.StartTime.String(),
+				StartTime:    formatTime(pod.Status.StartTime.String()),
 				Containers:   nil,
 				Labels:       pod.GetLabels(),
 			}
@@ -510,4 +511,14 @@ func getPodListByAppName(clusters []*k8smanager.Cluster, appName, group, ldcLabe
 	result["canaryGroup"] = canaryPods
 
 	return result, nil
+}
+
+func formatTime(dt string) string {
+	loc, _ := time.LoadLocation("Asia/Chongqing")
+	result, err := time.ParseInLocation("2006-01-02 15:04:05 -0700 MST", dt, loc)
+	if err != nil {
+		klog.Errorf("time parse error: %v", err)
+		return ""
+	}
+	return result.Format("2006-01-02 15:04:05")
 }
