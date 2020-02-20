@@ -419,10 +419,7 @@ func getPodListByAppName(clusters []*k8smanager.Cluster, appName, group, ldcLabe
 	listOptions.MatchingLabels(options)
 
 	endpointsListOptions := &client.ListOptions{Namespace: namespace}
-	if appName != "all" {
-		options["app"] = appName + "-svc"
-	}
-	endpointsListOptions.MatchingLabels(options)
+	endpointsListOptions.MatchingLabels(map[string]string{"app": appName + "-svc"})
 
 	for _, cluster := range clusters {
 		podList := &corev1.PodList{}

@@ -46,6 +46,7 @@ type ErrorResponse struct {
 	Code    int    `json:"code,omitempty"`
 	Message string `json:"message,omitempty"`
 	Error   string `json:"error,omitempty"`
+	Success bool   `json:"success"`
 }
 
 // Project ...

@@ -6,6 +6,7 @@ import (
 	"io/ioutil"
 	"net/http"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/gin-gonic/gin"
@@ -94,6 +95,12 @@ func (m *APIManager) HandleLogs(c *gin.Context) {
 		AbortHTTPError(c, GetPodLogsError, "", err)
 		return
 	}
+	c.IndentedJSON(http.StatusOK, gin.H{
+		"success": true,
+		"message": nil,
+		"resultMap": gin.H{
+			"log": processTextToHtml(string(result)),
+		}})
 	c.Data(http.StatusOK, "", result)
 }
 
@@ -131,4 +138,22 @@ func (m *APIManager) HandleFileLogs(c *gin.Context) {
 	}
 
 	c.Data(http.StatusOK, "", result)
+}
+
+func processTextToHtml(text string) string {
+	if text == "" {
+		return "暂无日志"
+	}
+	split := strings.Split(strings.Replace(text, "\r\n", "\n", -1), "\n")
+
+	var result []string
+	for _, s := range split {
+		if strings.Contains(s, "WARNING") || strings.Contains(s, "WARN") {
+			s = "<span class=\"text-warning\">" + s + "</span>"
+		} else if strings.Contains(s, "ERROR") || strings.Contains(s, "FAILURE") || strings.Contains(s, "Exception") {
+			s = "<span class=\"text-danger\">" + s + "</span>"
+		}
+		result = append(result, s)
+	}
+	return strings.Join(result, "<br/>")
 }

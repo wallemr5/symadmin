@@ -47,6 +47,7 @@ const (
 func AbortHTTPError(c *gin.Context, code int, msg string, err error) {
 	result := &model.ErrorResponse{
 		Code:    code,
+		Success: false,
 		Message: msg,
 	}
 	if err != nil {
