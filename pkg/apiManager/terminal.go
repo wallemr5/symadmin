@@ -424,14 +424,15 @@ func RunCmdOnceInContainer(cluster *k8smanager.Cluster, namespace, pod, containe
 		Stderr: &stderr,
 		Tty:    tty,
 	})
+	if stderr.Len() > 0 {
+		return nil, errors.New(stderr.String())
+	}
+
 	if err != nil {
 		klog.Errorf("get exec streaming error: %v", err)
 		return nil, err
 	}
 
-	if stderr.Len() > 0 {
-		return stderr.Bytes(), nil
-	}
 	return stdout.Bytes(), nil
 }
 
