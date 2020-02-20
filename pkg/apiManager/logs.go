@@ -101,7 +101,6 @@ func (m *APIManager) HandleLogs(c *gin.Context) {
 		"resultMap": gin.H{
 			"log": processTextToHtml(string(result)),
 		}})
-	c.Data(http.StatusOK, "", result)
 }
 
 // HandleFileLogs get log files in a pod
