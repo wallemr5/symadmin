@@ -256,6 +256,12 @@ func (m *APIManager) Routes() []*router.Route {
 		},
 		{
 			Method:  "GET",
+			Path:    "/api/cluster/:name/deployment/:appName/stat",
+			Handler: m.GetDeploymentsStat,
+			Desc:    GetDeploymentsDesc,
+		},
+		{
+			Method:  "GET",
 			Path:    "/api/cluster/:name/namespace/:namespace/pods/:podName/event",
 			Handler: m.GetPodEvent,
 			Desc:    GetPodEventDesc,

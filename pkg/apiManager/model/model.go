@@ -112,6 +112,16 @@ type DeploymentInfo struct {
 	CreationTimestamp   metav1.Time           `json:"creationTimestamp,omitempty"`
 }
 
+// DeploymentStatInfo ...
+type DeploymentStatInfo struct {
+	DesiredReplicas     int32 `json:"desiredReplicas,omitempty"`
+	UpdatedReplicas     int32 `json:"updatedReplicas,omitempty"`
+	ReadyReplicas       int32 `json:"readyReplicas,omitempty"`
+	AvailableReplicas   int32 `json:"availableReplicas,omitempty"`
+	UnavailableReplicas int32 `json:"unavailableReplicas,omitempty"`
+	OK                  bool  `json:"ok,omitempty"`
+}
+
 type EndpointsOfCluster struct {
 	ClusterName string      `json:"clusterCode,omitempty"`
 	Endpoint    []*Endpoint `json:"endpoint,omitempty"`

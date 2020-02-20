@@ -33,6 +33,50 @@ func (m *APIManager) GetDeployments(c *gin.Context) {
 	c.IndentedJSON(http.StatusOK, result)
 }
 
+// GetDeploymentsStat ...
+func (m *APIManager) GetDeploymentsStat(c *gin.Context) {
+	clusterName := c.Param("name")
+	appName := c.Param("appName")
+	group := c.DefaultQuery("group", "")
+	ldcLabel := c.DefaultQuery("ldcLabel", "")
+	namespace := c.DefaultQuery("namespace", "")
+	clusters := m.K8sMgr.GetAll(clusterName)
+
+	deployments, err := getDeployments(clusters, namespace, appName, group, ldcLabel)
+	if err != nil {
+		klog.Errorf("failed to get deployments: %v", err)
+		c.IndentedJSON(http.StatusBadRequest, gin.H{
+			"success": false,
+			"message": err.Error(),
+		})
+		return
+	}
+
+	var desired, updated, ready, available, unavailable int32
+	for _, deployment := range deployments {
+		desired += *deployment.DesiredReplicas
+		updated += deployment.UpdatedReplicas
+		ready += deployment.ReadyReplicas
+		available += deployment.AvailableReplicas
+		unavailable += deployment.UnavailableReplicas
+	}
+
+	result := model.DeploymentStatInfo{
+		DesiredReplicas:     desired,
+		UpdatedReplicas:     updated,
+		ReadyReplicas:       ready,
+		AvailableReplicas:   available,
+		UnavailableReplicas: unavailable,
+		OK:                  desired == available && unavailable == 0,
+	}
+
+	c.IndentedJSON(http.StatusOK, gin.H{
+		"success":   true,
+		"message":   "",
+		"resultMap": result,
+	})
+}
+
 func getDeployments(clusters []*k8smanager.Cluster, namespace, appName, group, ldcLabel string) ([]*model.DeploymentInfo, error) {
 	ctx := context.Background()
 	listOptions := &client.ListOptions{Namespace: namespace}
