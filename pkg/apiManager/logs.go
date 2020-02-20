@@ -7,11 +7,9 @@ import (
 	"net/http"
 	"strconv"
 	"strings"
-	"time"
 
 	"github.com/gin-gonic/gin"
 	corev1 "k8s.io/api/core/v1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/kubernetes/scheme"
 	"k8s.io/klog"
@@ -24,10 +22,10 @@ func (m *APIManager) HandleLogs(c *gin.Context) {
 	namespace := c.Param("namespace")
 	container := c.DefaultQuery("container", "")
 	tailLines, _ := strconv.ParseInt(c.DefaultQuery("tail", "1000"), 10, 64)
-	limitBytes, _ := strconv.ParseInt(c.DefaultQuery("limitBytes", "2048"), 10, 64)
-	follow, _ := strconv.ParseBool(c.DefaultQuery("follow", "true"))
+	// limitBytes, _ := strconv.ParseInt(c.DefaultQuery("limitBytes", "2048"), 10, 64)
+	follow, _ := strconv.ParseBool(c.DefaultQuery("follow", "false"))
 	previous, _ := strconv.ParseBool(c.DefaultQuery("previous", "false"))
-	timestamps, _ := strconv.ParseBool(c.DefaultQuery("timestamps", "true"))
+	timestamps, _ := strconv.ParseBool(c.DefaultQuery("timestamps", "false"))
 	// sinceSecond, _ := strconv.ParseInt(c.DefaultQuery("sinceSecond", "1"), 10, 64)
 
 	logOptions := &corev1.PodLogOptions{
@@ -35,20 +33,20 @@ func (m *APIManager) HandleLogs(c *gin.Context) {
 		Previous:   previous,
 		Timestamps: timestamps,
 		TailLines:  &tailLines,
-		LimitBytes: &limitBytes,
+		// LimitBytes: &limitBytes,
 	}
 
-	sinceTime := metav1.Time{}
-	sinceTimeStr, ok := c.GetQuery("sinceTime")
-	if ok {
-		parseTime, err := time.Parse("", sinceTimeStr)
-		sinceTime.Time = parseTime
-		logOptions.SinceTime = &sinceTime
-		if err != nil {
-			AbortHTTPError(c, ParseTimeStampError, "", err)
-			return
-		}
-	}
+	// sinceTime := metav1.Time{}
+	// sinceTimeStr, ok := c.GetQuery("sinceTime")
+	// if ok {
+	// 	parseTime, err := time.Parse("", sinceTimeStr)
+	// 	sinceTime.Time = parseTime
+	// 	logOptions.SinceTime = &sinceTime
+	// 	if err != nil {
+	// 		AbortHTTPError(c, ParseTimeStampError, "", err)
+	// 		return
+	// 	}
+	// }
 	// else {
 	// 	logOptions.SinceSeconds = &sinceSecond
 	// }
