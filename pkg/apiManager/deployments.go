@@ -36,7 +36,7 @@ func (m *APIManager) GetDeployments(c *gin.Context) {
 // GetDeploymentsStat ...
 func (m *APIManager) GetDeploymentsStat(c *gin.Context) {
 	clusterName := c.Param("name")
-	appName := c.Param("appName")
+	appName := c.DefaultQuery("appName", "all")
 	group := c.DefaultQuery("group", "")
 	ldcLabel := c.DefaultQuery("ldcLabel", "")
 	namespace := c.DefaultQuery("namespace", "")

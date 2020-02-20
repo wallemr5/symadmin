@@ -114,12 +114,12 @@ type DeploymentInfo struct {
 
 // DeploymentStatInfo ...
 type DeploymentStatInfo struct {
-	DesiredReplicas     int32 `json:"desiredReplicas,omitempty"`
-	UpdatedReplicas     int32 `json:"updatedReplicas,omitempty"`
-	ReadyReplicas       int32 `json:"readyReplicas,omitempty"`
-	AvailableReplicas   int32 `json:"availableReplicas,omitempty"`
-	UnavailableReplicas int32 `json:"unavailableReplicas,omitempty"`
-	OK                  bool  `json:"ok,omitempty"`
+	DesiredReplicas     int32 `json:"desiredReplicas"`
+	UpdatedReplicas     int32 `json:"updatedReplicas"`
+	ReadyReplicas       int32 `json:"readyReplicas"`
+	AvailableReplicas   int32 `json:"availableReplicas"`
+	UnavailableReplicas int32 `json:"unavailableReplicas"`
+	OK                  bool  `json:"ok"`
 }
 
 type EndpointsOfCluster struct {
