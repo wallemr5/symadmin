@@ -254,7 +254,10 @@ func (m *APIManager) DeletePodByName(c *gin.Context) {
 		klog.Errorf("delete pod error: %v", err)
 		AbortHTTPError(c, DeletePodError, "", err)
 	}
-	c.Status(http.StatusOK)
+	c.IndentedJSON(http.StatusOK, gin.H{
+		"success":   true,
+		"message":   nil,
+	})
 }
 
 // GetPodByName ...
