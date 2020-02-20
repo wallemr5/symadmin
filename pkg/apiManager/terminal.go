@@ -303,11 +303,11 @@ func (m *APIManager) GetFiles(c *gin.Context) {
 		}
 	}
 	c.IndentedJSON(http.StatusOK, gin.H{
-		"success": false,
+		"success": true,
 		"message": "no log files found.",
 		"resultMap": gin.H{
 			"result":    []string{},
-			"errorText": "no log files found.",
+			"errorText": []string{"no log files found."},
 			"path":      path,
 			"success":   false,
 		},
