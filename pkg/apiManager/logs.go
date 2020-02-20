@@ -23,7 +23,7 @@ func (m *APIManager) HandleLogs(c *gin.Context) {
 	podName := c.Param("podName")
 	namespace := c.Param("namespace")
 	container := c.DefaultQuery("container", "")
-	tailLines, _ := strconv.ParseInt(c.DefaultQuery("tail", "10"), 10, 64)
+	tailLines, _ := strconv.ParseInt(c.DefaultQuery("tail", "1000"), 10, 64)
 	limitBytes, _ := strconv.ParseInt(c.DefaultQuery("limitBytes", "2048"), 10, 64)
 	follow, _ := strconv.ParseBool(c.DefaultQuery("follow", "true"))
 	previous, _ := strconv.ParseBool(c.DefaultQuery("previous", "false"))
