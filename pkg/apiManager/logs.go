@@ -106,7 +106,7 @@ func (m *APIManager) HandleFileLogs(c *gin.Context) {
 	clusterName := c.Param("name")
 	namespace := c.Param("namespace")
 	podName := c.Param("podName")
-	tailLines := c.DefaultQuery("tailLines", "100")
+	tailLines := c.DefaultQuery("tailLines", "1000")
 
 	containerName, ok := c.GetQuery("container")
 	if !ok {
@@ -130,11 +130,25 @@ func (m *APIManager) HandleFileLogs(c *gin.Context) {
 	result, err := RunCmdOnceInContainer(cluster, namespace, podName, containerName, cmd, false)
 	if err != nil {
 		klog.Errorf("run cmd once in container error: %v", err)
-		AbortHTTPError(c, ExecCmdError, "", err)
+		c.IndentedJSON(http.StatusBadRequest, gin.H{
+			"success": false,
+			"message": err.Error(),
+			"resultMap": gin.H{
+				"path":   filepath,
+				"applog": "",
+			},
+		})
 		return
 	}
 
-	c.Data(http.StatusOK, "", result)
+	c.IndentedJSON(http.StatusOK, gin.H{
+		"success": true,
+		"message": nil,
+		"resultMap": gin.H{
+			"path":   filepath,
+			"applog": processTextToHtml(string(result)),
+		},
+	})
 }
 
 func processTextToHtml(text string) string {
