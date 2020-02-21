@@ -38,7 +38,7 @@ type Template struct {
 type Chart struct {
 	Metadata  *Metadata   `json:"metadata,omitempty"`
 	Templates []*Template `json:"templates,omitempty"`
-	Value     *Value      `json:"value,omitempty"`
+	Value     *Value      `json:"values,omitempty"`
 }
 
 // Value ...
