@@ -17,7 +17,6 @@ import (
 func (m *APIManager) GetEndpoints(c *gin.Context) {
 	clusterName := c.Param("name")
 	appName := c.Param("appName")
-	group := c.DefaultQuery("group", "")
 	clusters := m.K8sMgr.GetAll(clusterName)
 
 	ctx := context.Background()
@@ -25,8 +24,7 @@ func (m *APIManager) GetEndpoints(c *gin.Context) {
 	eps := make([]*model.Endpoint, 0, 4)
 	listOptions := &client.ListOptions{}
 	listOptions.MatchingLabels(map[string]string{
-		"app":       appName + "-svc",
-		"sym-group": group,
+		"app": appName + "-svc",
 	})
 	for _, cluster := range clusters {
 		endpointList := &corev1.EndpointsList{}
@@ -40,9 +38,7 @@ func (m *APIManager) GetEndpoints(c *gin.Context) {
 			return
 		}
 
-		for i := range endpointList.Items {
-			ep := &endpointList.Items[i]
-
+		for _, ep := range endpointList.Items {
 			for _, ss := range ep.Subsets {
 				for _, addr := range ss.Addresses {
 					eps = append(eps, &model.Endpoint{
@@ -50,7 +46,7 @@ func (m *APIManager) GetEndpoints(c *gin.Context) {
 						Name:              ep.Name,
 						Namespace:         ep.Namespace,
 						TargetRefName:     addr.TargetRef.Name,
-						CreationTimestamp: ep.ObjectMeta.CreationTimestamp.Time.String(),
+						CreationTimestamp: ep.ObjectMeta.CreationTimestamp.Time.Format("2006-01-02 15:04:05"),
 						Release:           "",
 						ClusterName:       ep.ClusterName,
 					})
