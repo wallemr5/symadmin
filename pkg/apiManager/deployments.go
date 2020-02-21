@@ -107,7 +107,10 @@ func getDeployments(clusters []*k8smanager.Cluster, namespace, appName, group, l
 		for _, deployment := range deployments.Items {
 			info := model.DeploymentInfo{
 				Name:                deployment.GetName(),
-				ClusterName:         cluster.GetName(),
+				ClusterCode:         cluster.GetName(),
+				Annotations:         deployment.GetAnnotations(),
+				Labels:              deployment.GetLabels(),
+				StartTime:           deployment.GetCreationTimestamp().Format("2006-01-02 15:04:05"),
 				NameSpace:           deployment.GetNamespace(),
 				DesiredReplicas:     deployment.Spec.Replicas,
 				UpdatedReplicas:     deployment.Status.UpdatedReplicas,
@@ -116,7 +119,6 @@ func getDeployments(clusters []*k8smanager.Cluster, namespace, appName, group, l
 				UnavailableReplicas: deployment.Status.UnavailableReplicas,
 				Group:               deployment.GetLabels()["sym-group"],
 				Selector:            deployment.Spec.Selector,
-				CreationTimestamp:   deployment.GetCreationTimestamp(),
 			}
 			result = append(result, &info)
 		}

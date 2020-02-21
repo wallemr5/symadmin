@@ -105,9 +105,12 @@ type ServiceInfo struct {
 
 // DeploymentInfo ...
 type DeploymentInfo struct {
-	ClusterName         string                `json:"clusterCode,omitempty"`
+	ClusterCode         string                `json:"clusterCode,omitempty"`
 	NameSpace           string                `json:"namespace,omitempty"`
+	Annotations         map[string]string     `json:"annotations,omitempty"`
+	Labels              map[string]string     `json:"labels,omitempty"`
 	Name                string                `json:"name,omitempty"`
+	StartTime           string                `json:"startTime,omitempty"`
 	DesiredReplicas     *int32                `json:"desiredReplicas,omitempty"`
 	UpdatedReplicas     int32                 `json:"updatedReplicas,omitempty"`
 	ReadyReplicas       int32                 `json:"readyReplicas,omitempty"`
@@ -115,7 +118,6 @@ type DeploymentInfo struct {
 	UnavailableReplicas int32                 `json:"unavailableReplicas,omitempty"`
 	Group               string                `json:"group,omitempty"`
 	Selector            *metav1.LabelSelector `json:"selector,omitempty"`
-	CreationTimestamp   metav1.Time           `json:"creationTimestamp,omitempty"`
 }
 
 // DeploymentStatInfo ...
