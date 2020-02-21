@@ -3,6 +3,7 @@ package apiManager
 import (
 	"net/http"
 	"strings"
+	"time"
 
 	"github.com/gin-gonic/gin"
 	"gitlab.dmall.com/arch/sym-admin/pkg/apiManager/model"
@@ -20,7 +21,9 @@ func (m *APIManager) GetHelmReleases(c *gin.Context) {
 	group := c.DefaultQuery("group", "")
 	clusters := m.K8sMgr.GetAll(clusterName)
 
-	result := make([]*model.HelmRelease, 0)
+	blue := make([]*model.HelmRelease, 0)
+	green := make([]*model.HelmRelease, 0)
+	canary := make([]*model.HelmRelease, 0)
 	for _, cluster := range clusters {
 		response, err := getHelmRelease(cluster, appName, group, "")
 		if err != nil {
@@ -35,17 +38,28 @@ func (m *APIManager) GetHelmReleases(c *gin.Context) {
 				Version:           release.Chart.GetMetadata().GetVersion(),
 				Description:       release.Chart.GetMetadata().GetDescription(),
 				Status:            release.GetInfo().GetStatus().GetCode().String(),
-				FirstDeployedDate: release.GetInfo().GetFirstDeployed().GetSeconds(),
-				LastDeployedDate:  release.GetInfo().GetLastDeployed().GetSeconds(),
-				// ReplicaCount:           0,
-				// PackageInfos:           nil,
-				// IsSuccessed:            false,
-				// FailedExceptionMessage: "",
+				FirstDeployedDate: time.Unix(release.Info.FirstDeployed.GetSeconds(), 0).Format("2006-01-02 15:04:05"),
+				LastDeployedDate:  time.Unix(release.Info.LastDeployed.GetSeconds(), 0).Format("2006-01-02 15:04:05"),
 			}
-			result = append(result, item)
+			switch item.Group {
+			case "blue":
+				blue = append(blue, item)
+			case "green":
+				green = append(green, item)
+			case "canary":
+				canary = append(canary, item)
+			}
 		}
 	}
-	c.IndentedJSON(http.StatusOK, result)
+	c.IndentedJSON(http.StatusOK, gin.H{
+		"success": true,
+		"message": nil,
+		"resultMap": gin.H{
+			"greenReleases":  green,
+			"blueReleases":   blue,
+			"canaryReleases": canary,
+		},
+	})
 }
 
 // GetHelmReleaseInfo ...

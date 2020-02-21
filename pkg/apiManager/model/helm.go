@@ -84,8 +84,8 @@ type HelmRelease struct {
 	Version                string         `json:"version,omitempty"`
 	Description            string         `json:"description,omitempty"`
 	Status                 string         `json:"status,omitempty"`
-	FirstDeployedDate      int64          `json:"firstDeployedDate,omitempty"`
-	LastDeployedDate       int64          `json:"lastDeployedDate,omitempty"`
+	FirstDeployedDate      string         `json:"firstDeployedDate,omitempty"`
+	LastDeployedDate       string         `json:"lastDeployedDate,omitempty"`
 	ReplicaCount           int32          `json:"replicaCount,omitempty"`
 	PackageInfos           []*PackageInfo `json:"packageInfos,omitempty"`
 	IsSuccessed            bool           `json:"isSuccessed,omitempty"`
