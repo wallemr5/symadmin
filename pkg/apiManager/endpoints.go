@@ -4,6 +4,7 @@ import (
 	"context"
 	"net/http"
 	"sort"
+	"strconv"
 
 	"github.com/gin-gonic/gin"
 	"gitlab.dmall.com/arch/sym-admin/pkg/apiManager/model"
@@ -35,23 +36,29 @@ func (m *APIManager) GetEndpoints(c *gin.Context) {
 			}
 			klog.Error(err, "failed to get endpoints")
 			AbortHTTPError(c, GetEndpointError, "", err)
+			c.IndentedJSON(http.StatusBadRequest, gin.H{
+				"success":   false,
+				"message":   err.Error(),
+				"resultMap": nil,
+			})
 			return
 		}
 
 		for _, ep := range endpointList.Items {
+			var subset []string
 			for _, ss := range ep.Subsets {
+				port := strconv.Itoa(int(ss.Ports[0].Port))
 				for _, addr := range ss.Addresses {
-					eps = append(eps, &model.Endpoint{
-						Subsets:           addr.IP,
-						Name:              ep.Name,
-						Namespace:         ep.Namespace,
-						TargetRefName:     addr.TargetRef.Name,
-						CreationTimestamp: ep.ObjectMeta.CreationTimestamp.Time.Format("2006-01-02 15:04:05"),
-						Release:           "",
-						ClusterName:       ep.ClusterName,
-					})
+					subset = append(subset, addr.IP+":"+port)
 				}
 			}
+			eps = append(eps, &model.Endpoint{
+				Subsets:           subset,
+				Name:              ep.Name,
+				Namespace:         ep.Namespace,
+				CreationTimestamp: ep.ObjectMeta.CreationTimestamp.Time.Format("2006-01-02 15:04:05"),
+				ClusterName:       ep.ClusterName,
+			})
 
 		}
 		ofCluster := model.EndpointsOfCluster{
@@ -64,5 +71,11 @@ func (m *APIManager) GetEndpoints(c *gin.Context) {
 		return endpointsOfCluster[i].ClusterName < endpointsOfCluster[j].ClusterName
 	})
 
-	c.IndentedJSON(http.StatusOK, endpointsOfCluster)
+	c.IndentedJSON(http.StatusOK, gin.H{
+		"success": true,
+		"message": nil,
+		"resultMap": gin.H{
+			"endpoints": endpointsOfCluster,
+		},
+	})
 }

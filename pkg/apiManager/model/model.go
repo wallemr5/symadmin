@@ -68,13 +68,13 @@ type NodeProjects struct {
 
 // Endpoints ...
 type Endpoint struct {
-	Name              string `json:"name,omitempty"`
-	Namespace         string `json:"namespace,omitempty"`
-	CreationTimestamp string `json:"creationTimes,omitempty"`
-	Release           string `json:"release,omitempty"`
-	ClusterName       string `json:"clusterCode,omitempty"`
-	Subsets           string `json:"subsets,omitempty"`
-	TargetRefName     string `json:"targetRefName,omitempty"`
+	Name              string   `json:"name,omitempty"`
+	Namespace         string   `json:"namespace,omitempty"`
+	CreationTimestamp string   `json:"creationTimes,omitempty"`
+	Release           string   `json:"release,omitempty"`
+	ClusterName       string   `json:"clusterCode,omitempty"`
+	Subsets           []string `json:"subsets,omitempty"`
+	TargetRefName     string   `json:"targetRefName,omitempty"`
 }
 
 // NodeInfo ...
