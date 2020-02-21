@@ -328,7 +328,7 @@ func startProcess(cluster *k8smanager.Cluster, namespace, podName, container str
 		return err
 	}
 
-	if !once {
+	if !once && len(cmd) == 0 {
 		cmd = []string{"/bin/sh"}
 	}
 
