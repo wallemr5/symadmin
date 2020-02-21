@@ -3,6 +3,7 @@ package apiManager
 import (
 	"bytes"
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"net/http"
@@ -48,10 +49,10 @@ type streamHandler struct {
 }
 
 type xtermMessage struct {
-	MsgType string `json:"type"`
-	Input   string `json:"input"`
-	Rows    uint16 `json:"rows"`
-	Cols    uint16 `json:"cols"`
+	MsgType string `json:"type,omitempty"`
+	Input   string `json:"input,omitempty"`
+	Rows    uint16 `json:"rows,omitempty"`
+	Cols    uint16 `json:"cols,omitempty"`
 }
 
 // GetTerminal ...
@@ -457,10 +458,9 @@ func InitWebsocket(resp http.ResponseWriter, req *http.Request) (ws *WsConnectio
 }
 
 // Next ...
-func (handler *streamHandler) Next() (size *remotecommand.TerminalSize) {
+func (handler *streamHandler) Next() *remotecommand.TerminalSize {
 	ret := <-handler.resizeEvent
-	size = &ret
-	return
+	return &ret
 }
 
 // Read ...
@@ -471,8 +471,15 @@ func (handler *streamHandler) Read(p []byte) (size int, err error) {
 		return 0, err
 	}
 
-	xtermMsg := &xtermMessage{
-		Input: string(msg.Data),
+	xtermMsg := &xtermMessage{}
+	if strings.HasPrefix(string(msg.Data), "___") {
+		err := json.Unmarshal([]byte(string(msg.Data[3:])), xtermMsg)
+		if err != nil {
+			klog.Errorf("unmarshal ws msg to json error: %v", err)
+			return 0, err
+		}
+	} else {
+		xtermMsg.Input = string(msg.Data)
 	}
 	handler.resizeEvent <- remotecommand.TerminalSize{Width: xtermMsg.Cols, Height: xtermMsg.Rows}
 	size = len(xtermMsg.Input)
