@@ -21,7 +21,6 @@ func (m *APIManager) GetEndpoints(c *gin.Context) {
 	clusters := m.K8sMgr.GetAll(clusterName)
 
 	ctx := context.Background()
-	endpointsOfCluster := make([]*model.EndpointsOfCluster, 0, 4)
 	eps := make([]*model.Endpoint, 0, 4)
 	listOptions := &client.ListOptions{}
 	listOptions.MatchingLabels(map[string]string{
@@ -54,28 +53,24 @@ func (m *APIManager) GetEndpoints(c *gin.Context) {
 			}
 			eps = append(eps, &model.Endpoint{
 				Subsets:           subset,
+				Labels:            ep.GetLabels(),
 				Name:              ep.Name,
 				Namespace:         ep.Namespace,
 				CreationTimestamp: ep.ObjectMeta.CreationTimestamp.Time.Format("2006-01-02 15:04:05"),
-				ClusterName:       ep.ClusterName,
+				ClusterCode:       ep.ClusterName,
 			})
 
 		}
-		ofCluster := model.EndpointsOfCluster{
-			ClusterName: cluster.Name,
-			Endpoint:    eps,
-		}
-		endpointsOfCluster = append(endpointsOfCluster, &ofCluster)
 	}
-	sort.Slice(endpointsOfCluster, func(i, j int) bool {
-		return endpointsOfCluster[i].ClusterName < endpointsOfCluster[j].ClusterName
+	sort.Slice(eps, func(i, j int) bool {
+		return eps[i].ClusterCode < eps[j].ClusterCode
 	})
 
 	c.IndentedJSON(http.StatusOK, gin.H{
 		"success": true,
 		"message": nil,
 		"resultMap": gin.H{
-			"endpoints": endpointsOfCluster,
+			"endpoints": eps,
 		},
 	})
 }
