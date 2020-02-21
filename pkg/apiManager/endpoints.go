@@ -57,7 +57,7 @@ func (m *APIManager) GetEndpoints(c *gin.Context) {
 				Name:              ep.Name,
 				Namespace:         ep.Namespace,
 				CreationTimestamp: ep.ObjectMeta.CreationTimestamp.Time.Format("2006-01-02 15:04:05"),
-				ClusterCode:       ep.ClusterName,
+				ClusterCode:       cluster.Name,
 			})
 
 		}
