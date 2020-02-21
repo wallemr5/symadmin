@@ -68,13 +68,21 @@ func (m *APIManager) GetHelmReleaseInfo(c *gin.Context) {
 	releaseName := c.Param("releaseName")
 	cluster, err := m.K8sMgr.Get(clusterName)
 	if err != nil {
-		AbortHTTPError(c, GetClusterError, "", err)
+		c.IndentedJSON(http.StatusBadRequest, gin.H{
+			"success":   false,
+			"message":   err.Error(),
+			"resultMap": nil,
+		})
 		return
 	}
 
 	response, err := getHelmRelease(cluster, "", "", releaseName)
 	if err != nil {
-		AbortHTTPError(c, GetHelmReleasesError, "", err)
+		c.IndentedJSON(http.StatusBadRequest, gin.H{
+			"success":   false,
+			"message":   err.Error(),
+			"resultMap": nil,
+		})
 		return
 	}
 	result := &model.HelmWholeRelease{}
@@ -107,7 +115,13 @@ func (m *APIManager) GetHelmReleaseInfo(c *gin.Context) {
 			result.Config = &model.Config{Raw: release.GetConfig().GetRaw()}
 		}
 	}
-	c.IndentedJSON(http.StatusOK, result)
+	c.IndentedJSON(http.StatusOK, gin.H{
+		"success": true,
+		"message": nil,
+		"resultMap": gin.H{
+			"release": result,
+		},
+	})
 }
 
 func getHelmRelease(cluster *k8smanager.Cluster, appName, group, releaseName string) (*rls.ListReleasesResponse, error) {
