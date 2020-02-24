@@ -139,6 +139,7 @@ func (m *APIManager) GetPodByLables(c *gin.Context) {
 	group := c.DefaultQuery("group", "")
 	ldcLabel := c.DefaultQuery("ldcLabel", "")
 	namespace := c.DefaultQuery("namespace", "")
+	zone := c.DefaultQuery("zone", "")
 	clusters := m.K8sMgr.GetAll(clusterName)
 
 	if !ok || appName == "" {
@@ -150,7 +151,7 @@ func (m *APIManager) GetPodByLables(c *gin.Context) {
 		return
 	}
 
-	result, err := getPodListByAppName(clusters, appName, group, ldcLabel, namespace)
+	result, err := getPodListByAppName(clusters, appName, group, ldcLabel, namespace, zone)
 	if err != nil {
 		c.IndentedJSON(http.StatusBadRequest, gin.H{
 			"success":   false,
@@ -405,7 +406,7 @@ func getPodByAppName(clusters []*k8smanager.Cluster, appName, group string) ([]*
 }
 
 // return Pod list， not PodOfCluster
-func getPodListByAppName(clusters []*k8smanager.Cluster, appName, group, ldcLabel, namespace string) (map[string][]*model.Pod, error) {
+func getPodListByAppName(clusters []*k8smanager.Cluster, appName, group, ldcLabel, namespace, zone string) (map[string][]*model.Pod, error) {
 	ctx := context.Background()
 	bluePods := make([]*model.Pod, 0, 4)
 	greenPods := make([]*model.Pod, 0, 4)
@@ -415,6 +416,9 @@ func getPodListByAppName(clusters []*k8smanager.Cluster, appName, group, ldcLabe
 	options := make(map[string]string)
 	if group != "" {
 		options["sym-group"] = group
+	}
+	if zone != "" {
+		options["sym-zone"] = zone
 	}
 	if ldcLabel != "" {
 		options["sym-ldc"] = ldcLabel

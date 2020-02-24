@@ -48,7 +48,7 @@ func (m *APIManager) GetClusterResource(c *gin.Context) {
 		})
 		return
 	}
-	pods, err := getPodListByAppName(clusters, appName, group, ldcLabel, namespace)
+	pods, err := getPodListByAppName(clusters, appName, group, ldcLabel, namespace, zone)
 	if err != nil {
 		klog.Error(err, "failed to get pods")
 		c.IndentedJSON(http.StatusBadRequest, gin.H{
