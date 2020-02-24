@@ -79,7 +79,7 @@ make manager
 
 ```shell
 # api
-make docekr-push-api
+make docker-push-api
 
 # controller
 make docker-push-controller

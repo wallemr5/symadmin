@@ -1,6 +1,7 @@
 VERSION ?= v0.1.1
 # Image URL to use all building/pushing image targets
-IMG_REG ?= registry.cn-hangzhou.aliyuncs.com/r2d2
+# IMG_REG ?= registry.cn-hangzhou.aliyuncs.com/r2d2
+IMG_REG ?= zhd1731
 IMG_CTL := $(IMG_REG)/sym-admin-controller
 IMG_API := $(IMG_REG)/sym-admin-api
 # Produce CRDs that work back to Kubernetes 1.11 (no version conversion)
@@ -77,14 +78,14 @@ build:
 	$(GO) -v -o bin/sym-admin-controller -ldflags "-s -w -X pkg/version.Release=$(VERSION) -X pkg/version.Commit=$(COMMIT)   \
 	-X pkg/version.BuildDate=$(BuildDate)" cmd/controller/main.go
 
-docker-push: docker-push-controller docekr-push-api
+docker-push: docker-push-controller docker-push-api
 
 # Push the docker image
 docker-push-controller: manager-controller
 	docker build -t ${IMG_CTL}:${VERSION} -f ./install/Dockerfile-ctl .
 	docker push ${IMG_CTL}:${VERSION}
 
-docekr-push-api: manager-api
+docker-push-api: manager-api
 	docker build -t ${IMG_API}:${VERSION} -f ./install/Dockerfile-api .
 	docker push ${IMG_API}:${VERSION}
 

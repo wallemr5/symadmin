@@ -255,8 +255,8 @@ func (m *APIManager) DeletePodByName(c *gin.Context) {
 		AbortHTTPError(c, DeletePodError, "", err)
 	}
 	c.IndentedJSON(http.StatusOK, gin.H{
-		"success":   true,
-		"message":   nil,
+		"success": true,
+		"message": nil,
 	})
 }
 
