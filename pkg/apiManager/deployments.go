@@ -19,11 +19,12 @@ func (m *APIManager) GetDeployments(c *gin.Context) {
 	clusterName := c.Param("name")
 	appName := c.Param("appName")
 	group := c.DefaultQuery("group", "")
+	zone := c.DefaultQuery("zone", "")
 	ldcLabel := c.DefaultQuery("ldcLabel", "")
 	namespace := c.DefaultQuery("namespace", "")
 	clusters := m.K8sMgr.GetAll(clusterName)
 
-	result, err := getDeployments(clusters, namespace, appName, group, ldcLabel)
+	result, err := getDeployments(clusters, namespace, appName, group, ldcLabel, zone)
 	if err != nil {
 		klog.Errorf("failed to get deployments: %v", err)
 		AbortHTTPError(c, GetDeploymentError, "", err)
@@ -39,10 +40,11 @@ func (m *APIManager) GetDeploymentsStat(c *gin.Context) {
 	appName := c.DefaultQuery("appName", "all")
 	group := c.DefaultQuery("group", "")
 	ldcLabel := c.DefaultQuery("ldcLabel", "")
+	zone := c.DefaultQuery("zone", "")
 	namespace := c.DefaultQuery("namespace", "")
 	clusters := m.K8sMgr.GetAll(clusterName)
 
-	deployments, err := getDeployments(clusters, namespace, appName, group, ldcLabel)
+	deployments, err := getDeployments(clusters, namespace, appName, group, ldcLabel, zone)
 	if err != nil {
 		klog.Errorf("failed to get deployments: %v", err)
 		c.IndentedJSON(http.StatusBadRequest, gin.H{
@@ -78,12 +80,15 @@ func (m *APIManager) GetDeploymentsStat(c *gin.Context) {
 	})
 }
 
-func getDeployments(clusters []*k8smanager.Cluster, namespace, appName, group, ldcLabel string) ([]*model.DeploymentInfo, error) {
+func getDeployments(clusters []*k8smanager.Cluster, namespace, appName, group, ldcLabel, zone string) ([]*model.DeploymentInfo, error) {
 	ctx := context.Background()
 	listOptions := &client.ListOptions{Namespace: namespace}
 	options := make(map[string]string)
 	if group != "" {
 		options["sym-group"] = group
+	}
+	if zone != "" {
+		options["sym-zone"] = zone
 	}
 	if ldcLabel != "" {
 		options["sym-ldc"] = ldcLabel

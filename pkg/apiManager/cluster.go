@@ -36,8 +36,9 @@ func (m *APIManager) GetClusterResource(c *gin.Context) {
 	namespace := c.Param("namespace")
 	ldcLabel := c.DefaultQuery("ldcLabel", "")
 	group := c.DefaultQuery("group", "")
+	zone := c.DefaultQuery("zone", "")
 
-	deployments, err := getDeployments(clusters, namespace, appName, group, ldcLabel)
+	deployments, err := getDeployments(clusters, namespace, appName, group, ldcLabel, zone)
 	if err != nil {
 		klog.Errorf("failed to get deployments: %v", err)
 		c.IndentedJSON(http.StatusBadRequest, gin.H{
