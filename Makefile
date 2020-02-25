@@ -1,6 +1,6 @@
 VERSION ?= v0.0.1
 # Image URL to use all building/pushing image targets
-IMG_REG ?= IMG_REG ?= registry.cn-hangzhou.aliyuncs.com/r2d2
+IMG_REG ?= registry.cn-hangzhou.aliyuncs.com/r2d2
 IMG_CTL := $(IMG_REG)/sym-admin-controller
 IMG_API := $(IMG_REG)/sym-admin-api
 # Produce CRDs that work back to Kubernetes 1.11 (no version conversion)
