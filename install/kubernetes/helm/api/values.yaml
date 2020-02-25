@@ -5,8 +5,8 @@
 replicaCount: 1
 
 image:
-  repository: nginx
-  tag: stable
+  repository: registry.cn-shanghai.aliyuncs.com/zhd173/sym-admin-api
+  tag: v0.0.1
   pullPolicy: IfNotPresent
 
 nameOverride: ""
@@ -17,7 +17,7 @@ service:
   port: 8081
 
 ingress:
-  enabled: true
+  enabled: false
   annotations: {}
     # kubernetes.io/ingress.class: nginx
     # kubernetes.io/tls-acme: "true"
@@ -38,9 +38,12 @@ rbac:
   name: sym-api
   namespace: sym
   rules:
+  - apiGroups: ["workload.dmall.com"]
+    resources: ["*"]
+    verbs: ["*"]
   - apiGroups: [""]
     resources: ["pods", "services", "endpoints", "configmaps"]
-    verbs: ["get", "list", "watch","update"]
+    verbs: ["get", "list", "watch", "update"]
   - apiGroups: ["apps"]
     resources: ["deployments", "statefulsets"]
     verbs: ["get", "list", "watch"]
