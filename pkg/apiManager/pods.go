@@ -132,8 +132,8 @@ func (m *APIManager) GetPod(c *gin.Context) {
 	c.IndentedJSON(http.StatusOK, result)
 }
 
-// GetPodByLables ...
-func (m *APIManager) GetPodByLables(c *gin.Context) {
+// GetPodByLabels ...
+func (m *APIManager) GetPodByLabels(c *gin.Context) {
 	clusterName := c.Param("name")
 	appName, ok := c.GetQuery("appName")
 	group := c.DefaultQuery("group", "")
