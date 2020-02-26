@@ -108,7 +108,7 @@ func NewAppSetController(mgr manager.Manager, cMgr *pkgmanager.DksManager) (*App
 	c := &AppSetReconciler{
 		DksMgr:    cMgr,
 		Manager:   mgr,
-		Log:       logf.KBLog.WithName("appset-controller"),
+		Log:       logf.KBLog.WithName(controllerName),
 		Namespace: "default",
 		recorder:  mgr.GetRecorder(controllerName),
 	}

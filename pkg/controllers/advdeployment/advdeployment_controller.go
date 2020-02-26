@@ -34,6 +34,7 @@ import (
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
+	"k8s.io/client-go/tools/record"
 	"k8s.io/klog"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -50,24 +51,27 @@ const (
 
 // AdvDeploymentReconciler reconciles a AdvDeployment object
 type AdvDeploymentReconciler struct {
-	Name string
 	client.Client
+
+	Name      string
 	Log       logr.Logger
 	Mgr       manager.Manager
 	KubeCli   kubernetes.Interface
 	Cfg       *rest.Config
 	HelmEnv   *v2repo.HelmIndexSyncer
 	IsRecover bool
+	recorder  record.EventRecorder
 }
 
 // Add add controller to runtime manager
 func Add(mgr manager.Manager, cMgr *pkgmanager.DksManager) error {
 	r := &AdvDeploymentReconciler{
-		Name:      "AdvDeployment-controllers",
+		Name:      controllerName,
 		Client:    mgr.GetClient(),
 		Mgr:       mgr,
 		Log:       ctrl.Log.WithName("controllers").WithName("AdvDeployment"),
 		IsRecover: cMgr.Opt.Recover,
+		recorder:  mgr.GetRecorder(controllerName),
 	}
 
 	r.Cfg = mgr.GetConfig()

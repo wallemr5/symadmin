@@ -8,6 +8,7 @@ import (
 	helmv2 "gitlab.dmall.com/arch/sym-admin/pkg/helm/v2"
 	"gitlab.dmall.com/arch/sym-admin/pkg/labels"
 	"gitlab.dmall.com/arch/sym-admin/pkg/utils"
+	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	hapirelease "k8s.io/helm/pkg/proto/hapi/release"
 	rls "k8s.io/helm/pkg/proto/hapi/services"
@@ -108,7 +109,8 @@ func (r *AdvDeploymentReconciler) ApplyReleases(ctx context.Context, advDeploy *
 
 			// Delete the release as long as we found its status code is not correct
 			if rr.Info.Status.GetCode() == hapirelease.Status_DELETED || rr.Info.Status.GetCode() == hapirelease.Status_FAILED || rr.Info.Status.GetCode() == hapirelease.Status_UNKNOWN {
-				klog.Infof("Release[%s]'s status means that there may be some problems here, description: %s", rr.Name, rr.Info.Description)
+				klog.Errorf("Release[%s]'s status means that there may be some problems here, description: %s", rr.Name, rr.Info.Description)
+				r.recorder.Event(advDeploy, corev1.EventTypeWarning, "Release status may be some problems", rr.Info.Description)
 
 				// Delete this release with purge flag.
 				if err := helmv2.DeleteRelease(rr.Name, hClient); err != nil {
@@ -149,6 +151,7 @@ func (r *AdvDeploymentReconciler) ApplyReleases(ctx context.Context, advDeploy *
 		}
 		if err != nil {
 			klog.Errorf("Podset: [%s], applying the release has an error: %v", podSet.Name, err)
+			r.recorder.Event(advDeploy, corev1.EventTypeWarning, "Applying the release has an error", err.Error())
 			return hasModifiedRls, err
 		}
 	}
@@ -157,6 +160,7 @@ func (r *AdvDeploymentReconciler) ApplyReleases(ctx context.Context, advDeploy *
 	for _, rlsName := range redundantReleases {
 		if err := helmv2.DeleteRelease(rlsName, hClient); err != nil {
 			klog.Errorf("Deleting redundant release[%s] has an error: %+v", rlsName, err)
+			r.recorder.Event(advDeploy, corev1.EventTypeWarning, "Deleteing redundant release error", err.Error())
 			return hasModifiedRls, err
 		}
 		hasModifiedRls = true
