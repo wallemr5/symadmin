@@ -169,6 +169,9 @@ type PodSet struct {
 	// the images version
 	Version string `json:"version,omitempty"`
 
+	// the override podset chart spec
+	Chart *ChartSpec `json:"chart,omitempty"`
+
 	// use for helm
 	RawValues string `json:"rawValues,omitempty"`
 

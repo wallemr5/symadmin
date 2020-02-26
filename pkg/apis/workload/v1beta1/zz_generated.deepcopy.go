@@ -969,6 +969,11 @@ func (in *PodSet) DeepCopyInto(out *PodSet) {
 		*out = new(intstr.IntOrString)
 		**out = **in
 	}
+	if in.Chart != nil {
+		in, out := &in.Chart, &out.Chart
+		*out = new(ChartSpec)
+		(*in).DeepCopyInto(*out)
+	}
 	if in.Mata != nil {
 		in, out := &in.Mata, &out.Mata
 		*out = make(map[string]string, len(*in))

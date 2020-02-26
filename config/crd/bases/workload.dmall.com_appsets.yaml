@@ -85,6 +85,20 @@ spec:
                         items:
                           description: PodSet defines the detail of a PodSet.
                           properties:
+                            chart:
+                              description: the override podset chart spec
+                              properties:
+                                chartUrl:
+                                  properties:
+                                    chartVersion:
+                                      type: string
+                                    url:
+                                      type: string
+                                  type: object
+                                rawChart:
+                                  format: byte
+                                  type: string
+                              type: object
                             image:
                               type: string
                             meta:
