@@ -76,6 +76,8 @@ name: url param,the unique cluster name and all. <br/>
 namespace: url param, namespace name <br/>
 appName: url param,the unique app name. <br/>
 group: query string, the unique group label. <br/>
+zone : query string, the unique zone name. <br/>
+ldcLabel: query string, the unique ldcLabel name. <br/>
 <br/>
 e.g. <br/>
 <a>/api/cluster/tcc-bj5-dks-monit-01/namespace/default/app/bbcc?&group=blue</a><br/>
