@@ -6,10 +6,9 @@ metadata:
 
 ---
 apiVersion: {{ include "rbac_api_version" . }}
-kind: Role
+kind: ClusterRole
 metadata:
   name: {{- printf " %s-role\n" .Values.rbac.name | trunc 63 }}
-  namespace: {{ .Values.rbac.namespace }}
 rules:
 {{- range $item := .Values.rbac.rules }}
 - apiGroups:
@@ -22,15 +21,15 @@ rules:
 
 ---
 apiVersion: {{ include "rbac_api_version" . }}
-kind: RoleBinding
+kind: ClusterRoleBinding
 metadata:
   name: {{- printf " %s-rolebinding\n" .Values.rbac.name | trunc 63 }}
   namespace: {{ .Values.rbac.namespace }}
 subjects:
 - kind: ServiceAccount
   name: {{ .Values.rbac.name }}
-  namespace: {{ .Values.rbac.namespace }}
+  namespace: {{ .Release.Namespace }}
 roleRef:
-  kind: Role
+  kind: ClusterRole
   name: {{- printf " %s-role" .Values.rbac.name | trunc 63 }}
   apiGroup: rbac.authorization.k8s.io

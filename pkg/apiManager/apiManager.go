@@ -185,8 +185,8 @@ func (m *APIManager) Routes() []*router.Route {
 		{
 			Method:  "GET",
 			Path:    "/api/cluster/:name/appPods/labels",
-			Handler: m.GetPodByLables,
-			Desc:    GetPodDesc,
+			Handler: m.GetPodByLabels,
+			Desc:    GetPodByLabelsDesc,
 		},
 		{
 			Method:  "GET",
@@ -222,7 +222,7 @@ func (m *APIManager) Routes() []*router.Route {
 			Method:  "GET",
 			Path:    "/api/cluster/:name/namespace/:namespace/pod/:podName",
 			Handler: m.GetPodByName,
-			Desc:    "",
+			Desc:    GetPodByNameDesc,
 		},
 		{
 			Method:  "GET",
@@ -264,7 +264,7 @@ func (m *APIManager) Routes() []*router.Route {
 			Method:  "GET",
 			Path:    "/api/cluster/:name/deployments/stat",
 			Handler: m.GetDeploymentsStat,
-			Desc:    GetDeploymentsDesc,
+			Desc:    GetDeploymentsStatDesc,
 		},
 		{
 			Method:  "GET",
