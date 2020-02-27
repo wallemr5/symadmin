@@ -126,25 +126,10 @@ func (r *AdvDeploymentReconciler) ApplyReleases(ctx context.Context, advDeploy *
 		klog.V(4).Infof("Listing all releases may be has an error, there is no response feeds back.")
 	}
 
-	var (
-		specChartUrlName    string
-		specChartUrlVersion string
-		specRawChart        []byte
-		// rls    *hapirelease.Release
-
-	)
-
-	if advDeploy.Spec.PodSpec.Chart.RawChart != nil {
-		specRawChart = *advDeploy.Spec.PodSpec.Chart.RawChart
-	}
-
-	if advDeploy.Spec.PodSpec.Chart.ChartUrl != nil {
-		specChartUrlName = advDeploy.Spec.PodSpec.Chart.ChartUrl.Url
-		specChartUrlVersion = advDeploy.Spec.PodSpec.Chart.ChartUrl.ChartVersion
-	}
-
 	for _, podSet := range advDeploy.Spec.Topology.PodSets {
-		appliedRls, err := helmv2.ApplyRelease(podSet.Name, specChartUrlName, specChartUrlVersion, specRawChart,
+		specChartURLName, specChartURLVersion, specRawChart := getChartInfo(podSet, advDeploy)
+
+		appliedRls, err := helmv2.ApplyRelease(podSet.Name, specChartURLName, specChartURLVersion, specRawChart,
 			hClient, r.HelmEnv.Helmv2env, advDeploy.Namespace, findRunningReleases(podSet.Name, response), []byte(podSet.RawValues))
 		if appliedRls != nil {
 			hasModifiedRls = true
@@ -197,4 +182,33 @@ func findRunningReleases(name string, rlsList *rls.ListReleasesResponse) *hapire
 	}
 
 	return nil
+}
+
+func getChartInfo(podSet *workloadv1beta1.PodSet, advDeploy *workloadv1beta1.AdvDeployment) (specChartURLName string, specChartURLVersion string, specRawChart []byte) {
+
+	if podSet.Chart != nil {
+		if podSet.Chart.RawChart != nil {
+			specRawChart = *podSet.Chart.RawChart
+		}
+		if podSet.Chart.ChartUrl != nil {
+			specChartURLName = podSet.Chart.ChartUrl.Url
+			specChartURLVersion = podSet.Chart.ChartUrl.ChartVersion
+		}
+
+		// if podset chart info is empty, use global chart info
+		if specRawChart != nil || specChartURLName != "" || specChartURLVersion != "" {
+			return specChartURLName, specChartURLVersion, specRawChart
+		}
+	}
+
+	if advDeploy.Spec.PodSpec.Chart.RawChart != nil {
+		specRawChart = *advDeploy.Spec.PodSpec.Chart.RawChart
+	}
+
+	if advDeploy.Spec.PodSpec.Chart.ChartUrl != nil {
+		specChartURLName = advDeploy.Spec.PodSpec.Chart.ChartUrl.Url
+		specChartURLVersion = advDeploy.Spec.PodSpec.Chart.ChartUrl.ChartVersion
+	}
+
+	return specChartURLName, specChartURLVersion, specRawChart
 }

@@ -1,4 +1,4 @@
-VERSION ?= v0.1.2
+VERSION ?= v0.1.3
 # Image URL to use all building/pushing image targets
 IMG_REG ?= registry.cn-hangzhou.aliyuncs.com/r2d2
 IMG_CTL := $(IMG_REG)/sym-admin-controller
