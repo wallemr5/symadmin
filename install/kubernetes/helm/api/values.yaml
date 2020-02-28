@@ -42,7 +42,7 @@ rbac:
     verbs: ["*"]
   - apiGroups: [""]
     resources: ["pods", "services", "endpoints", "configmaps"]
-    verbs: ["get", "list", "watch", "update"]
+    verbs: ["get", "list", "watch", "update", "create"]
   - apiGroups: ["apps"]
     resources: ["deployments", "statefulsets"]
     verbs: ["get", "list", "watch"]
@@ -68,16 +68,32 @@ tolerations: []
 
 affinity: {}
 
+# dev
+# hostAliases:
+#   - ip: "10.13.133.9"
+#     hostnames:
+#       - "cls-nkp08j5d.ccs.tencent-cloud.com"
+#   - ip: "10.13.135.12"
+#     hostnames:
+#       - "cls-7xq1bq9f.ccs.tencent-cloud.com"
+#   - ip: "10.13.135.251"
+#     hostnames:
+#       - "cls-89a4hpb3.ccs.tencent-cloud.com"
+#   - ip: "10.13.135.250"
+#     hostnames:
+#       - "chartmuseum.dmall.com"
+
+# dev-test
 hostAliases:
-  - ip: "10.13.133.9"
+  - ip: "10.16.247.78"
     hostnames:
-      - "cls-nkp08j5d.ccs.tencent-cloud.com"
-  - ip: "10.13.135.12"
+      - "cls-otdyiqyb.ccs.tencent-cloud.com"
+  - ip: "10.16.247.11"
     hostnames:
-      - "cls-7xq1bq9f.ccs.tencent-cloud.com"
-  - ip: "10.13.135.251"
+      - "cls-h5f02nmb.ccs.tencent-cloud.com"
+  - ip: "10.16.113.12"
     hostnames:
-      - "cls-89a4hpb3.ccs.tencent-cloud.com"
+      - "cls-3yclxq8t.ccs.tencent-cloud.com"
   - ip: "10.13.135.250"
     hostnames:
       - "chartmuseum.dmall.com"
