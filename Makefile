@@ -13,7 +13,7 @@ ROOT := gitlab.dmall.com/arch/sym-admin
 GO_VERSION := 1.13.6
 ARCH     ?= $(shell go env GOARCH)
 BuildDate = $(shell date +'%Y-%m-%dT%H:%M:%SZ')
-Commit    = $(shell git rev-parse --short HEAD)
+COMMIT    = $(shell git rev-parse --short HEAD)
 GOENV    := CGO_ENABLED=0 GOOS=$(shell uname -s | tr A-Z a-z) GOARCH=$(ARCH) GOPROXY=https://goproxy.cn,direct
 #GO       := $(GOENV) go build -mod=vendor
 GO       := $(GOENV) go build
@@ -39,7 +39,6 @@ manager-controller: generate fmt
 
 manager-api: generate fmt
 	GOOS=linux GOARCH=amd64 go build -o bin/sym-admin-api -ldflags "-s -w -X pkg/version.Release=$(VERSION) -X pkg/version.Commit=$(COMMIT) -X pkg/version.BuildDate=$(BuildDate)" cmd/sym-api/main.go
-
 
 # Run against the configured Kubernetes cluster in ~/.kube/config
 run: generate fmt vet manifests
@@ -75,10 +74,10 @@ docker-build:
 	docker run --rm -v "$$PWD":/go/src/${ROOT} -w /go/src/${ROOT} golang:${GO_VERSION} make build
 
 build:
-	$(GO) -v -o bin/sym-admin-controller -ldflags "-s -w -X pkg/version.Release=$(VERSION) -X pkg/version.Commit=$(COMMIT)   \
-	-X pkg/version.BuildDate=$(BuildDate)" cmd/controller/main.go
-	$(GO) -v -o bin/sym-admin-api -ldflags "-s -w -X pkg/version.Release=$(VERSION) -X pkg/version.Commit=$(COMMIT)   \
-	-X pkg/version.BuildDate=$(BuildDate)" cmd/sym-api/main.go
+	$(GO) -v -o bin/sym-admin-controller -ldflags "-s -w -X $(ROOT)/pkg/version.Release=$(VERSION) -X  $(ROOT)/pkg/version.Commit=$(COMMIT)   \
+	-X  $(ROOT)/pkg/version.BuildDate=$(BuildDate)" cmd/controller/main.go
+	$(GO) -v -o bin/sym-admin-api -ldflags "-s -w -X  $(ROOT)/pkg/version.Release=$(VERSION) -X  $(ROOT)/pkg/version.Commit=$(COMMIT)   \
+	-X  $(ROOT)/pkg/version.BuildDate=$(BuildDate)" cmd/sym-api/main.go
 
 docker-push: docker-push-controller docker-push-api
 
