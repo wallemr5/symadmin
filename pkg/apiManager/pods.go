@@ -476,9 +476,12 @@ func getPodListByAppName(clusters []*k8smanager.Cluster, appName, group, ldcLabe
 				Phase:        pod.Status.Phase,
 				ImageVersion: pod.GetAnnotations()["buildNumber_0"],
 				CommitID:     pod.GetAnnotations()["gitCommit_0"],
-				StartTime:    formatTime(pod.Status.StartTime.String()),
 				Containers:   nil,
 				Labels:       pod.GetLabels(),
+			}
+
+			if pod.Status.StartTime != nil {
+				apiPod.StartTime = formatTime(pod.Status.StartTime.String())
 			}
 
 			apiPod.Endpoints = false
