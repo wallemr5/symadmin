@@ -22,7 +22,7 @@ ingress:
     kubernetes.io/ingress.class: traefik
     # kubernetes.io/tls-acme: "true"
   hosts:
-    - host: sym-api.com
+    - host: testapi.sym.dmall.com
       paths: ["/"]
 
   tls: []
@@ -36,7 +36,6 @@ healthPath:
 
 rbac:
   name: sym-api
-  namespace: sym-admin
   rules:
   - apiGroups: ["workload.dmall.com"]
     resources: ["*"]
