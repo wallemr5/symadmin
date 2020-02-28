@@ -31,6 +31,7 @@ import (
 	pkgmanager "gitlab.dmall.com/arch/sym-admin/pkg/manager"
 	"gitlab.dmall.com/arch/sym-admin/pkg/utils"
 	appsv1 "k8s.io/api/apps/v1"
+	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
@@ -179,6 +180,7 @@ func (r *AdvDeploymentReconciler) Reconcile(req ctrl.Request) (ctrl.Result, erro
 		logger.Info("Delete all releases of an advDeploy", "advDeploy", advDeploy.Name)
 		if err := r.CleanAllReleases(advDeploy); err != nil {
 			logger.Error(err, "Can not remove the helm releases which are related with this AdvDeployment")
+			r.recorder.Event(advDeploy, corev1.EventTypeWarning, "Remove helm release failed", err.Error())
 			return reconcile.Result{}, errors.Wrap(err, "Can not remove the helm releases which are related with this AdvDeployment")
 		}
 
@@ -195,6 +197,7 @@ func (r *AdvDeploymentReconciler) Reconcile(req ctrl.Request) (ctrl.Result, erro
 		advDeploy.ObjectMeta.Finalizers = append(advDeploy.ObjectMeta.Finalizers, labels.ControllerFinalizersName)
 		if err := r.Client.Update(ctx, advDeploy); err != nil {
 			klog.Errorf("failed to update AdvDeployment[%s] for appending a finalizer to it: %v", advDeploy.Name, err)
+			r.recorder.Event(advDeploy, corev1.EventTypeWarning, "Add finalizer failed", err.Error())
 			return reconcile.Result{}, errors.Wrap(err, "Can not add sym-admin's finalizer to AdvDeployment")
 		}
 
@@ -210,15 +213,18 @@ func (r *AdvDeploymentReconciler) Reconcile(req ctrl.Request) (ctrl.Result, erro
 	if advDeploy.Spec.PodSpec.DeployType == "helm" {
 		if advDeploy.Spec.PodSpec.Chart == nil {
 			klog.Errorf("advDeploy [%s]'s chart is empty, can not reconcile it.", advDeploy.Name)
+			r.recorder.Event(advDeploy, corev1.EventTypeWarning, "Chart is empty", "chart is empty, can not reconcile it.")
 			return reconcile.Result{}, nil
 		}
 		if advDeploy.Spec.PodSpec.Chart.ChartUrl == nil && advDeploy.Spec.PodSpec.Chart.RawChart == nil {
 			klog.Errorf("advDeploy [%s]: neither chart's url nor raw exist, can not reconcile it.", advDeploy.Name)
+			r.recorder.Event(advDeploy, corev1.EventTypeWarning, "Chart data not neither empty", "neither chart's url nor raw exist, can not reconcile it.")
 			return reconcile.Result{}, nil
 		}
 
 		hasModifiedRls, err := r.ApplyReleases(ctx, advDeploy)
 		if err != nil {
+			r.recorder.Event(advDeploy, corev1.EventTypeWarning, "Apply releases failed", err.Error())
 			logger.Error(err, "failed to apply releases")
 		}
 
@@ -233,11 +239,13 @@ func (r *AdvDeploymentReconciler) Reconcile(req ctrl.Request) (ctrl.Result, erro
 	aggregatedStatus, err := r.RecalculateStatus(ctx, advDeploy)
 	if err != nil {
 		klog.Errorf("failed to recalculate the newest status of an advancement deployment [%s]: %v", advDeploy.Name, err)
+		r.recorder.Event(advDeploy, corev1.EventTypeWarning, "Aggregate status failed", err.Error())
 		return reconcile.Result{}, err
 	}
 
 	if err := r.updateStatus(ctx, advDeploy, aggregatedStatus); err != nil {
 		klog.Errorf("failed to update the newest status of an advancement deployment [%s]: %v", advDeploy.Name, err)
+		r.recorder.Event(advDeploy, corev1.EventTypeWarning, "Update newest status failed", err.Error())
 		return reconcile.Result{}, err
 	}
 
