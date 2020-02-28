@@ -23,7 +23,7 @@ import (
 
 // other URLs
 const (
-	VersionPath = "version"
+	VersionPath = "/version"
 	MetricsPath = "/metrics"
 	LivePath    = "/live"
 	ReadyPath   = "/ready"
@@ -240,6 +240,8 @@ func (r *Router) AddRoutes(apiGroup string, routes []*Route) {
 			<a href="/live?full=true"> query the full body`)
 		r.AddProfile("GET", ReadyPath, `readyness check:  <br/>
 			<a href="/ready?full=true"> query the full body`)
+		r.AddProfile("GET", VersionPath, `version describe: <br/>
+            <a href="/version"> query version info`)
 	} else if apiGroup == "cluster" {
 		for _, route := range routes {
 			var desc string
