@@ -71,12 +71,14 @@ generate: controller-gen
 	$(CONTROLLER_GEN) object:headerFile=./hack/boilerplate.go.txt paths="./..."
 
 # Build the docker image
-docker-build: 
+docker-build:
 	docker run --rm -v "$$PWD":/go/src/${ROOT} -w /go/src/${ROOT} golang:${GO_VERSION} make build
 
 build:
 	$(GO) -v -o bin/sym-admin-controller -ldflags "-s -w -X pkg/version.Release=$(VERSION) -X pkg/version.Commit=$(COMMIT)   \
 	-X pkg/version.BuildDate=$(BuildDate)" cmd/controller/main.go
+	$(GO) -v -o bin/sym-admin-api -ldflags "-s -w -X pkg/version.Release=$(VERSION) -X pkg/version.Commit=$(COMMIT)   \
+	-X pkg/version.BuildDate=$(BuildDate)" cmd/sym-api/main.go
 
 docker-push: docker-push-controller docker-push-api
 
@@ -85,7 +87,7 @@ docker-push-controller: manager-controller
 	docker build -t ${IMG_CTL}:${VERSION} -f ./install/Dockerfile-ctl .
 	docker push ${IMG_CTL}:${VERSION}
 
-docker-push-api: manager-api
+docker-push-api: docker-build
 	docker build -t ${IMG_API}:${VERSION} -f ./install/Dockerfile-api .
 	docker push ${IMG_API}:${VERSION}
 
