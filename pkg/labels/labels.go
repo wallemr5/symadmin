@@ -73,22 +73,26 @@ func MakeHelmReleaseFilter(appName string) string {
 }
 
 // MakeHelmReleaseFilterWithGroup ...
-func MakeHelmReleaseFilterWithGroup(appName, group string) (string, error) {
-	if appName == "" || appName == "all" {
-		return "", nil
+func MakeHelmReleaseFilterWithGroup(appName, group, zone string) (string, error) {
+	var reg string
+	switch {
+	case appName == "" || appName == "all":
+		reg = ""
+	case group == "" && zone == "":
+		reg = fmt.Sprintf("^%s(-gz|-rz).*(-blue|-green|-canary|-svc)$", appName)
+	case group != "" && zone == "":
+		if x := IsValidGroup(group); !x && group != "" {
+			klog.Errorf("get not valid group: %s", group)
+			err := errors.New("Received incorrect group parameter")
+			return "", err
+		}
+		reg = fmt.Sprintf("^%s(-gz|-rz).*(-%s)$", appName, group)
+	case group == "" && zone != "":
+		reg = fmt.Sprintf("^%s(-%s).*(-blue|-green|-canary|-svc)$", appName, zone)
+	default:
+		reg = fmt.Sprintf("^%s(-%s).*(-%s)$", appName, zone, group)
 	}
-
-	if group == "" {
-		return fmt.Sprintf("^%s(-gz|-rz).*(-blue|-green|-canary|-svc)$", appName), nil
-	}
-
-	if x := IsValidGroup(group); !x && group != "" {
-		klog.Errorf("get not valid group: %s", group)
-		err := errors.New("Received incorrect group parameter")
-		return "", err
-	}
-
-	return fmt.Sprintf("^%s(-gz|-rz).*(-%s)$", appName, group), nil
+	return reg, nil
 }
 
 // CheckAndGetAppInfo check name format, if throught return app info

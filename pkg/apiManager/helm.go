@@ -20,12 +20,13 @@ func (m *APIManager) GetHelmReleases(c *gin.Context) {
 	appName := c.Param("appName")
 	group := c.DefaultQuery("group", "")
 	clusters := m.K8sMgr.GetAll(clusterName)
+	zone := c.DefaultQuery("zone", "")
 
 	blue := make([]*model.HelmRelease, 0)
 	green := make([]*model.HelmRelease, 0)
 	canary := make([]*model.HelmRelease, 0)
 	for _, cluster := range clusters {
-		response, err := getHelmRelease(cluster, appName, group, "")
+		response, err := getHelmRelease(cluster, appName, group, "", zone)
 		if err != nil {
 			AbortHTTPError(c, GetHelmReleasesError, "", err)
 			return
@@ -67,6 +68,7 @@ func (m *APIManager) GetHelmReleaseInfo(c *gin.Context) {
 	clusterName := c.Param("name")
 	releaseName := c.Param("releaseName")
 	cluster, err := m.K8sMgr.Get(clusterName)
+	zone := c.DefaultQuery("zone", "")
 	if err != nil {
 		c.IndentedJSON(http.StatusBadRequest, gin.H{
 			"success":   false,
@@ -76,7 +78,7 @@ func (m *APIManager) GetHelmReleaseInfo(c *gin.Context) {
 		return
 	}
 
-	response, err := getHelmRelease(cluster, "", "", releaseName)
+	response, err := getHelmRelease(cluster, "", "", releaseName, zone)
 	if err != nil {
 		c.IndentedJSON(http.StatusBadRequest, gin.H{
 			"success":   false,
@@ -124,7 +126,7 @@ func (m *APIManager) GetHelmReleaseInfo(c *gin.Context) {
 	})
 }
 
-func getHelmRelease(cluster *k8smanager.Cluster, appName, group, releaseName string) (*rls.ListReleasesResponse, error) {
+func getHelmRelease(cluster *k8smanager.Cluster, appName, group, releaseName, zone string) (*rls.ListReleasesResponse, error) {
 	hClient, err := helmv2.NewClientFromConfig(cluster.RestConfig, cluster.KubeCli, "")
 	if err != nil {
 		klog.Errorf("Initializing a new helm clinet has an error: %+v", err)
@@ -136,7 +138,7 @@ func getHelmRelease(cluster *k8smanager.Cluster, appName, group, releaseName str
 	if releaseName != "" {
 		filter = releaseName
 	} else {
-		filter, err = labels.MakeHelmReleaseFilterWithGroup(appName, group)
+		filter, err = labels.MakeHelmReleaseFilterWithGroup(appName, group, zone)
 		if err != nil {
 			return nil, err
 		}
