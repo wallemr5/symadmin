@@ -314,8 +314,8 @@ func (m *APIManager) DeletePodByGroup(c *gin.Context) {
 	appName := c.Param("appName")
 	namespace := c.Param("namespace")
 	group, ok := c.GetPostForm("group")
-	zone := c.DefaultPostForm("zone", "")
-	ldcLabel := c.DefaultPostForm("ldcLabel", "")
+	zone, _ := c.GetPostForm("zone")
+	ldcLabel, _ := c.GetPostForm("ldcLabel")
 	if !ok {
 		AbortHTTPError(c, GetPodNotGroup, "no group label", nil)
 		return
