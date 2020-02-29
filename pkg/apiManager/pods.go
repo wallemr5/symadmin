@@ -313,9 +313,9 @@ func (m *APIManager) DeletePodByGroup(c *gin.Context) {
 	clusterName := c.Param("name")
 	appName := c.Param("appName")
 	namespace := c.Param("namespace")
-	group, ok := c.GetQuery("group")
-	zone := c.DefaultQuery("zone", "")
-	ldcLabel := c.DefaultQuery("ldcLabel", "")
+	group, ok := c.GetPostForm("group")
+	zone := c.DefaultPostForm("zone", "")
+	ldcLabel := c.DefaultPostForm("ldcLabel", "")
 	if !ok {
 		AbortHTTPError(c, GetPodNotGroup, "no group label", nil)
 		return
@@ -357,7 +357,11 @@ func (m *APIManager) DeletePodByGroup(c *gin.Context) {
 		}
 
 	}
-	c.JSON(http.StatusOK, gin.H{"errorPods": errorPods})
+	c.JSON(http.StatusOK, gin.H{
+		"success":   true,
+		"message":   nil,
+		"errorPods": errorPods,
+	})
 }
 
 func getPodByAppName(clusters []*k8smanager.Cluster, appName, group string) ([]*model.PodOfCluster, error) {

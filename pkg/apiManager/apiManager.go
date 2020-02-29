@@ -207,8 +207,8 @@ func (m *APIManager) Routes() []*router.Route {
 			Desc:    GetNodeProjectDesc,
 		},
 		{
-			Method:  "DELETE",
-			Path:    "/api/cluster/:name/namespace/:namespace/app/:appName",
+			Method:  "POST",
+			Path:    "/api/cluster/:name/namespace/:namespace/app/:appName/delete",
 			Handler: m.DeletePodByGroup,
 			Desc:    DeletePodByGroupDesc,
 		},
