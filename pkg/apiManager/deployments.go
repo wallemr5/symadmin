@@ -19,7 +19,7 @@ func (m *APIManager) GetDeployments(c *gin.Context) {
 	clusterName := c.Param("name")
 	appName := c.Param("appName")
 	group := c.DefaultQuery("group", "")
-	zone := c.DefaultQuery("zone", "")
+	zone := c.DefaultQuery("symZone", "")
 	ldcLabel := c.DefaultQuery("ldcLabel", "")
 	namespace := c.DefaultQuery("namespace", "")
 	clusters := m.K8sMgr.GetAll(clusterName)
@@ -40,7 +40,7 @@ func (m *APIManager) GetDeploymentsStat(c *gin.Context) {
 	appName := c.DefaultQuery("appName", "all")
 	group := c.DefaultQuery("group", "")
 	ldcLabel := c.DefaultQuery("ldcLabel", "")
-	zone := c.DefaultQuery("zone", "")
+	zone := c.DefaultQuery("symZone", "")
 	namespace := c.DefaultQuery("namespace", "")
 	clusters := m.K8sMgr.GetAll(clusterName)
 

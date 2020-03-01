@@ -20,7 +20,7 @@ func (m *APIManager) GetHelmReleases(c *gin.Context) {
 	appName := c.Param("appName")
 	group := c.DefaultQuery("group", "")
 	clusters := m.K8sMgr.GetAll(clusterName)
-	zone := c.DefaultQuery("zone", "")
+	zone := c.DefaultQuery("symZone", "")
 
 	blue := make([]*model.HelmRelease, 0)
 	green := make([]*model.HelmRelease, 0)
@@ -68,7 +68,7 @@ func (m *APIManager) GetHelmReleaseInfo(c *gin.Context) {
 	clusterName := c.Param("name")
 	releaseName := c.Param("releaseName")
 	cluster, err := m.K8sMgr.Get(clusterName)
-	zone := c.DefaultQuery("zone", "")
+	zone := c.DefaultQuery("symZone", "")
 	if err != nil {
 		c.IndentedJSON(http.StatusBadRequest, gin.H{
 			"success":   false,
