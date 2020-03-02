@@ -3,6 +3,7 @@ package apiManager
 import (
 	"net/http"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/gin-gonic/gin"
@@ -25,33 +26,42 @@ func (m *APIManager) GetHelmReleases(c *gin.Context) {
 	blue := make([]*model.HelmRelease, 0)
 	green := make([]*model.HelmRelease, 0)
 	canary := make([]*model.HelmRelease, 0)
+	wg := sync.WaitGroup{}
 	for _, cluster := range clusters {
-		response, err := getHelmRelease(cluster, appName, group, "", zone)
-		if err != nil {
-			AbortHTTPError(c, GetHelmReleasesError, "", err)
-			return
-		}
-		for _, release := range response.GetReleases() {
-			item := &model.HelmRelease{
-				Cluster:           cluster.GetName(),
-				Group:             getGroupFromHelmRelease(release.GetName()),
-				Name:              release.GetName(),
-				Version:           release.Chart.GetMetadata().GetVersion(),
-				Description:       release.Chart.GetMetadata().GetDescription(),
-				Status:            release.GetInfo().GetStatus().GetCode().String(),
-				FirstDeployedDate: time.Unix(release.Info.FirstDeployed.GetSeconds(), 0).Format("2006-01-02 15:04:05"),
-				LastDeployedDate:  time.Unix(release.Info.LastDeployed.GetSeconds(), 0).Format("2006-01-02 15:04:05"),
+		wg.Add(1)
+		go func(wg *sync.WaitGroup, cluster *k8smanager.Cluster) {
+			response, err := getHelmRelease(cluster, appName, group, "", zone)
+			if err != nil {
+				AbortHTTPError(c, GetHelmReleasesError, "", err)
+				return
 			}
-			switch item.Group {
-			case "blue":
-				blue = append(blue, item)
-			case "green":
-				green = append(green, item)
-			case "canary":
-				canary = append(canary, item)
+			for _, release := range response.GetReleases() {
+				item := &model.HelmRelease{
+					Cluster:     cluster.GetName(),
+					Group:       getGroupFromHelmRelease(release.GetName()),
+					Name:        release.GetName(),
+					Version:     release.Chart.GetMetadata().GetVersion(),
+					Description: release.Chart.GetMetadata().GetDescription(),
+					Status:      release.GetInfo().GetStatus().GetCode().String(),
+					FirstDeployedDate: time.Unix(release.Info.FirstDeployed.GetSeconds(), 0).
+						Format("2006-01-02 15:04:05"),
+					LastDeployedDate: time.Unix(release.Info.LastDeployed.GetSeconds(), 0).
+						Format("2006-01-02 15:04:05"),
+				}
+				switch item.Group {
+				case "blue":
+					blue = append(blue, item)
+				case "green":
+					green = append(green, item)
+				case "canary":
+					canary = append(canary, item)
+				}
 			}
-		}
+			wg.Done()
+		}(&wg, cluster)
 	}
+	wg.Wait()
+
 	c.IndentedJSON(http.StatusOK, gin.H{
 		"success": true,
 		"message": nil,
@@ -127,6 +137,7 @@ func (m *APIManager) GetHelmReleaseInfo(c *gin.Context) {
 }
 
 func getHelmRelease(cluster *k8smanager.Cluster, appName, group, releaseName, zone string) (*rls.ListReleasesResponse, error) {
+	klog.V(4).Infof("start get helm release, %s", cluster.Name)
 	hClient, err := helmv2.NewClientFromConfig(cluster.RestConfig, cluster.KubeCli, "")
 	if err != nil {
 		klog.Errorf("Initializing a new helm clinet has an error: %+v", err)
