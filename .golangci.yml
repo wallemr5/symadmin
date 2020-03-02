@@ -13,7 +13,7 @@ run:
   issues-exit-code: 1
 
   # include test files or not, default is true
-  tests: true
+  tests: false
 
   # list of build tags, all linters use it. Default is empty list.
   # build-tags:
@@ -35,6 +35,7 @@ run:
     - pkg/manager
     - pkg/resources
     - pkg/controllers
+    - ~/go/pkg/mod
 
   # default is true. Enables skipping of directories:
   #   vendor$, third_party$, testdata$, examples$, Godeps$, builtin$
@@ -245,13 +246,15 @@ linters:
     - megacheck
     - govet
   disable:
+    - errcheck
+    - unused
     - maligned
     - prealloc
   disable-all: false
   presets:
     - bugs
     # - unused
-  fast: false
+  fast: true
 
 
 issues:
@@ -260,8 +263,6 @@ issues:
   # it can be disabled by `exclude-use-default: false`. To list all
   # excluded by default patterns execute `golangci-lint run --help`
   exclude:
-    - unused
-    - "Error return value of"
     - "shadows declaration"
     - G104
     - "Using a reference for the variable on range scope"
@@ -311,7 +312,7 @@ issues:
   # large codebase. It's not practical to fix all existing issues at the moment
   # of integration: much better don't allow issues in new code.
   # Default is false.
-  new: false
+  new: true
 
   # Show only new issues created after git revision `REV`
   new-from-rev: ""
