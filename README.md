@@ -1,6 +1,6 @@
-# sym-admin
+![logo](docs/symphony.png)
 
-![logo](symphony.png)
+# sym-admin
 
 ## 调试
 
