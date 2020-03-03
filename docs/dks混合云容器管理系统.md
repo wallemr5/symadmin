@@ -234,6 +234,37 @@ dmall-inner   no-project-aabb           4         4           0             v5  
 
 ### 多集群管理
 
+```go
+// Cluster ...
+type Cluster struct {
+	Name          string
+	AliasName     string
+	RawKubeconfig []byte
+	Meta          map[string]string
+	RestConfig    *rest.Config
+	Client        client.Client
+	KubeCli       kubernetes.Interface
+
+	log             logr.Logger
+	Mgr             manager.Manager
+	Cache           cache.Cache
+	internalStopper chan struct{}
+
+	Status ClusterStatusType
+	// Started is true if the Informers has been Started
+	Started bool
+}
+// ClusterManager ...
+type ClusterManager struct {
+	MasterClient
+	mu             *sync.RWMutex
+	Opt            *ClusterManagerOption
+	clusters       []*Cluster
+	PreInit        func()
+	Started        bool
+	ClusterAddInfo chan map[string]string
+}
+```
 - 集群感知，通过通过 `Informer` 监听meta集群 configmap 资源变化，获取配置后初始化客户端，可以运行后动态增加删除基础，修改元数据。
 - 创建一些额外的资源索引后开启 Informer cache 同步协程，等待资源同步完成。
 - 同时开启一个后台协程负责集群健康检查，根据一定策略删除和恢复集群管理。
@@ -249,6 +280,49 @@ type Handler interface {
 	ReadyEndpoint(ctx *gin.Context)
 	RemoveLivenessCheck(name string)
 	RemoveReadinessCheck(name string)
+}
+```
+### 监控指标
+
+```go
+// 注册http监控指标
+func RegisterGinView() error {
+	// Register stat views
+	err := view.Register(
+		// Gin (HTTP) stats
+		ochttp.ServerRequestCountView,
+		ochttp.ServerRequestBytesView,
+		ochttp.ServerResponseBytesView,
+		ServerLatencyView,
+		ochttp.ServerRequestCountByMethod,
+		ServerResponseCountByStatusCode,
+	)
+	return nil
+}
+
+// NewRouter creates a new Router instance
+func NewRouter(opt *Options) *Router {
+	engine := gin.New()
+    ...
+	r := &Router{
+		Engine:              engine,
+		Routes:              make(map[string][]*Route, 0),
+		ProfileDescriptions: make([]*Profile, 0),
+	}
+  
+	if opt.MetricsEnabled {
+		metrics.RegisterGinView()
+		r.Engine.GET("/metrics", gin.HandlerFunc(func(c *gin.Context) {
+			p.Exporter.ServeHTTP(c.Writer, c.Request)
+		}))
+	}
+
+	if opt.PprofEnabled {
+		// automatically add routers for net/http/pprof e.g. /debug/pprof, /debug/pprof/heap, etc.
+		ginpprof.Wrap(r.Engine)
+	}
+    ...
+	return r
 }
 ```
 
