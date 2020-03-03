@@ -1,4 +1,4 @@
-![logo](docs/symphony.png)
+<img src="docs/symphony.png" alt="logo" width="250"/>
 
 # sym-admin
 
