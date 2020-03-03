@@ -1,232 +1,225 @@
 # 架构
 
-
-
 # 概述
 
-
-
 # 设计
+
 **功能：**
 
 - 支持混合云基础组件自动部署
 - 兼容现有部署方式
 - 支持多集群自动迁移
-- 支持k8s原生deployment、StatefulSet等部署方式
+- 支持 k8s 原生 deployment、StatefulSet 等部署方式
 - 支持多集群多活、单元化、蓝绿灰等多组高级部署方式
 - 后期支持动态注入调度器亲和性调度策略、集群元数据环境
 
-## 声明式api定义
+## 声明式 api 定义
 
 <u>**声明式**</u>（Declarative）的编程是云原生的一大特色，与<u>**命令式编程**</u>相比，能更好的描述一个效果或者目标的终态。
 
 在 Kubernetes 中，可以直接使用 YAML 文件定义**集群基础组件**部署的终态：
 
-~~~yaml
-apiVersion: devops.dmall.com/v1                       # 资源组
-kind: Cluster                                         # 资源类型
+```yaml
+apiVersion: devops.dmall.com/v1 # 资源组
+kind: Cluster # 资源类型
 metadata:
-  labels: 
+  labels:
     clusterName: az-hk-prod-02
     createdBy: sym-controller
   name: az-hk-prod-02
   namespace: default
 spec:
-  pause: false                                         # 是否暂停
-  symNodeName: aks-v16c128g-16534360-vmss000000        # 指定admin组件运行结点，基础组件不和业务部署在一起
-  additionals:                                         # 集群元数据
+  pause: false # 是否暂停
+  symNodeName: aks-v16c128g-16534360-vmss000000 # 指定admin组件运行结点，基础组件不和业务部署在一起
+  additionals: # 集群元数据
     area: eastasia
     az: hongkong
     ldc: az-hk-prod-02
-  helmSpec:                                            # helm 版本期望
-    maxHistory: 5                                      # 最大历史数
+  helmSpec: # helm 版本期望
+    maxHistory: 5 # 最大历史数
     namespace: kube-system
     overrideImageSpec: gcr.io/kubernetes-helm/tiller:v2.13.1
   apps:
-  - name: swift
-    repo: dmall
-    chartVersion: 0.11.2    
-    namespace: kube-system
-    values:
-      "swift-ing": akss2.sym.dmall.com
-  - name: monitor                 # 监控 prometheus 安装期望
-    repo: dmall
-    namespace: monitoring
-    chartVersion: 8.7.0
-    values:
-      prom-limit-cpu: "24"
-      prom-limit-memory: 48Gi
-      prom-req-cpu: "16"
-      prom-req-memory: 32Gi
-      prom-retention: 90d         # 数据存储天数
-      grafana-ing: aksg2.sym.inner-dmall.com.hk    # 访问域名
-      prom-ing: aksp2.sym.inner-dmall.com.hk
-      alertmanager-ing: aksa2.sym.inner-dmall.com.hk
-      lpv-path: /web/prometheus-data
-      lpv-size: 200Gi             # 监控数据本地存储大小
-      custom-resources-config: disable
-      selector-only-system: disable
-  - name: searchlight             # 集群事件报警
-    repo: dmall
-    namespace: monitoring
-    chartVersion: 8.0.3
-    values:
-      "searchlight-ing": dkstu01.searchlight.dmall.com
-  - name: metrics-server          # 集群指标
-    repo: dmall
-    namespace: monitoring
-    values:
-      sym-affinity: enable        # 是否采用亲和性部署
-  - name: node-problem-detector   # 集群结点内核事件报警组件
-    repo: dmall
-    chartVersion: 1.5.2
-    namespace: monitoring
-  - name: traefik                 # traefik ingress控制器
-    repo: dmall
-    namespace: kube-system
-    values:
-      sym-affinity: enable
-      dashboard-ing: akst2.sym.dmall.com
-      "service.beta.kubernetes.io/azure-load-balancer-internal": "true"   # ingress内网负载均衡 暴露服务
-  - name: istio                  # service mesh istio 部署
-    repo: dmall
-    namespace: istio-system
-    appVersion: 1.4.5            # 部署版本
-    rawValus: |                  # istio各组件定制配置
-      global:
-      proxy:
-        accessLogFile: "/dev/stdout"
-        resources:
-          requests:
-            cpu: 10m
-            memory: 40Mi
+    - name: swift
+      repo: dmall
+      chartVersion: 0.11.2
+      namespace: kube-system
+      values:
+        "swift-ing": akss2.sym.dmall.com
+    - name: monitor # 监控 prometheus 安装期望
+      repo: dmall
+      namespace: monitoring
+      chartVersion: 8.7.0
+      values:
+        prom-limit-cpu: "24"
+        prom-limit-memory: 48Gi
+        prom-req-cpu: "16"
+        prom-req-memory: 32Gi
+        prom-retention: 90d # 数据存储天数
+        grafana-ing: aksg2.sym.inner-dmall.com.hk # 访问域名
+        prom-ing: aksp2.sym.inner-dmall.com.hk
+        alertmanager-ing: aksa2.sym.inner-dmall.com.hk
+        lpv-path: /web/prometheus-data
+        lpv-size: 200Gi # 监控数据本地存储大小
+        custom-resources-config: disable
+        selector-only-system: disable
+    - name: searchlight # 集群事件报警
+      repo: dmall
+      namespace: monitoring
+      chartVersion: 8.0.3
+      values:
+        "searchlight-ing": dkstu01.searchlight.dmall.com
+    - name: metrics-server # 集群指标
+      repo: dmall
+      namespace: monitoring
+      values:
+        sym-affinity: enable # 是否采用亲和性部署
+    - name: node-problem-detector # 集群结点内核事件报警组件
+      repo: dmall
+      chartVersion: 1.5.2
+      namespace: monitoring
+    - name: traefik # traefik ingress控制器
+      repo: dmall
+      namespace: kube-system
+      values:
+        sym-affinity: enable
+        dashboard-ing: akst2.sym.dmall.com
+        "service.beta.kubernetes.io/azure-load-balancer-internal": "true" # ingress内网负载均衡 暴露服务
+    - name: istio # service mesh istio 部署
+      repo: dmall
+      namespace: istio-system
+      appVersion: 1.4.5 # 部署版本
+      rawValus: | # istio各组件定制配置
+        global:
+        proxy:
+          accessLogFile: "/dev/stdout"
+          resources:
+            requests:
+              cpu: 10m
+              memory: 40Mi
 
-      disablePolicyChecks: false
-      controlPlaneSecurityEnabled: false
-      mtls:
-        enabled: false
-      arch:
-        amd64: 2
+        disablePolicyChecks: false
+        controlPlaneSecurityEnabled: false
+        mtls:
+          enabled: false
+        arch:
+          amd64: 2
 
-      sidecarInjectorWebhook:
-      enabled: true
-      rewriteAppHTTPProbe: false
-
-      pilot:
-      autoscaleEnabled: false
-      traceSampling: 100.0
-      resources:
-        requests:
-          cpu: 10m
-          memory: 100Mi
-
-      certmanager:
-      enabled: true
-
-      mixer:
-      policy:
+        sidecarInjectorWebhook:
         enabled: true
+        rewriteAppHTTPProbe: false
+
+        pilot:
         autoscaleEnabled: false
+        traceSampling: 100.0
         resources:
           requests:
             cpu: 10m
             memory: 100Mi
 
-      telemetry:
+        certmanager:
         enabled: true
-        autoscaleEnabled: false
-        resources:
-          requests:
-            cpu: 50m
-            memory: 100Mi
 
-      adapters:
-        stdio:
+        mixer:
+        policy:
           enabled: true
+          autoscaleEnabled: false
+          resources:
+            requests:
+              cpu: 10m
+              memory: 100Mi
 
-      prometheus:
-      enabled: true
-      contextPath: /
-      image: prometheus
-      tag: v2.15.2
-      ingress:
+        telemetry:
+          enabled: true
+          autoscaleEnabled: false
+          resources:
+            requests:
+              cpu: 50m
+              memory: 100Mi
+
+        adapters:
+          stdio:
+            enabled: true
+
+        prometheus:
         enabled: true
-        hosts:
-          - dkscdp.istio.dmall.com               # 定义prometheus访问url
-        annotations:
-          kubernetes.io/ingress.class: contour   # 注解指定ingress控制器  traefik/contour
+        contextPath: /
+        image: prometheus
+        tag: v2.15.2
+        ingress:
+          enabled: true
+          hosts:
+            - dkscdp.istio.dmall.com               # 定义prometheus访问url
+          annotations:
+            kubernetes.io/ingress.class: contour   # 注解指定ingress控制器  traefik/contour
 
-      grafana:
-      enabled: true
-      contextPath: /
-      image:
-        repository: grafana/grafana
-        tag: 6.5.3
-      ingress:
+        grafana:
         enabled: true
-        hosts:
-          - dkscdg.istio.dmall.com
-        annotations:
-          kubernetes.io/ingress.class: traefik  # 注解指定ingress控制器  traefik/contour
+        contextPath: /
+        image:
+          repository: grafana/grafana
+          tag: 6.5.3
+        ingress:
+          enabled: true
+          hosts:
+            - dkscdg.istio.dmall.com
+          annotations:
+            kubernetes.io/ingress.class: traefik  # 注解指定ingress控制器  traefik/contour
 
-      tracing:
-      enabled: true
-      contextPath: /
-      ingress:
+        tracing:
         enabled: true
-        hosts:
-          - dkscdt.istio.dmall.com
-        annotations:
-          kubernetes.io/ingress.class: traefik   # 注解指定ingress控制器  traefik/contour
+        contextPath: /
+        ingress:
+          enabled: true
+          hosts:
+            - dkscdt.istio.dmall.com
+          annotations:
+            kubernetes.io/ingress.class: traefik   # 注解指定ingress控制器  traefik/contour
 
-      kiali:
-      enabled: true
-      contextPath: /
-      createDemoSecret: true
-      dashboard:
-        auth:
-          strategy: login
-        secretName: kiali
-        viewOnlyMode: false
-        grafanaURL: http://dkscdg.istio.dmall.com # 定义kiali集群外能访问的 grafana url，集群内访问service域名已指定
-        jaegerURL: http://dkscdt.istio.dmall.com  # 定义kiali集群外能访问的 tracing url，集群内访问service域名已指定
-      ingress:
+        kiali:
         enabled: true
-        hosts:
-          - dkscdk.istio.dmall.com
-        annotations:
-          kubernetes.io/ingress.class: traefik   # 注解指定ingress控制器  traefik/contour
+        contextPath: /
+        createDemoSecret: true
+        dashboard:
+          auth:
+            strategy: login
+          secretName: kiali
+          viewOnlyMode: false
+          grafanaURL: http://dkscdg.istio.dmall.com # 定义kiali集群外能访问的 grafana url，集群内访问service域名已指定
+          jaegerURL: http://dkscdt.istio.dmall.com  # 定义kiali集群外能访问的 tracing url，集群内访问service域名已指定
+        ingress:
+          enabled: true
+          hosts:
+            - dkscdk.istio.dmall.com
+          annotations:
+            kubernetes.io/ingress.class: traefik   # 注解指定ingress控制器  traefik/contour
 
-      gateways:
-      istio-ingressgateway:
-        serviceAnnotations:
-          # 指定内网负载均衡注解，各种云实现方式不一样
-          # tke找到集群网址子网id，<kubectl get svc -n default kube-user>  metadata.annotations
-          #                     service.beta.kubernetes.io/azure-load-balancer-internal: 'true'
-          # aks下添加注解         service.beta.kubernetes.io/azure-load-balancer-internal: 'true'
-          service.beta.kubernetes.io/azure-load-balancer-internal: 'true'
-        autoscaleEnabled: false
-        resources:
-          requests:
-            cpu: 10m
-            memory: 40Mi
+        gateways:
+        istio-ingressgateway:
+          serviceAnnotations:
+            # 指定内网负载均衡注解，各种云实现方式不一样
+            # tke找到集群网址子网id，<kubectl get svc -n default kube-user>  metadata.annotations
+            #                     service.beta.kubernetes.io/azure-load-balancer-internal: 'true'
+            # aks下添加注解         service.beta.kubernetes.io/azure-load-balancer-internal: 'true'
+            service.beta.kubernetes.io/azure-load-balancer-internal: 'true'
+          autoscaleEnabled: false
+          resources:
+            requests:
+              cpu: 10m
+              memory: 40Mi
 
-      istio-egressgateway:
-        enabled: true
-        autoscaleEnabled: false
-        resources:
-          requests:
-            cpu: 10m
-            memory: 40Mi
-
-
-~~~
-
-
+        istio-egressgateway:
+          enabled: true
+          autoscaleEnabled: false
+          resources:
+            requests:
+              cpu: 10m
+              memory: 40Mi
+```
 
 在 Kubernetes 中，直接使用 YAML 文件定义**应用**在<u>**多集群的拓扑结构和状态**</u>：
 
-~~~yaml
+```yaml
 apiVersion: workload.dmall.com/v1beta1
 kind: AppSet
 metadata:
@@ -235,40 +228,50 @@ metadata:
 spec:
   replicas: 10
   podSpec:
-    deployType: helm                 # helm, InPlaceSet，StatefulSet, deployment等， 目前支持helm
-    chart:                           # 仅helm部署时有效
-      chartUrl:                      # helm仓库chart描述
-        url: dmall/springBoot        
+    deployType: helm # helm, InPlaceSet，StatefulSet, deployment等， 目前支持helm
+    chart: # 仅helm部署时有效
+      chartUrl: # helm仓库chart描述
+        url: dmall/springBoot
         chartVersion: 0.0.1
-      rawChart: ...                  # 没有helm仓库时可指定原始压缩包  []byte
-    template: ...                    # 非helm部署时，pod的原始描述模板 PodTemplateSpec
-  serviceName: inner.bbcc.dmall.com  # App 的 service 名称
-  updateStrategy:                    # 升级策略
-    upgradeType: canary|blue|green   
+      rawChart: ... # 没有helm仓库时可指定原始压缩包  []byte
+    template: ... # 非helm部署时，pod的原始描述模板 PodTemplateSpec
+  serviceName: inner.bbcc.dmall.com # App 的 service 名称
+  updateStrategy: # 升级策略
+    upgradeType: canary|blue|green
     minReadySeconds: 10
-    canaryClusters:                  # 灰度部署集群拓扑
+    canaryClusters: # 灰度部署集群拓扑
       - tcc-bj4-dks-test-01
     needWaitingForConfirm: true
     paused: false
-  clusterTopology:                   # 多集群部署拓扑期望
+  clusterTopology: # 多集群部署拓扑期望
     clusters:
-      - name: tcc-bj4-dks-test-01    # 集群名
-        meta:                        # 集群元数据 
+      - name: tcc-bj4-dks-test-01 # 集群名
+        meta: # 集群元数据
           sym-available-zone: bj4
           sym-cluster-info: tcc-bj4-dks-test-01
-        podSets:                     # pod 组集合 蓝、绿、灰等
+        podSets: # pod 组集合 蓝、绿、灰等
           - name: bbcc-gz01b-canary
             replicas: 1
             version: v4
+            image: ... # 覆盖 image
+            chart: ... # 覆盖 chart 仅helm部署时有效
+            rawValues: ... # 覆盖 rawValues  仅helm部署时有效
+            meta:
+              sym-group: canary
           - name: bbcc-gz01b-blue
             replicas: 2
             version: v3
+            image: ... # 覆盖 image
+            chart: ... # 覆盖 chart 仅helm部署时有效
+            rawValues: ... # 覆盖 rawValues  仅helm部署时有效
+            meta:
+              sym-group: blue
           - name: bbcc-gz01b-green
-            replicas: 2              # 覆盖 replicas
-            version: v3              # 覆盖 version
-            image: ...               # 覆盖 image
-            chart: ...               # 覆盖 chart 仅helm部署时有效
-            rawValues: ...           # 覆盖 rawValues  仅helm部署时有效
+            replicas: 2 # 覆盖 replicas
+            version: v3 # 覆盖 version
+            image: ... # 覆盖 image
+            chart: ... # 覆盖 chart 仅helm部署时有效
+            rawValues: ... # 覆盖 rawValues  仅helm部署时有效
             meta:
               sym-group: green
       - name: tcc-bj5-dks-test-01
@@ -279,42 +282,55 @@ spec:
           - name: bbcc-gz01a-canary
             replicas: 1
             version: v4
+            image: ... # 覆盖 image
+            chart: ... # 覆盖 chart 仅helm部署时有效
+            rawValues: ... # 覆盖 rawValues  仅helm部署时有效
+            meta:
+              sym-group: canary
           - name: bbcc-gz01a-blue
             replicas: 2
             version: v3
+            image: ... # 覆盖 image
+            chart: ... # 覆盖 chart 仅helm部署时有效
+            rawValues: ... # 覆盖 rawValues  仅helm部署时有效
+            meta:
+              sym-group: blue
           - name: bbcc-gz01a-green
             replicas: 2
             version: v3
-~~~
-
-
+            image: ... # 覆盖 image
+            chart: ... # 覆盖 chart 仅helm部署时有效
+            rawValues: ... # 覆盖 rawValues  仅helm部署时有效
+            meta:
+              sym-group: green
+```
 
 ## 控制器模式
 
 控制器采用松耦合的方式组合，启动命令：
 
-~~~shell
+```shell
 # 只启动 AppSetController 控制器
-$ sym-controller controller --enable-master -v 4   
+$ sym-controller controller --enable-master -v 4
 
  # 只启动 AdvDeploymentController 控制器
-$ sym-controller controller --enable-worker -v 4   
+$ sym-controller controller --enable-worker -v 4
 
 # 同时启动 AppSetController 和 AdvDeploymentController 控制器
-$ sym-controller controller --enable-master --enable-worker -v 4  
-~~~
+$ sym-controller controller --enable-master --enable-worker -v 4
+```
 
-由于在多集群中部署，各个资源无法建立ownerReferences关系，也就无法控制从属资源的生命周期；在此基础上引入了Finalizers机制，用户发起删除资源后，控制器查询Finalizers是否为空，待从属资源AdvDeployment、helm release等删除后，清空Finalizers资源也立即被删除。
+由于在多集群中部署，各个资源无法建立 ownerReferences 关系，也就无法控制从属资源的生命周期；在此基础上引入了 Finalizers 机制，创建资源的时候控制器会自动注入自己的Finalizer标识，用户发起删除资源后，控制器查询 Finalizers 是否为空，待从属资源 AdvDeployment、helm release 等删除后，删除对应的 Finalizer标识，当 Finalizers 为空立即被删除，可以扩展多控制器对同一个资源的生命周期的管控。
 
 ### 实现原理
 
-- AppSetController作为管理 AppSet 资源的控制器，会在启动时通过 `Informer` 监听多集群不同资源的通知，AppSet和 AdvDeployment，这些资源的变动加入限速队列触发控制器的调和函数。根据AppSet 资源期望集群拓扑调和(创建，更新，删除)相应集群的AdvDeployment资源。
-- AdvDeploymentController作为单一集群内管理AdvDeployment的控制器，helm方式部署时简历隧道客户端发布release，然后监听`Informer`集群内多种资源deployment、StatefulSet、service、endpoint、pod、event、configmap的状态变化，聚合应用总的部署状态。
-- 状态收集，触发回调后，获取AdvDeployment资源状态然后统一聚合。
+- AppSetController 作为管理 AppSet 资源的控制器，会在启动时通过 `Informer` 监听多集群不同资源的通知，AppSet 和 AdvDeployment，这些资源的变动加入限速队列触发控制器的调和函数。根据 AppSet 资源期望集群拓扑调和(创建，更新，删除)相应集群的 AdvDeployment 资源。
+- AdvDeploymentController 作为单一集群内管理 AdvDeployment 的控制器，helm 方式部署时通过客户端发布 release，然后监听`Informer`集群内多种资源 deployment、StatefulSet、service、endpoint、pod、event、configmap 的状态变化，聚合应用总的部署状态。
+- 状态收集，触发回调后，获取 AdvDeployment 资源状态然后统一聚合。
 
 部署完成后可以看到部署的状态：
 
-~~~shell
+```shell
 $ kubectl get as --all-namespaces
 NAMESPACE     NAME                      DESIRED   AVAILABLE   UNAVAILABLE   VERSION   STATUS    AGE
 dmall-inner   kafka-08-producer-gz01a   6         6           0             v8/v9     Running   3h37m
@@ -326,17 +342,17 @@ NAMESPACE     NAME                      DESIRED   AVAILABLE   UNAVAILABLE   VERS
 dmall-inner   kafka-08-producer-gz01a   2         2           0             v8/v9     Running   3h39m
 dmall-inner   kafka-test-group          4         4           0             v2        Running   56m
 dmall-inner   no-project-aabb           4         4           0             v5        Running   47h
-~~~
+```
 
 ### 多集群管理
 
-- 集群感知，通过通过 `Informer` 监听元集群configmap资源变化，获取配置后初始化客户端，可以运行后动态增加删除基础，修改元数据。
-- 创建一些额外的资源索引后开启Informer cache同步协程，等待资源同步完成。
+- 集群感知，通过通过 `Informer` 监听元集群 configmap 资源变化，获取配置后初始化客户端，可以运行后动态增加删除基础，修改元数据。
+- 创建一些额外的资源索引后开启 Informer cache 同步协程，等待资源同步完成。
 - 同时开启一个后台协程负责集群健康检查，根据一定策略删除和恢复集群管理。
 
 ### 健康检查
 
-~~~go
+```go
 // Check is a health/readiness check.
 type Check func() error
 
@@ -352,31 +368,31 @@ type Handler interface {
 	RemoveLivenessCheck(name string)
 	RemoveReadinessCheck(name string)
 }
-~~~
+```
+
 ### 高可用部署
 
 **集群内高可用**
 
-- 控制器以deployment方式部署三个pod，但同一时间控制器只允许一个允许。
-- 三个pod在做好初始化后，抢到锁的pod开始正常运行工作，其他pod定时查询锁状态，一旦运行控制器的pod挂掉，其他pod可以快速补位。
+- 控制器以 deployment 方式部署三个 pod，但同一时间控制器只允许一个运行。
+- 通过分布式锁来确保只有一个控制器处于运行状态，其他的控制器都是准备好资源处于就绪态，一旦运行态的控制器挂掉，其他就绪态的控制器可以争抢锁然后快速进入运行态。
 
 集群外高可用
 
-- 同步所有资源到远程meta备用集群，在远端集群上采用helm部署，但deployment副本数0。
-- 主meta集群不能工作时，管理员手动拉起远程meta集群控制器后正常工作。
+- 同步所有资源到远程 meta 备用集群，只是远程 meta 备用集群没有控制器运行。
+- 主 meta 集群不能工作时，管理员手动拉起远程 meta 集群控制器后正常工作。
 
-
-## API组件
+## API 组件
 
 资源获取采用标准 HTTP RESTful 接口提供，启动命令：
 
-~~~shell
+```shell
 # 集群内部部署
 $ sym-api api -v 4
 
 # 集群外部部署, kubeconfig 指向 master 集群
 $ sym-api api --kubeconfig=./manifests/kubeconfig_TCC_BJ5_DKS_MONIT_01.yaml -v 4
-~~~
+```
 
 ### API 调用流程
 
@@ -439,4 +455,3 @@ $ sym-api api --kubeconfig=./manifests/kubeconfig_TCC_BJ5_DKS_MONIT_01.yaml -v 4
 #### 13. `GET /api/cluster/:name/namespace/:namespace/pods/:podName/logs/file`
 
 获取指定 `Pod` 中的日志文件内容。支持 `tail` 命令参数。
-
