@@ -354,7 +354,7 @@ dmall-inner   no-project-aabb           4         4           0             v5  
 
 ### 健康检查
 
-~~~go
+``` go
 type Handler interface {
 	Routes() []*router.Route
 	AddLivenessCheck(name string, check Check)
