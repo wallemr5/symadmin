@@ -307,7 +307,9 @@ spec:
 
 ## 控制器模式
 
-控制器采用松耦合的方式组合，启动命令：
+由于在多集群中部署，各个资源无法建立ownerReferences关系，也就无法控制从属资源的生命周期；在此基础上引入了Finalizers机制，用户发起删除资源后，控制器查询Finalizers是否为空，待从属资源AdvDeployment、helm release等删除后，清空Finalizers资源也立即被删除。
+
+控制器程序采用**松耦合、高内聚**的模块组合，启动命令如下：
 
 ```shell
 # 只启动 AppSetController 控制器
@@ -352,13 +354,7 @@ dmall-inner   no-project-aabb           4         4           0             v5  
 
 ### 健康检查
 
-```go
-// Check is a health/readiness check.
-type Check func() error
-
-// Handler is an endpoints with additional methods that register health and
-// readiness checks. It handles handle "/live" and "/ready" HTTP
-// endpoints.
+~~~go
 type Handler interface {
 	Routes() []*router.Route
 	AddLivenessCheck(name string, check Check)
