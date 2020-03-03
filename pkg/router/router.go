@@ -1,16 +1,13 @@
 package router
 
 import (
-	"net/http"
-	"text/template"
-
+	"bytes"
 	"context"
 	"crypto/tls"
-	"time"
-
-	"bytes"
-
 	"fmt"
+	"net/http"
+	"text/template"
+	"time"
 
 	"github.com/DeanThompson/ginpprof"
 	"github.com/gin-gonic/gin"
@@ -80,7 +77,10 @@ func NewRouter(opt *Options) *Router {
 	if !opt.GinLogEnabled {
 		gin.SetMode(gin.ReleaseMode)
 	} else {
-		engine.Use(gin.Logger())
+		conf := gin.LoggerConfig{
+			SkipPaths: []string{"/ready", "/live"},
+		}
+		engine.Use(gin.LoggerWithConfig(conf))
 		// engine.Use(ginlog.Middleware())
 	}
 
