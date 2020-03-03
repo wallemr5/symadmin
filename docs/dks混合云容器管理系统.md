@@ -281,7 +281,7 @@ $ sym-api api --kubeconfig=./manifests/kubeconfig_TCC_BJ5_DKS_MONIT_01.yaml -v 4
 
 详细调用流程如图：
 
-![sym-api.png](sym-api.png)
+![sym.png](sym.png)
 
 ### API 说明
 
