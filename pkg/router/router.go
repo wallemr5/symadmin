@@ -30,6 +30,7 @@ const (
 // Options are options for constructing a Router
 type Options struct {
 	GinLogEnabled  bool
+	GinLogSkipPath []string
 	PprofEnabled   bool
 	MetricsEnabled bool
 
@@ -78,7 +79,7 @@ func NewRouter(opt *Options) *Router {
 		gin.SetMode(gin.ReleaseMode)
 	} else {
 		conf := gin.LoggerConfig{
-			SkipPaths: []string{"/ready", "/live"},
+			SkipPaths: opt.GinLogSkipPath,
 		}
 		engine.Use(gin.LoggerWithConfig(conf))
 		// engine.Use(ginlog.Middleware())
