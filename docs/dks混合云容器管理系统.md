@@ -370,13 +370,14 @@ type Handler interface {
 
 **集群内高可用**
 
-- 控制器以 deployment 方式部署三个 pod，但同一时间控制器只允许一个运行。
+- sym-controller以（）类似于k8s原生controller manager的部署方式） deployment 方式部署三个 pod，但同一时间控制器只允许一个运行。
 - 通过分布式锁来确保只有一个控制器处于运行状态，其他的控制器都是准备好资源处于就绪态，一旦运行态的控制器挂掉，其他就绪态的控制器可以争抢锁然后快速进入运行态。
 
 集群外高可用
 
-- 同步所有资源到远程 meta 备用集群，只是远程 meta 备用集群没有控制器运行。
-- 主 meta 集群不能工作时，管理员手动拉起远程 meta 集群控制器后正常工作。
+- sym所有相关组件均安装在独立的meta集群中，从物理上与业务集群物理隔离。
+- 实时同步所有资源（as、adv等）到远程 meta 备用集群作为冷备数据，远程 meta 备用集群中暂时不开启sym-controller。
+- 主 meta 集群不能工作时，管理员手动拉起远程备 meta 集群控制器后正常工作。
 
 ## API 组件
 
@@ -386,7 +387,7 @@ type Handler interface {
 # 集群内部部署
 $ sym-api api -v 4
 
-# 集群外部部署, kubeconfig 指向 master 集群
+# 集群外部部署, kubeconfig 指向 meta 集群
 $ sym-api api --kubeconfig=./manifests/kubeconfig_TCC_BJ5_DKS_MONIT_01.yaml -v 4
 ```
 
