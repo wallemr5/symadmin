@@ -299,7 +299,7 @@ $ sym-api api --kubeconfig=./manifests/kubeconfig_TCC_BJ5_DKS_MONIT_01.yaml -v 4
 
 获取所有（或某个）集群应用的 `Helm` 版本。可使用分组、单元名称等进行正则匹配。 后端使用 `goroutine` 并发为每个集群创建客户端，通过 `port-forward` 映射集群 `Tiller` 服务至本地， 再调用服务端 `gRPC Streaming` 接口获取相关信息。
 
-#### 5. `POST /api/cluster/:name/namespace/:namespace/app/:appName/delete`
+#### 5. `POST /api/cluster/:name/namespace/:namespace/app/:appName/restart`
 
 重启所有（或某个）集群中应用的所有 `Pod`，可通过蓝绿灰分组、单元名称进一步筛选。
 
