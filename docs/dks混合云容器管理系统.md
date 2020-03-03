@@ -370,7 +370,7 @@ type Handler interface {
 
 **集群内高可用**
 
-- sym-controller以（）类似于k8s原生controller manager的部署方式） deployment 方式部署三个 pod，但同一时间控制器只允许一个运行。
+- sym-controller以（类似于k8s原生controller manager的deployment）  方式部署三个 pod，但同一时间控制器只允许一个运行。
 - 通过分布式锁来确保只有一个控制器处于运行状态，其他的控制器都是准备好资源处于就绪态，一旦运行态的控制器挂掉，其他就绪态的控制器可以争抢锁然后快速进入运行态。
 
 集群外高可用
