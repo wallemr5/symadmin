@@ -1,5 +1,7 @@
 # sym-admin
 
+![logo](symphony.png)
+
 ## 调试
 
 ### 配置 hosts
