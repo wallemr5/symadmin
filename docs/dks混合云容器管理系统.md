@@ -1,4 +1,3 @@
-# 架构
 
 # 概述
 
@@ -12,6 +11,9 @@
 - 支持 k8s 原生 deployment、StatefulSet 等部署方式
 - 支持多集群多活、单元化、蓝绿灰等多组高级部署方式
 - 后期支持动态注入调度器亲和性调度策略、集群元数据环境
+
+# 架构
+![sym.png](sym.png)
 
 ## 声明式 api 定义
 
@@ -278,10 +280,6 @@ $ sym-api api --kubeconfig=./manifests/kubeconfig_TCC_BJ5_DKS_MONIT_01.yaml -v 4
 ### API 调用流程
 
 大部分接口都从集群 `Informer` 中进行查询，具有缓存机制且资源状态与集群有较高一致性。保证高并发下不会对集群造成太大的查询压力。
-
-详细调用流程如图：
-
-![sym.png](sym.png)
 
 ### API 说明
 
