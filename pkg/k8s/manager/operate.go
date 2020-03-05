@@ -1,20 +1,26 @@
 package manager
 
 import (
-	"gitlab.dmall.com/arch/sym-admin/pkg/apiManager/model"
+	appv1 "k8s.io/api/apps/v1"
+	corev1 "k8s.io/api/core/v1"
+	rls "k8s.io/helm/pkg/proto/hapi/services"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
-// ClusterInterface ...
-type ClusterInterface interface {
-	GetPod(clusterName, namespace, podName string) (*model.Pod, error)
-	GetPods(clusterName, namespace, appName, group, ldcLabel, zone string) ([]*model.Pod, error)
-	GetDeployment(clusterName, namespace, appName, group, ldcLabel, zone string) ([]*model.DeploymentInfo, error)
-	GetService(clusterName, namespace, appName, group string) ([]*model.ServiceInfo, error)
-	GetEndpoint(clusterName, namespace, appName string) ([]*model.Endpoint, error)
-	GetHelm(clusterName, appName, group, zone string) ([]*model.HelmRelease, error)
-	GetHelmInfo(clusterName, zone, releaseName string) ([]*model.HelmWholeRelease, error)
-	GetTerminal(clusterName, namespace, podName, containerName, cmd, option, ws string) error
-	GetEvent(clusterName, namespace, podName, limit string) ([]*model.Event, error)
-	RestartPods(clusterName, namespace, appName, group, ldcLabel, zone string) error
-	DeletePod(clusterName, namespace, podName string) error
+// BaseCluster ...
+type BaseCluster interface {
+	GetPod(opts *client.ListOptions, clusters ...string) (*corev1.Pod, error)
+	GetPods(opts *client.ListOptions, clusters ...string) (*corev1.PodList, error)
+	GetDeployment(opts *client.ListOptions, clusters ...string) (*appv1.DeploymentList, error)
+	GetService(opts *client.ListOptions, clusters ...string) (*corev1.ServiceList, error)
+	GetEndpoint(opts *client.ListOptions, clusters ...string) (*corev1.EndpointsList, error)
+	GetEvent(opts *client.ListOptions, clusters ...string) (*corev1.EventList, error)
+	RestartPods(opts *client.ListOptions, clusters ...string) error
+	DeletePod(opts *client.ListOptions, clusters ...string) (*corev1.PodList, error)
+}
+
+// CustomeCluster ...
+type CustomeCluster interface {
+	BaseCluster
+	GetHelmRelease(cluster, appName, group, releaseName, zone string) ([]*rls.ListReleasesResponse, error)
 }
