@@ -1,14 +1,5 @@
 package apiManager
 
-// GetClusterDesc describing api /api/cluster/:name
-var GetClusterDesc = `
-Get cluster status:<br/>
-name: url param,the unique cluster name and all <br/>
-<br/>
-e.g. <br/>
-<a href="/api/cluster/all">/api/cluster/all</a><br/>
-`
-
 // GetClusterResourceDesc ...
 var GetClusterResourceDesc = `
 Get cluster resources, include pods,services and deployments.<br/>
@@ -21,17 +12,6 @@ ldcLabel: query string, the unique ldcLabel name. <br/>
 <br/>
 e.g. <br/>
 <a href="/api/cluster/all/namespace/default/app/bbcc/resource?group=blue">/api/cluster/all/namespace/default/app/bbcc/resource?group=blue</a><br/>
-`
-
-// GetPodDesc ...
-var GetPodDesc = `
-Get all the pods which an app belongs: <br/>
-name: url param,the unique cluster name and all <br/>
-appName: url param,the unique app name. <br/>
-group: query string, the unique group name. <br/>
-<br/>
-e.g. <br/>
-<a href="/api/cluster/all/appPod/bbcc?group=blue">/api/cluster/all/appPod/bbcc?group=blue</a><br/>
 `
 
 // GetPodByNameDesc ...
@@ -57,16 +37,6 @@ ldcLabel: query string, the unique ldcLabel name. <br/>
 <br/>
 e.g. <br/>
 <a href="/api/cluster/all/appPod/labels?appName=bbcc&group=blue">/api/cluster/all/appPod/labels?appName=bbcc&group=blue</a><br/>
-`
-
-// GetNodeProjectDesc ...
-var GetNodeProjectDesc = `
-Get all pods on a node: <br/>
-name: url param,the unique cluster name and all <br/>
-nodeName: url param,the unique node name. <br/>
-<br/>
-e.g. <br/>
-<a href="/api/cluster/all/nodeProject/10.13.135.17">/api/cluster/all/nodeProject/10.13.135.17</a><br/>
 `
 
 // DeletePodByGroupDesc ...
@@ -102,16 +72,6 @@ appName: url param,the unique app name. <br/>
 <br/>
 e.g. <br/>
 <a href="/api/cluster/all/endpoints/bbcc?group=blue">/api/cluster/all/endpoints/bbcc?group=blue</a><br/>
-`
-
-// GetNodeInfoDesc ...
-var GetNodeInfoDesc = `
-Get node info by name: <br/>
-name: url param,the unique cluster name and all. <br/>
-nodeName: url param,the unique node name. <br/>
-<br/>
-e.g. <br/>
-<a href="/api/cluster/all/node/10.13.135.252">/api/cluster/all/node/10.13.135.252</a><br/>
 `
 
 // GetTerminalDesc ...

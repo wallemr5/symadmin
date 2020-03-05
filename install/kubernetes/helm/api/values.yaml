@@ -23,6 +23,7 @@ ingress:
     # kubernetes.io/tls-acme: "true"
   hosts:
     - host: testapi.sym.dmall.com
+    # - host: devapi.sym.dmall.com
       paths: ["/"]
 
   tls: []

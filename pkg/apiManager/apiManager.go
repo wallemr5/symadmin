@@ -22,9 +22,10 @@ type Option struct {
 	Features           []string
 
 	// use expose /metrics, /read, /live, /pprof, /api.
-	HTTPAddr      string
-	GinLogEnabled bool
-	PprofEnabled  bool
+	HTTPAddr       string
+	GinLogEnabled  bool
+	GinLogSkipPath []string
+	PprofEnabled   bool
 }
 
 // APIManager ...
@@ -41,6 +42,7 @@ func DefaultOption() *Option {
 	return &Option{
 		HTTPAddr:           ":8080",
 		GoroutineThreshold: 1000,
+		GinLogSkipPath:     []string{"/ready", "/live"},
 		GinLogEnabled:      true,
 		PprofEnabled:       true,
 	}
@@ -65,6 +67,7 @@ func NewAPIManager(cli k8smanager.MasterClient, opt *Option, componentName strin
 
 	routerOptions := &router.Options{
 		GinLogEnabled:    opt.GinLogEnabled,
+		GinLogSkipPath:   opt.GinLogSkipPath,
 		MetricsEnabled:   true,
 		PprofEnabled:     opt.PprofEnabled,
 		Addr:             opt.HTTPAddr,
@@ -166,21 +169,9 @@ func (m *APIManager) Routes() []*router.Route {
 	apiRoutes := []*router.Route{
 		{
 			Method:  "GET",
-			Path:    "/api/cluster/:name",
-			Handler: m.GetClusters,
-			Desc:    GetClusterDesc,
-		},
-		{
-			Method:  "GET",
 			Path:    "/api/cluster/:name/namespace/:namespace/app/:appName/resource",
 			Handler: m.GetClusterResource,
 			Desc:    GetClusterResourceDesc,
-		},
-		{
-			Method:  "GET",
-			Path:    "/api/cluster/:name/appPod/:appName",
-			Handler: m.GetPod,
-			Desc:    GetPodDesc,
 		},
 		{
 			Method:  "GET",
@@ -199,12 +190,6 @@ func (m *APIManager) Routes() []*router.Route {
 			Path:    "/api/cluster/:name/helm/:releaseName",
 			Handler: m.GetHelmReleaseInfo,
 			Desc:    GetHelmReleaseInfoDesc,
-		},
-		{
-			Method:  "GET",
-			Path:    "/api/cluster/:name/nodeProject/:nodeName",
-			Handler: m.GetNodeProject,
-			Desc:    GetNodeProjectDesc,
 		},
 		{
 			Method:  "POST",
@@ -229,12 +214,6 @@ func (m *APIManager) Routes() []*router.Route {
 			Path:    "/api/cluster/:name/endpoints/:appName",
 			Handler: m.GetEndpoints,
 			Desc:    GetEndpointsDesc,
-		},
-		{
-			Method:  "GET",
-			Path:    "/api/cluster/:name/node/:nodeName",
-			Handler: m.GetNodeInfo,
-			Desc:    GetNodeInfoDesc,
 		},
 		{
 			Method:  "GET",

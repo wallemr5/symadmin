@@ -10,7 +10,6 @@ import (
 	"github.com/gin-gonic/gin"
 	"gitlab.dmall.com/arch/sym-admin/pkg/apiManager/model"
 	k8smanager "gitlab.dmall.com/arch/sym-admin/pkg/k8s/manager"
-	"gitlab.dmall.com/arch/sym-admin/pkg/labels"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -18,119 +17,6 @@ import (
 	"k8s.io/klog"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
-
-// GetNodeProject ...
-func (m *APIManager) GetNodeProject(c *gin.Context) {
-	clusterName := c.Param("name")
-	nodeName := c.Param("nodeName")
-
-	clusters := m.K8sMgr.GetAll(clusterName)
-
-	nodePro := &model.NodeProjects{
-		Projects: make([]*model.Project, 0),
-	}
-
-	listOptions := &client.ListOptions{}
-	listOptions.MatchingField("spec.nodeName", nodeName)
-
-	var isFind bool
-	var findProject *model.Project
-	ctx := context.Background()
-	for _, cluster := range clusters {
-		podList := &corev1.PodList{}
-		err := cluster.Client.List(ctx, listOptions, podList)
-		if err != nil {
-			if apierrors.IsNotFound(err) {
-				continue
-			}
-			klog.Error(err, "failed to get pods")
-			AbortHTTPError(c, GetPodError, "", err)
-			return
-		}
-
-		for i := range podList.Items {
-			var ok bool
-			var appName string
-
-			isFind = false
-			pod := &podList.Items[i]
-			if appName, ok = pod.GetLabels()[labels.ObserveMustLabelAppName]; !ok {
-				continue
-			}
-
-			if _, ok = pod.GetLabels()[labels.ObserveMustLabelGroupName]; !ok {
-				continue
-			}
-
-			for _, p := range nodePro.Projects {
-				if p.AppName == appName {
-					findProject = p
-					isFind = true
-					break
-				}
-			}
-
-			if isFind && findProject != nil {
-				nodePro.PodCount++
-				findProject.PodCount++
-				findProject.Instances = append(findProject.Instances, pod.Status.PodIP)
-				continue
-			}
-
-			podInfo := &model.Project{}
-			podInfo.AppName = appName
-			podInfo.PodCount++
-			podInfo.Instances = append(podInfo.Instances, pod.Status.PodIP)
-			if domainName, ok := pod.GetLabels()[labels.ObserveMustLabelDomain]; ok {
-				podInfo.DomainName = domainName
-			} else {
-				svcList := &corev1.ServiceList{}
-				svcListOptions := &client.ListOptions{}
-				svcListOptions.MatchingLabels(map[string]string{
-					"app": appName + "-svc",
-				})
-				err := cluster.Client.List(ctx, svcListOptions, svcList)
-				if err == nil && len(svcList.Items) > 0 {
-					if domainName, ok := svcList.Items[0].GetLabels()[labels.ObserveMustLabelDomain]; ok {
-						podInfo.DomainName = domainName
-					}
-				}
-			}
-
-			nodePro.Projects = append(nodePro.Projects, podInfo)
-			nodePro.PodCount++
-			if nodePro.NodeIP == "" {
-				nodePro.NodeIP = pod.Status.HostIP
-			}
-		}
-
-		if nodePro.PodCount > 0 {
-			nodePro.ClusterName = cluster.Name
-			break
-		}
-	}
-
-	sort.Slice(nodePro.Projects, func(i, j int) bool {
-		return nodePro.Projects[i].AppName < nodePro.Projects[j].AppName
-	})
-
-	c.IndentedJSON(http.StatusOK, nodePro)
-}
-
-// GetPod ...
-func (m *APIManager) GetPod(c *gin.Context) {
-	appName := c.Param("appName")
-	group := c.DefaultQuery("group", "")
-	clusterName := c.Param("name")
-	clusters := m.K8sMgr.GetAll(clusterName)
-	result, err := getPodByAppName(clusters, appName, group)
-	if err != nil {
-		klog.Error(err, "failed to get pods")
-		AbortHTTPError(c, GetPodError, "", err)
-		return
-	}
-	c.IndentedJSON(http.StatusOK, result)
-}
 
 // GetPodByLabels ...
 func (m *APIManager) GetPodByLabels(c *gin.Context) {
@@ -362,63 +248,6 @@ func (m *APIManager) DeletePodByGroup(c *gin.Context) {
 		"message":   nil,
 		"errorPods": errorPods,
 	})
-}
-
-func getPodByAppName(clusters []*k8smanager.Cluster, appName, group string) ([]*model.PodOfCluster, error) {
-	ctx := context.Background()
-	clusterPods := make([]*model.PodOfCluster, 0, 4)
-	listOptions := &client.ListOptions{}
-	listOptions.MatchingLabels(map[string]string{
-		"app":   appName,
-		"group": group,
-	})
-	for _, cluster := range clusters {
-		pods := make([]*model.Pod, 0, 4)
-		podList := &corev1.PodList{}
-		err := cluster.Client.List(ctx, listOptions, podList)
-		if err != nil {
-			if apierrors.IsNotFound(err) {
-				continue
-			}
-			return nil, err
-		}
-
-		for i := range podList.Items {
-			pod := &podList.Items[i]
-			apiPod := &model.Pod{
-				Name:         pod.GetName(),
-				Namespace:    pod.Namespace,
-				ClusterCode:  cluster.GetName(),
-				HostIP:       pod.Status.HostIP,
-				PodIP:        pod.Status.PodIP,
-				ImageVersion: "",
-				StartTime:    formatTime(pod.Status.StartTime.String()),
-				Containers:   nil,
-				Labels:       pod.GetLabels(),
-			}
-			apiPod.Containers = append(apiPod.Containers, &model.ContainerStatus{
-				Name:         pod.Status.ContainerStatuses[0].Name,
-				Ready:        pod.Status.ContainerStatuses[0].Ready,
-				RestartCount: pod.Status.ContainerStatuses[0].RestartCount,
-				Image:        pod.Status.ContainerStatuses[0].Image,
-				ContainerID:  pod.Status.ContainerStatuses[0].ContainerID,
-			})
-			pods = append(pods, apiPod)
-		}
-		sort.Slice(pods, func(i, j int) bool {
-			return pods[i].Name < pods[j].Name
-		})
-
-		ofCluster := &model.PodOfCluster{
-			ClusterName: cluster.Name,
-			Pods:        pods,
-		}
-		clusterPods = append(clusterPods, ofCluster)
-	}
-	sort.Slice(clusterPods, func(i, j int) bool {
-		return clusterPods[i].ClusterName < clusterPods[j].ClusterName
-	})
-	return clusterPods, nil
 }
 
 // return Pod list， not PodOfCluster
