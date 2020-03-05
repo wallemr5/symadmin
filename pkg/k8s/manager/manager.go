@@ -59,7 +59,7 @@ type ClusterManager struct {
 // DefaultClusterManagerOption ...
 func DefaultClusterManagerOption(isAPI bool, ls map[string]string) *ClusterManagerOption {
 	return &ClusterManagerOption{
-		Namespace:     "default",
+		Namespace:     "sym-admin",
 		LabelSelector: ls,
 		IsAPI:         isAPI,
 	}

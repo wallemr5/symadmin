@@ -1,4 +1,4 @@
-VERSION ?= v0.1.7
+VERSION ?= v0.1.8
 # Image URL to use all building/pushing image targets
 IMG_REG ?= registry.cn-hangzhou.aliyuncs.com/r2d2
 # IMG_REG ?= registry.cn-shanghai.aliyuncs.com/zhd173
