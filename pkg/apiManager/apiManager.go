@@ -18,6 +18,7 @@ import (
 type Option struct {
 	Threadiness        int
 	GoroutineThreshold int
+	IsMeta             bool
 	ResyncPeriod       time.Duration
 	Features           []string
 
@@ -32,6 +33,7 @@ type Option struct {
 type APIManager struct {
 	Opt *Option
 
+	Cluster       k8smanager.CustomeCluster
 	Router        *router.Router
 	HealthHandler healthcheck.Handler
 	K8sMgr        *k8smanager.ClusterManager
@@ -41,6 +43,7 @@ type APIManager struct {
 func DefaultOption() *Option {
 	return &Option{
 		HTTPAddr:           ":8080",
+		IsMeta:             true,
 		GoroutineThreshold: 1000,
 		GinLogSkipPath:     []string{"/ready", "/live"},
 		GinLogEnabled:      true,
@@ -86,6 +89,12 @@ func NewAPIManager(cli k8smanager.MasterClient, opt *Option, componentName strin
 			apiMgr.registryResource(c)
 		}
 	})
+
+	if opt.IsMeta {
+		apiMgr.Cluster = k8sMgr
+	} else {
+		// apiMgr.Cluster = cli
+	}
 
 	go apiMgr.ClusterChange()
 
@@ -271,6 +280,23 @@ func (m *APIManager) Routes() []*router.Route {
 		},
 	}
 
+	// api version use CustomeCluster interface
+	apiRoutesV2 := []*router.Route{
+		{
+			Method:  "GET",
+			Path:    "/api/v2/cluster/:name/namespace/:namespace/app/:appName/resource",
+			Handler: m.GetClusterResource,
+			Desc:    GetClusterResourceDesc,
+		},
+		{
+			Method:  "GET",
+			Path:    "/api/v2/cluster/:name/appPods/labels",
+			Handler: m.GetPodByLabels,
+			Desc:    GetPodByLabelsDesc,
+		},
+	}
+
 	routes = append(routes, apiRoutes...)
+	routes = append(routes, apiRoutesV2...)
 	return routes
 }

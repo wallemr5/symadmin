@@ -87,6 +87,7 @@ func NewAPICmd(cli *DksCli) *cobra.Command {
 
 	cmd.PersistentFlags().IntVar(&opt.GoroutineThreshold, "goroutine-threshold", opt.GoroutineThreshold, "the max Goroutine Threshold")
 	cmd.PersistentFlags().StringVar(&opt.HTTPAddr, "http-addr", opt.HTTPAddr, "HttpAddr for some info")
+	cmd.PersistentFlags().BoolVar(&opt.IsMeta, "is-meta", opt.IsMeta, "Whether it is a meta cluster")
 	cmd.PersistentFlags().BoolVar(&opt.GinLogEnabled, "enable-ginlog", opt.GinLogEnabled, "Enabled will open gin run log.")
 	cmd.PersistentFlags().BoolVar(&opt.PprofEnabled, "enable-pprof", opt.PprofEnabled, "Enabled will open endpoint for go pprof.")
 	return cmd
