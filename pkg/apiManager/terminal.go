@@ -95,8 +95,8 @@ func (m *APIManager) GetTerminal(c *gin.Context) {
 	err = startProcess(cluster, namespace, podName, containerName,
 		cmd, isStdin, isStdout, isStderr, tty, once, ws)
 	if err != nil {
-		klog.Errorf("error in startProcess: %v", err)
-		AbortHTTPError(c, RequestK8sExecError, "", err)
+		ws.Write(websocket.BinaryMessage, []byte(err.Error()+". "))
+		ws.closeChan <- 0
 	}
 }
 
@@ -465,9 +465,16 @@ func (handler *streamHandler) Next() *remotecommand.TerminalSize {
 
 // Read ...
 func (handler *streamHandler) Read(p []byte) (size int, err error) {
+	if handler.ws.isClosed {
+		return 0, err
+	}
 	msg, err := handler.ws.Read()
 	if err != nil {
 		handler.ws.Close()
+		return 0, err
+	}
+
+	if msg == nil {
 		return 0, err
 	}
 
@@ -504,12 +511,18 @@ func (handler *streamHandler) Write(p []byte) (size int, err error) {
 // ReadLoop ...
 func (ws *WsConnection) ReadLoop() {
 	for {
-		msgType, data, err := ws.conn.ReadMessage()
-		if err != nil {
-			klog.Errorf("readloop error: %v", err)
-			break
+		select {
+		case <-ws.closeChan:
+			ws.Close()
+			return
+		default:
+			msgType, data, err := ws.conn.ReadMessage()
+			if err != nil {
+				klog.Errorf("readloop error: %v", err)
+				break
+			}
+			ws.inChan <- &WsMessage{msgType, data}
 		}
-		ws.inChan <- &WsMessage{msgType, data}
 	}
 }
 
@@ -559,7 +572,6 @@ func (ws *WsConnection) Close() {
 	defer ws.mutex.Unlock()
 	if !ws.isClosed {
 		ws.isClosed = true
-		ws.closeChan <- 0
 		close(ws.closeChan)
 		ws.conn.Close()
 	}
