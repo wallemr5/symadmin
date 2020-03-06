@@ -285,7 +285,7 @@ func (m *APIManager) Routes() []*router.Route {
 		{
 			Method:  "GET",
 			Path:    "/api/v2/cluster/:name/namespace/:namespace/app/:appName/resource",
-			Handler: m.GetClusterResource,
+			Handler: m.GetClusterResourceV2,
 			Desc:    GetClusterResourceDesc,
 		},
 		{

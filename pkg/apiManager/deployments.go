@@ -133,3 +133,53 @@ func getDeployments(clusters []*k8smanager.Cluster, namespace, appName, group, l
 	})
 	return result, nil
 }
+
+func (m *APIManager) getDeployments(clusterName, namespace, appName, group, zone, ldcLabel string) ([]*model.DeploymentInfo, error) {
+	result := make([]*model.DeploymentInfo, 0)
+
+	listOptions := &client.ListOptions{Namespace: namespace}
+	options := make(map[string]string)
+	if group != "" {
+		options["sym-group"] = group
+	}
+	if zone != "" {
+		options["sym-zone"] = zone
+	}
+	if ldcLabel != "" {
+		options["sym-ldc"] = ldcLabel
+	}
+	if appName != "all" {
+		options["app"] = appName
+	}
+
+	listOptions.MatchingLabels(options)
+	deployments, err := m.Cluster.GetDeployment(listOptions, clusterName)
+	if err != nil {
+		klog.Errorf("failed to get deployments: %v", err)
+		return nil, err
+	}
+
+	for _, deploy := range deployments {
+		info := model.DeploymentInfo{
+			Name:                deploy.GetName(),
+			ClusterCode:         deploy.ClusterName,
+			Annotations:         deploy.GetAnnotations(),
+			Labels:              deploy.GetLabels(),
+			StartTime:           deploy.GetCreationTimestamp().Format("2006-01-02 15:04:05"),
+			NameSpace:           deploy.GetNamespace(),
+			DesiredReplicas:     deploy.Spec.Replicas,
+			UpdatedReplicas:     deploy.Status.UpdatedReplicas,
+			ReadyReplicas:       deploy.Status.ReadyReplicas,
+			AvailableReplicas:   deploy.Status.AvailableReplicas,
+			UnavailableReplicas: deploy.Status.UnavailableReplicas,
+			Group:               deploy.GetLabels()["sym-group"],
+			Selector:            deploy.Spec.Selector,
+		}
+		result = append(result, &info)
+	}
+
+	sort.Slice(result, func(i, j int) bool {
+		return result[i].Name < result[j].Name
+	})
+	return result, nil
+}
