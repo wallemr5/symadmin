@@ -243,7 +243,6 @@ linters:
     - stylecheck
     - unconvert
     - dogsled
-    - gomnd
   disable:
     - errcheck
     - unused
