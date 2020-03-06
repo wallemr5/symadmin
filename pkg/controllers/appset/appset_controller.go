@@ -31,7 +31,6 @@ import (
 	"gitlab.dmall.com/arch/sym-admin/pkg/labels"
 	pkgmanager "gitlab.dmall.com/arch/sym-admin/pkg/manager"
 	"gitlab.dmall.com/arch/sym-admin/pkg/utils"
-	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/equality"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/util/wait"
@@ -224,7 +223,6 @@ func (r *AppSetReconciler) CustomReconcile(ctx context.Context, req customctrl.C
 
 	// add finalizers
 	if !utils.ContainsString(app.ObjectMeta.Finalizers, labels.ControllerFinalizersName) {
-		r.recorder.Event(app, corev1.EventTypeNormal, "AddFinalizers", "Add finalizer 'sym-admin-finalizers'.")
 		klog.V(4).Infof("%s: finalizers not set:%s, set now", req.NamespacedName, labels.ControllerFinalizersName)
 
 		if app.ObjectMeta.Finalizers == nil {

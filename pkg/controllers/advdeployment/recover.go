@@ -5,6 +5,7 @@ import (
 	"strings"
 
 	workloadv1beta1 "gitlab.dmall.com/arch/sym-admin/pkg/apis/workload/v1beta1"
+	helmv2 "gitlab.dmall.com/arch/sym-admin/pkg/helm/v2"
 	"gitlab.dmall.com/arch/sym-admin/pkg/labels"
 	appsv1 "k8s.io/api/apps/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
@@ -87,6 +88,15 @@ func (r *AdvDeploymentReconciler) buildAdvDeployment(req reconcile.Request, appI
 		klog.Errorf("failed to DeploymentList name:%s, err: %v", req.Name, err)
 		return
 	}
+
+	// get helm release
+	hClient, err := helmv2.NewClientFromConfig(r.Cfg, r.KubeCli, "")
+	if err != nil {
+		klog.Errorf("Initializing a new helm client has an error:%s", err.Error())
+		return false, err
+	}
+	defer hClient.Close()
+
 	for _, deploy := range deployLists.Items {
 		containers := deploy.Spec.Template.Spec.Containers
 		if len(containers) == 0 {
@@ -97,11 +107,26 @@ func (r *AdvDeploymentReconciler) buildAdvDeployment(req reconcile.Request, appI
 			continue
 		}
 
+		response, err := helmv2.ListReleases(labels.MakeHelmReleaseFilter(deploy.ObjectMeta.Name), hClient)
+		if err != nil {
+			klog.Errorf("Can not find all releases for Deployment[%s], err:%s", appInfo.Name, err.Error())
+			return false, err
+		}
+		if response.Count == 0 {
+			continue
+		}
+
 		images := strings.Split(containers[0].Image, ":")
 		version := ""
 		if len(images) > 1 {
 			version = images[len(images)-1]
 		}
+		charRaw, err := helmv2.SaveChartByte(response.Releases[0].GetChart())
+		if err != nil {
+			klog.Errorf("Can not transfor cahr raw:%+v", err)
+			return false, err
+		}
+
 		adv.Spec.Topology.PodSets = append(adv.Spec.Topology.PodSets, &workloadv1beta1.PodSet{
 			Name:     deploy.ObjectMeta.Name,
 			Replicas: &intstr.IntOrString{IntVal: *deploy.Spec.Replicas},
@@ -111,27 +136,14 @@ func (r *AdvDeploymentReconciler) buildAdvDeployment(req reconcile.Request, appI
 				"sym-ldc":   info.IdcName,
 				"sym-group": info.Group,
 			},
+			Chart: &workloadv1beta1.ChartSpec{
+				RawChart: &charRaw,
+			},
+			RawValues: response.Releases[0].GetChart().GetValues().GetRaw(),
 		})
 	}
 
-	// get helm release
-	// hClient, err := helmv2.NewClientFromConfig(r.Cfg, r.KubeCli, "")
-	// if err != nil {
-	// 	klog.Errorf("Initializing a new helm client has an error:%s", err.Error())
-	// 	return reconcile.Result{}, err
-	// }
-	// defer hClient.Close()
-
-	// response, err := helmv2.ListReleases(labels.MakeHelmReleaseFilter(appInfo.Name), hClient)
-	// if err != nil {
-	// 	klog.Errorf("Can not find all releases for Deployment[%s], err:%s", appInfo.Name, err.Error())
-	// 	return reconcile.Result{}, err
-	// }
-	// for _, item := range response.Releases {
-	// 	// item.GetChart().
-	// 	// item.String()
-	// 	item.GetChart().GetTemplates()
-	// }
+	adv.Spec.PodSpec.DeployType = "helm"
 
 	var replicas int32
 	for _, podSet := range adv.Spec.Topology.PodSets {
