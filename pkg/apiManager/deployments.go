@@ -1,15 +1,11 @@
 package apiManager
 
 import (
-	"context"
 	"net/http"
 	"sort"
 
 	"github.com/gin-gonic/gin"
 	"gitlab.dmall.com/arch/sym-admin/pkg/apiManager/model"
-	k8smanager "gitlab.dmall.com/arch/sym-admin/pkg/k8s/manager"
-	appv1 "k8s.io/api/apps/v1"
-	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/klog"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
@@ -22,9 +18,8 @@ func (m *APIManager) GetDeployments(c *gin.Context) {
 	zone := c.DefaultQuery("symZone", "")
 	ldcLabel := c.DefaultQuery("ldcLabel", "")
 	namespace := c.DefaultQuery("namespace", "")
-	clusters := m.K8sMgr.GetAll(clusterName)
 
-	result, err := getDeployments(clusters, namespace, appName, group, ldcLabel, zone)
+	result, err := m.getDeployments(clusterName, namespace, appName, group, zone, ldcLabel)
 	if err != nil {
 		klog.Errorf("failed to get deployments: %v", err)
 		AbortHTTPError(c, GetDeploymentError, "", err)
@@ -42,9 +37,8 @@ func (m *APIManager) GetDeploymentsStat(c *gin.Context) {
 	ldcLabel := c.DefaultQuery("ldcLabel", "")
 	zone := c.DefaultQuery("symZone", "")
 	namespace := c.DefaultQuery("namespace", "")
-	clusters := m.K8sMgr.GetAll(clusterName)
 
-	deployments, err := getDeployments(clusters, namespace, appName, group, ldcLabel, zone)
+	deployments, err := m.getDeployments(clusterName, namespace, appName, group, zone, ldcLabel)
 	if err != nil {
 		klog.Errorf("failed to get deployments: %v", err)
 		c.IndentedJSON(http.StatusBadRequest, gin.H{
@@ -80,8 +74,9 @@ func (m *APIManager) GetDeploymentsStat(c *gin.Context) {
 	})
 }
 
-func getDeployments(clusters []*k8smanager.Cluster, namespace, appName, group, ldcLabel, zone string) ([]*model.DeploymentInfo, error) {
-	ctx := context.Background()
+func (m *APIManager) getDeployments(clusterName, namespace, appName, group, zone, ldcLabel string) ([]*model.DeploymentInfo, error) {
+	result := make([]*model.DeploymentInfo, 0)
+
 	listOptions := &client.ListOptions{Namespace: namespace}
 	options := make(map[string]string)
 	if group != "" {
@@ -98,36 +93,31 @@ func getDeployments(clusters []*k8smanager.Cluster, namespace, appName, group, l
 	}
 
 	listOptions.MatchingLabels(options)
-	result := []*model.DeploymentInfo{}
-	for _, cluster := range clusters {
-		deployments := &appv1.DeploymentList{}
-		err := cluster.Client.List(ctx, listOptions, deployments)
-		if err != nil {
-			if apierrors.IsNotFound(err) {
-				continue
-			}
-			return nil, err
-		}
-
-		for _, deployment := range deployments.Items {
-			info := model.DeploymentInfo{
-				Name:                deployment.GetName(),
-				ClusterCode:         cluster.GetName(),
-				Annotations:         deployment.GetAnnotations(),
-				Labels:              deployment.GetLabels(),
-				StartTime:           deployment.GetCreationTimestamp().Format("2006-01-02 15:04:05"),
-				NameSpace:           deployment.GetNamespace(),
-				DesiredReplicas:     deployment.Spec.Replicas,
-				UpdatedReplicas:     deployment.Status.UpdatedReplicas,
-				ReadyReplicas:       deployment.Status.ReadyReplicas,
-				AvailableReplicas:   deployment.Status.AvailableReplicas,
-				UnavailableReplicas: deployment.Status.UnavailableReplicas,
-				Group:               deployment.GetLabels()["sym-group"],
-				Selector:            deployment.Spec.Selector,
-			}
-			result = append(result, &info)
-		}
+	deployments, err := m.Cluster.GetDeployment(listOptions, clusterName)
+	if err != nil {
+		klog.Errorf("failed to get deployments: %v", err)
+		return nil, err
 	}
+
+	for _, deploy := range deployments {
+		info := model.DeploymentInfo{
+			Name:                deploy.GetName(),
+			ClusterCode:         deploy.GetClusterName(),
+			Annotations:         deploy.GetAnnotations(),
+			Labels:              deploy.GetLabels(),
+			StartTime:           deploy.GetCreationTimestamp().Format("2006-01-02 15:04:05"),
+			NameSpace:           deploy.GetNamespace(),
+			DesiredReplicas:     deploy.Spec.Replicas,
+			UpdatedReplicas:     deploy.Status.UpdatedReplicas,
+			ReadyReplicas:       deploy.Status.ReadyReplicas,
+			AvailableReplicas:   deploy.Status.AvailableReplicas,
+			UnavailableReplicas: deploy.Status.UnavailableReplicas,
+			Group:               deploy.GetLabels()["sym-group"],
+			Selector:            deploy.Spec.Selector,
+		}
+		result = append(result, &info)
+	}
+
 	sort.Slice(result, func(i, j int) bool {
 		return result[i].Name < result[j].Name
 	})

@@ -280,23 +280,6 @@ func (m *APIManager) Routes() []*router.Route {
 		},
 	}
 
-	// api version use CustomeCluster interface
-	apiRoutesV2 := []*router.Route{
-		{
-			Method:  "GET",
-			Path:    "/api/v2/cluster/:name/namespace/:namespace/app/:appName/resource",
-			Handler: m.GetClusterResource,
-			Desc:    GetClusterResourceDesc,
-		},
-		{
-			Method:  "GET",
-			Path:    "/api/v2/cluster/:name/appPods/labels",
-			Handler: m.GetPodByLabels,
-			Desc:    GetPodByLabelsDesc,
-		},
-	}
-
 	routes = append(routes, apiRoutes...)
-	routes = append(routes, apiRoutesV2...)
 	return routes
 }

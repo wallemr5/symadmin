@@ -1,6 +1,21 @@
 <img src="docs/symphony.png" alt="logo" width="250"/>
 
-# sym-admin
+# 多点 DKS 混合云容器管理系统
+
+[![pipeline status](http://gitlab.dmall.com/arch/sym-admin/badges/master/pipeline.svg)](http://gitlab.dmall.com/arch/sym-admin/commits/master)
+[![coverage report](http://gitlab.dmall.com/arch/sym-admin/badges/master/coverage.svg)](http://gitlab.dmall.com/arch/sym-admin/commits/master)
+
+**功能：**
+
+- 支持混合云基础组件自动部署
+- 兼容现有部署方式
+- 支持多集群自动迁移
+- 支持 k8s 原生 deployment、StatefulSet 等部署方式
+- 支持多集群多活、单元化、蓝绿灰等多组高级部署方式
+- 后期支持动态注入调度器亲和性调度策略、集群元数据环境
+
+## 架构
+![sym.png](docs/sym.png)
 
 ## 调试
 

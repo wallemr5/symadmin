@@ -72,7 +72,7 @@ func (m *ClusterManager) GetPod(opts types.NamespacedName, clusterNames ...strin
 func (m *ClusterManager) GetPods(opts *client.ListOptions, clusterNames ...string) ([]*corev1.Pod, error) {
 	clusters := m.GetAll(clusterNames...)
 	ctx := context.Background()
-	result := make([]*corev1.Pod, 4)
+	result := make([]*corev1.Pod, 0)
 
 	for _, cluster := range clusters {
 		podList := &corev1.PodList{}
@@ -94,7 +94,7 @@ func (m *ClusterManager) GetPods(opts *client.ListOptions, clusterNames ...strin
 func (m *ClusterManager) GetNodes(opts *client.ListOptions, clusterNames ...string) ([]*corev1.Node, error) {
 	clusters := m.GetAll(clusterNames...)
 	ctx := context.Background()
-	result := make([]*corev1.Node, 4)
+	result := make([]*corev1.Node, 0)
 
 	for _, cluster := range clusters {
 		nodeList := &corev1.NodeList{}
@@ -116,7 +116,7 @@ func (m *ClusterManager) GetNodes(opts *client.ListOptions, clusterNames ...stri
 func (m *ClusterManager) GetDeployment(opts *client.ListOptions, clusterNames ...string) ([]*appv1.Deployment, error) {
 	clusters := m.GetAll(clusterNames...)
 	ctx := context.Background()
-	result := make([]*appv1.Deployment, 4)
+	result := make([]*appv1.Deployment, 0)
 
 	for _, cluster := range clusters {
 		deployList := &appv1.DeploymentList{}
@@ -138,7 +138,7 @@ func (m *ClusterManager) GetDeployment(opts *client.ListOptions, clusterNames ..
 func (m *ClusterManager) GetService(opts *client.ListOptions, clusterNames ...string) ([]*corev1.Service, error) {
 	clusters := m.GetAll(clusterNames...)
 	ctx := context.Background()
-	result := make([]*corev1.Service, 4)
+	result := make([]*corev1.Service, 0)
 
 	for _, cluster := range clusters {
 		serviceList := &corev1.ServiceList{}
@@ -160,7 +160,7 @@ func (m *ClusterManager) GetService(opts *client.ListOptions, clusterNames ...st
 func (m *ClusterManager) GetEndpoints(opts *client.ListOptions, clusterNames ...string) ([]*corev1.Endpoints, error) {
 	clusters := m.GetAll(clusterNames...)
 	ctx := context.Background()
-	result := make([]*corev1.Endpoints, 4)
+	result := make([]*corev1.Endpoints, 0)
 
 	for _, cluster := range clusters {
 		endpointsList := &corev1.EndpointsList{}
@@ -182,7 +182,7 @@ func (m *ClusterManager) GetEndpoints(opts *client.ListOptions, clusterNames ...
 func (m *ClusterManager) GetEvent(opts *client.ListOptions, clusterNames ...string) ([]*corev1.Event, error) {
 	clusters := m.GetAll(clusterNames...)
 	ctx := context.Background()
-	result := make([]*corev1.Event, 4)
+	result := make([]*corev1.Event, 0)
 
 	for _, cluster := range clusters {
 		eventList := &corev1.EventList{}

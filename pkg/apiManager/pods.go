@@ -9,7 +9,6 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"gitlab.dmall.com/arch/sym-admin/pkg/apiManager/model"
-	k8smanager "gitlab.dmall.com/arch/sym-admin/pkg/k8s/manager"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -26,7 +25,6 @@ func (m *APIManager) GetPodByLabels(c *gin.Context) {
 	ldcLabel := c.DefaultQuery("ldcLabel", "")
 	namespace := c.DefaultQuery("namespace", "")
 	zone := c.DefaultQuery("symZone", "")
-	clusters := m.K8sMgr.GetAll(clusterName)
 
 	if !ok || appName == "" {
 		c.IndentedJSON(http.StatusBadRequest, gin.H{
@@ -37,7 +35,7 @@ func (m *APIManager) GetPodByLabels(c *gin.Context) {
 		return
 	}
 
-	result, err := getPodListByAppName(clusters, appName, group, ldcLabel, namespace, zone)
+	result, err := m.getPodListByAppName(clusterName, namespace, appName, group, zone, ldcLabel)
 	if err != nil {
 		c.IndentedJSON(http.StatusBadRequest, gin.H{
 			"success":   false,
@@ -251,8 +249,7 @@ func (m *APIManager) DeletePodByGroup(c *gin.Context) {
 }
 
 // return Pod list， not PodOfCluster
-func getPodListByAppName(clusters []*k8smanager.Cluster, appName, group, ldcLabel, namespace, zone string) (map[string][]*model.Pod, error) {
-	ctx := context.Background()
+func (m *APIManager) getPodListByAppName(clusterName, namespace, appName, group, zone, ldcLabel string) (map[string][]*model.Pod, error) {
 	bluePods := make([]*model.Pod, 0, 4)
 	greenPods := make([]*model.Pod, 0, 4)
 	canaryPods := make([]*model.Pod, 0, 4)
@@ -274,95 +271,84 @@ func getPodListByAppName(clusters []*k8smanager.Cluster, appName, group, ldcLabe
 
 	listOptions := &client.ListOptions{Namespace: namespace}
 	listOptions.MatchingLabels(options)
+	podList, err := m.Cluster.GetPods(listOptions, clusterName)
+	if err != nil {
+		return nil, err
+	}
 
 	endpointsListOptions := &client.ListOptions{Namespace: namespace}
 	endpointsListOptions.MatchingLabels(map[string]string{"app": appName + "-svc"})
+	endpointsList, err := m.Cluster.GetEndpoints(endpointsListOptions, clusterName)
+	if err != nil {
+		return nil, err
+	}
 
-	for _, cluster := range clusters {
-		podList := &corev1.PodList{}
-		err := cluster.Client.List(ctx, listOptions, podList)
-		if err != nil {
-			if apierrors.IsNotFound(err) {
-				continue
-			}
-			return nil, err
+	for _, pod := range podList {
+		apiPod := &model.Pod{
+			Name:         pod.GetName(),
+			Namespace:    pod.Namespace,
+			ClusterCode:  pod.ClusterName,
+			Annotations:  pod.GetAnnotations(),
+			HostIP:       pod.Status.HostIP,
+			Group:        pod.GetLabels()["sym-group"],
+			PodIP:        pod.Status.PodIP,
+			Phase:        pod.Status.Phase,
+			ImageVersion: pod.GetAnnotations()["buildNumber_0"],
+			CommitID:     pod.GetAnnotations()["gitCommit_0"],
+			Containers:   nil,
+			Labels:       pod.GetLabels(),
 		}
-		// look up endpoint
-		endpointList := &corev1.EndpointsList{}
-		err = cluster.Client.List(ctx, endpointsListOptions, endpointList)
-		if err != nil {
-			if apierrors.IsNotFound(err) {
-				continue
-			}
-			return nil, err
+
+		if pod.Status.StartTime != nil {
+			apiPod.StartTime = formatTime(pod.Status.StartTime.String())
 		}
 
-		for _, pod := range podList.Items {
-			apiPod := &model.Pod{
-				Name:         pod.GetName(),
-				Namespace:    pod.Namespace,
-				ClusterCode:  cluster.GetName(),
-				Annotations:  pod.GetAnnotations(),
-				HostIP:       pod.Status.HostIP,
-				Group:        pod.GetLabels()["sym-group"],
-				PodIP:        pod.Status.PodIP,
-				Phase:        pod.Status.Phase,
-				ImageVersion: pod.GetAnnotations()["buildNumber_0"],
-				CommitID:     pod.GetAnnotations()["gitCommit_0"],
-				Containers:   nil,
-				Labels:       pod.GetLabels(),
-			}
-
-			if pod.Status.StartTime != nil {
-				apiPod.StartTime = formatTime(pod.Status.StartTime.String())
-			}
-
-			apiPod.Endpoints = false
-			for _, ep := range endpointList.Items {
-				for _, ss := range ep.Subsets {
-					for _, addr := range ss.Addresses {
-						if addr.TargetRef.Name == apiPod.Name {
-							apiPod.Endpoints = true
-							break
-						}
+		apiPod.Endpoints = false
+		for _, ep := range endpointsList {
+			for _, ss := range ep.Subsets {
+				for _, addr := range ss.Addresses {
+					if addr.TargetRef.Name == apiPod.Name {
+						apiPod.Endpoints = true
+						break
 					}
 				}
 			}
-
-			for _, containerStatus := range pod.Status.ContainerStatuses {
-				apiPod.RestartCount += containerStatus.RestartCount
-				apiPod.Containers = append(apiPod.Containers, &model.ContainerStatus{
-					Name:         containerStatus.Name,
-					Ready:        containerStatus.Ready,
-					RestartCount: containerStatus.RestartCount,
-					Image:        containerStatus.Image,
-					ContainerID:  containerStatus.ContainerID,
-					LastState:    containerStatus.LastTerminationState.Terminated,
-				})
-				if containerStatus.LastTerminationState.Terminated != nil {
-					apiPod.HasLastState = true
-				}
-			}
-			switch apiPod.Group {
-			case "blue":
-				bluePods = append(bluePods, apiPod)
-			case "green":
-				greenPods = append(greenPods, apiPod)
-			case "canary":
-				canaryPods = append(canaryPods, apiPod)
-			}
 		}
 
-		sort.Slice(bluePods, func(i, j int) bool {
-			return bluePods[i].Name < bluePods[j].Name
-		})
-		sort.Slice(greenPods, func(i, j int) bool {
-			return greenPods[i].Name < greenPods[j].Name
-		})
-		sort.Slice(canaryPods, func(i, j int) bool {
-			return canaryPods[i].Name < canaryPods[j].Name
-		})
+		for _, containerStatus := range pod.Status.ContainerStatuses {
+			apiPod.RestartCount += containerStatus.RestartCount
+			apiPod.Containers = append(apiPod.Containers, &model.ContainerStatus{
+				Name:         containerStatus.Name,
+				Ready:        containerStatus.Ready,
+				RestartCount: containerStatus.RestartCount,
+				Image:        containerStatus.Image,
+				ContainerID:  containerStatus.ContainerID,
+				LastState:    containerStatus.LastTerminationState.Terminated,
+			})
+			if containerStatus.LastTerminationState.Terminated != nil {
+				apiPod.HasLastState = true
+			}
+		}
+		switch apiPod.Group {
+		case "blue":
+			bluePods = append(bluePods, apiPod)
+		case "green":
+			greenPods = append(greenPods, apiPod)
+		case "canary":
+			canaryPods = append(canaryPods, apiPod)
+		}
 	}
+
+	sort.Slice(bluePods, func(i, j int) bool {
+		return bluePods[i].Name < bluePods[j].Name
+	})
+	sort.Slice(greenPods, func(i, j int) bool {
+		return greenPods[i].Name < greenPods[j].Name
+	})
+	sort.Slice(canaryPods, func(i, j int) bool {
+		return canaryPods[i].Name < canaryPods[j].Name
+	})
+
 	result["blueGroup"] = bluePods
 	result["greenGroup"] = greenPods
 	result["canaryGroup"] = canaryPods
