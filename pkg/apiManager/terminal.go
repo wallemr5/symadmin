@@ -511,18 +511,16 @@ func (handler *streamHandler) Write(p []byte) (size int, err error) {
 // ReadLoop ...
 func (ws *WsConnection) ReadLoop() {
 	for {
-		select {
-		case <-ws.closeChan:
-			ws.Close()
-			return
-		default:
-			msgType, data, err := ws.conn.ReadMessage()
-			if err != nil {
-				klog.Errorf("readloop error: %v", err)
+		msgType, data, err := ws.conn.ReadMessage()
+		if err != nil {
+			if _, ok := err.(*websocket.CloseError); ok {
+				klog.Info("websocket closed")
 				break
 			}
-			ws.inChan <- &WsMessage{msgType, data}
+			klog.Errorf("readloop error: %v", err)
+			break
 		}
+		ws.inChan <- &WsMessage{msgType, data}
 	}
 }
 
