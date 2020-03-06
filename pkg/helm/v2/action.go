@@ -335,6 +335,13 @@ func ApplyRelease(rlsName, chartUrlName, specChartVersion string, chartPackage [
 		rlsErr     error
 	)
 
+	if specChartVersion == "" && len(chartPackage) > 0 {
+		c, err := chartutil.LoadArchive(bytes.NewReader(chartPackage))
+		if err == nil {
+			specChartVersion = c.GetMetadata().GetVersion()
+		}
+	}
+
 	// If the release need to apply is nil, we create this release directly.
 	if runningRls == nil {
 		rep, err := CreateRelease(rlsName, chartUrlName, specChartVersion, chartPackage, hClient, env, namespace, helm.ValueOverrides(vaByte))
@@ -346,11 +353,11 @@ func ApplyRelease(rlsName, chartUrlName, specChartVersion string, chartPackage [
 	} else {
 		// If the release need to apply has been passed here, it is necessary to compare it with the running release.
 		var isDifferent int
-		runningVersion := runningRls.GetChart().GetMetadata().GetVersion()
+
 		if specChartVersion != "" {
-			klog.V(3).Infof("Release[%s], runningVersion %s => specChartVersion %s", rlsName, runningVersion, specChartVersion)
+			runningVersion := runningRls.GetChart().GetMetadata().GetVersion()
 			if strings.Compare(specChartVersion, runningVersion) != 0 {
-				klog.V(3).Infof("Release[%s] chart version is changed", rlsName)
+				klog.V(3).Infof("Release[%s] chart version will changed, runningVersion %s => specChartVersion %s", rlsName, runningVersion, specChartVersion)
 				isDifferent++
 			}
 		}
@@ -364,7 +371,7 @@ func ApplyRelease(rlsName, chartUrlName, specChartVersion string, chartPackage [
 
 			isEquivalent := equality.Semantic.DeepEqual(string(vaByte), runningRaw)
 			if isEquivalent {
-				klog.V(4).Infof("Release[%s]'s running raw and spec raw are equivalent, there is no need to create or update it.", rlsName)
+				klog.V(5).Infof("Release[%s]'s running raw and spec raw not changed, ignore", rlsName)
 				return nil, nil
 			} else {
 				isDifferent++

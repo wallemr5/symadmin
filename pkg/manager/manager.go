@@ -41,6 +41,7 @@ type ManagerOption struct {
 	LeaderElectionNamespace string
 	EnableLeaderElection    bool
 	GinLogEnabled           bool
+	GinLogSkipPath          []string
 	PprofEnabled            bool
 	MasterEnabled           bool
 	WorkerEnabled           bool
@@ -65,6 +66,7 @@ func DefaultManagerOption() *ManagerOption {
 		EnableLeaderElection:    true,
 		LeaderElectionNamespace: "sym-admin",
 		GinLogEnabled:           true,
+		GinLogSkipPath:          []string{"/ready", "/live"},
 		PprofEnabled:            true,
 		MasterEnabled:           false,
 		WorkerEnabled:           false,
@@ -78,6 +80,7 @@ func NewDksManager(cli k8smanager.MasterClient, opt *ManagerOption, componentNam
 	routerOptions := &router.Options{
 		GinLogEnabled:    opt.GinLogEnabled,
 		MetricsEnabled:   true,
+		GinLogSkipPath:   opt.GinLogSkipPath,
 		PprofEnabled:     opt.PprofEnabled,
 		Addr:             opt.HTTPAddr,
 		MetricsPath:      "metrics",

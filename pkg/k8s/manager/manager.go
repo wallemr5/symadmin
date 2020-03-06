@@ -318,8 +318,7 @@ func (m *ClusterManager) preStart() error {
 }
 
 func (m *ClusterManager) cluterCheck() {
-
-	klog.V(4).Info("cluster configmap check.")
+	klog.V(5).Info("cluster configmap check.")
 	configmaps, err := m.getClusterConfigmap()
 	if err != nil {
 		klog.Errorf("unable to get cluster configmap err: %v", err)
