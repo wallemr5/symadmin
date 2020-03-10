@@ -222,15 +222,15 @@ func (r *AdvDeploymentReconciler) Reconcile(req ctrl.Request) (ctrl.Result, erro
 			return reconcile.Result{}, nil
 		}
 
-		hasModifiedRls, err := r.ApplyReleases(ctx, advDeploy)
+		_, err := r.ApplyReleases(ctx, advDeploy)
 		if err != nil {
 			r.recorder.Event(advDeploy, corev1.EventTypeWarning, "Apply releases failed", err.Error())
 			logger.Error(err, "failed to apply releases")
 		}
 
-		if hasModifiedRls {
-			return reconcile.Result{}, err
-		}
+		//if hasModifiedRls {
+		//	return reconcile.Result{}, err
+		//}
 	} else {
 		klog.Errorf("The deploy type %s don't be supported yet.", advDeploy.Name)
 	}
