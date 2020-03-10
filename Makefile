@@ -108,6 +108,9 @@ helm-master-worker:
 helm-worker:
 	helm upgrade --install sym-ctl --namespace sym-admin --set image.tag=${VERSION},image.worker=true,image.master=false ./install/Kubernetes/helm/controller
 
+helm-api:
+	helm upgrade --install sym-api --namespace sym-admin --set image.tag=${VERSION} ./install/Kubernetes/helm/api
+
 # find or download controller-gen
 # download controller-gen if necessary
 controller-gen:
