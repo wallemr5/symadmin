@@ -287,7 +287,7 @@ func (m *APIManager) getPodListByAppName(clusterName, namespace, appName, group,
 		apiPod := &model.Pod{
 			Name:         pod.GetName(),
 			Namespace:    pod.Namespace,
-			ClusterCode:  pod.ClusterName,
+			ClusterCode:  pod.GetLabels()["sym-cluster-info"],
 			Annotations:  pod.GetAnnotations(),
 			HostIP:       pod.Status.HostIP,
 			Group:        pod.GetLabels()["sym-group"],
