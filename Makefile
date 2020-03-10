@@ -29,7 +29,7 @@ all: manager
 
 # Run tests
 test: set-goproxy fmt vet
-	go test -race -cover ./...
+	go test $(go list ./... | grep -v /vendor/) -v -coverprofile .testCoverage.txt
 
 
 # Build manager binary
