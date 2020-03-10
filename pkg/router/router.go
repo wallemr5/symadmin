@@ -146,7 +146,7 @@ func (r *Router) Start(stopCh <-chan struct{}) error {
 		Addr:         r.Opt.Addr,
 		Handler:      warpHandler,
 		ReadTimeout:  15 * time.Second,
-		WriteTimeout: 15 * time.Second,
+		WriteTimeout: 35 * time.Second,
 	}
 
 	if r.Opt.CertFilePath != "" && r.Opt.KeyFilePath != "" {
