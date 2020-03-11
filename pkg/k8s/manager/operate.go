@@ -83,7 +83,8 @@ func (m *ClusterManager) GetPods(opts *client.ListOptions, clusterNames ...strin
 			}
 			return nil, err
 		}
-		for _, pod := range podList.Items {
+		for _, value := range podList.Items {
+			pod := value
 			result = append(result, &pod)
 		}
 	}
@@ -105,7 +106,8 @@ func (m *ClusterManager) GetNodes(opts *client.ListOptions, clusterNames ...stri
 			}
 			return nil, err
 		}
-		for _, node := range nodeList.Items {
+		for _, value := range nodeList.Items {
+			node := value
 			result = append(result, &node)
 		}
 	}
@@ -127,7 +129,8 @@ func (m *ClusterManager) GetDeployment(opts *client.ListOptions, clusterNames ..
 			}
 			return nil, err
 		}
-		for _, deploy := range deployList.Items {
+		for _, value := range deployList.Items {
+			deploy := value
 			result = append(result, &deploy)
 		}
 	}
@@ -149,7 +152,8 @@ func (m *ClusterManager) GetService(opts *client.ListOptions, clusterNames ...st
 			}
 			return nil, err
 		}
-		for _, service := range serviceList.Items {
+		for _, value := range serviceList.Items {
+			service := value
 			result = append(result, &service)
 		}
 	}
@@ -171,7 +175,8 @@ func (m *ClusterManager) GetEndpoints(opts *client.ListOptions, clusterNames ...
 			}
 			return nil, err
 		}
-		for _, endpoints := range endpointsList.Items {
+		for _, value := range endpointsList.Items {
+			endpoints := value
 			result = append(result, &endpoints)
 		}
 	}
@@ -193,7 +198,8 @@ func (m *ClusterManager) GetEvent(opts *client.ListOptions, clusterNames ...stri
 			}
 			return nil, err
 		}
-		for _, event := range eventList.Items {
+		for _, value := range eventList.Items {
+			event := value
 			result = append(result, &event)
 		}
 	}
@@ -215,7 +221,7 @@ func (m *ClusterManager) DeletePods(opts *client.ListOptions, clusterNames ...st
 			return err
 		}
 		for _, pod := range podList.Items {
-			err = cluster.Client.Delete(ctx, &pod)
+			err = cluster.Client.Delete(ctx, pod.DeepCopyObject())
 			if err != nil {
 				klog.Errorf("delete pod error: %v", err)
 			}
