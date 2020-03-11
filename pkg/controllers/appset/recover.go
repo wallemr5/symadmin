@@ -50,7 +50,7 @@ func (r *AppSetReconciler) Recover(ctx context.Context, req customctrl.CustomReq
 func (r *AppSetReconciler) buildAppSet(ctx context.Context, req customctrl.CustomRequest, app *workloadv1beta1.AppSet) (isCreate bool, err error) {
 	app = &workloadv1beta1.AppSet{}
 	err = r.GetClient().Get(ctx, req.NamespacedName, app)
-	if err != nil && !apierrors.IsNotFound(err) {
+	if err != nil {
 		if apierrors.IsNotFound(err) {
 			isCreate = true
 		} else {
