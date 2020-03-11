@@ -531,7 +531,6 @@ func (ws *WsConnection) ReadLoop() {
 func (ws *WsConnection) WriteLoop() {
 Loop:
 	for {
-	Select:
 		select {
 		case msg := <-ws.outChan:
 			if err := ws.conn.WriteMessage(msg.MessageType, msg.Data); err != nil {
@@ -540,7 +539,7 @@ Loop:
 			}
 		case <-ws.closeChan:
 			ws.Close()
-			break Select
+			break Loop
 		}
 	}
 
