@@ -1,0 +1,218 @@
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: comsumer-config
+  labels:
+    app: comsumer
+data:
+  log.yml: |
+    level: "debug"
+    development: true
+    disableCaller: true
+    disableStacktrace: true
+    sampling:
+    encoding: "console"
+
+    # encoder
+    encoderConfig:
+      messageKey: "message"
+      levelKey: "level"
+      timeKey: "time"
+      nameKey: "logger"
+      callerKey: "caller"
+      stacktraceKey: "stacktrace"
+      lineEnding: ""
+      levelEncoder: "capitalColor"
+      timeEncoder: "iso8601"
+      durationEncoder: "seconds"
+      callerEncoder: "short"
+      nameEncoder: ""
+
+    outputPaths:
+      - "stderr"
+    errorOutputPaths:
+      - "stderr"
+    initialFields:
+  client.yml: |
+    # dubbo client yaml configure file
+    check: true
+    # client
+    request_timeout : "3s"
+    # connect timeout
+    connect_timeout : "3s"
+
+    # application config
+    application:
+      organization : "ikurento.com"
+      name  : "BDTService"
+      module : "dubbogo user-info client"
+      version : "0.0.1"
+      owner : "ZX"
+      environment : "release"
+
+    references:
+      "UserProvider":
+        # 可以指定多个registry，使用逗号隔开;不指定默认向所有注册中心注册
+        interface : "com.ikurento.user.UserProvider"
+        cluster: "failover"
+        url:  "dubbo://provider:8888"
+        methods :
+          - name: "GetUser"
+            retries: 3
+
+    protocol_conf:
+      dubbo:
+        reconnect_interval: 0
+        connection_number: 2
+        heartbeat_period: "5s"
+        session_timeout: "20s"
+        pool_size: 64
+        pool_ttl: 600
+        getty_session_param:
+          compress_encoding: false
+          tcp_no_delay: true
+          tcp_keep_alive: true
+          keep_alive_period: "120s"
+          tcp_r_buf_size: 262144
+          tcp_w_buf_size: 65536
+          pkg_rq_size: 1024
+          pkg_wq_size: 512
+          tcp_read_timeout: "1s"
+          tcp_write_timeout: "5s"
+          wait_timeout: "1s"
+          max_msg_len: 10240
+          session_name: "client"
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: comsumer-v0.0.1
+  labels:
+    app: comsumer
+    version: v0.0.1
+spec:
+  replicas: 1
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxUnavailable: 25%
+      maxSurge: 25%
+  selector:
+    matchLabels:
+      app: comsumer
+      version: v0.0.1
+  template:
+    metadata:
+      labels:
+        app: comsumer
+        version: v0.0.1
+    spec:
+      volumes:
+        - name: config
+          configMap:
+            name: comsumer-config
+            defaultMode: 420
+      containers:
+        - name: comsumer
+          image: "registry.cn-hangzhou.aliyuncs.com/dmall/consumer:v0.0.1"
+          imagePullPolicy: Always
+#          imagePullPolicy: IfNotPresent
+          volumeMounts:
+            - name: config
+              mountPath: "/config"
+          ports:
+            - name: http
+              containerPort: 8080
+              protocol: TCP
+          env:
+            - name: POD_NAME
+              valueFrom:
+                fieldRef:
+                  apiVersion: v1
+                  fieldPath: metadata.name
+            - name: POD_NAMESPACE
+              valueFrom:
+                fieldRef:
+                  apiVersion: v1
+                  fieldPath: metadata.namespace
+            - name: INSTANCE_IP
+              valueFrom:
+                fieldRef:
+                  apiVersion: v1
+                  fieldPath: status.podIP
+            - name: SERVICE_ACCOUNT
+              valueFrom:
+                fieldRef:
+                  apiVersion: v1
+                  fieldPath: spec.serviceAccountName
+            - name: APP_LOG_CONF_FILE
+              value: "/config/log.yml"
+            - name: CONF_CONSUMER_FILE_PATH
+              value: "/config/client.yml"
+          livenessProbe:
+            httpGet:
+              path: /live
+              port: http
+            initialDelaySeconds: 5
+            periodSeconds: 30
+          readinessProbe:
+            httpGet:
+              path: /ready
+              port: http
+            initialDelaySeconds: 5
+            periodSeconds: 30
+          resources:
+            limits:
+              cpu: 500m
+              memory: 512Mi
+            requests:
+              cpu: 100m
+              memory: 256Mi
+      affinity:
+        podAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+            - labelSelector:
+                matchExpressions:
+                  - key: app
+                    operator: In
+                    values:
+                      - provider
+              topologyKey: "kubernetes.io/hostname"
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: comsumer
+  labels:
+    app: comsumer
+spec:
+  type: ClusterIP
+  ports:
+    - port: 80
+      targetPort: http
+      protocol: TCP
+      name: http-gin
+  selector:
+    app: comsumer
+---
+apiVersion: extensions/v1beta1
+kind: Ingress
+metadata:
+  name: comsumer-ingress
+  labels:
+    app: comsumer
+  annotations:
+    kubernetes.io/ingress.class: traefik
+
+spec:
+  rules:
+    - host: td.istio.dmall.com
+      http:
+        paths:
+          - path: /
+            backend:
+              serviceName: comsumer
+              servicePort: http-gin
+
