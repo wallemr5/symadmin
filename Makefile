@@ -28,8 +28,9 @@ endif
 all: manager
 
 # Run tests
-test: generate fmt vet manifests
-	go test ./... -coverprofile cover.out
+test: set-goproxy fmt vet
+	go test -race -cover ./...
+
 
 # Build manager binary
 manager: manager-controller manager-api
@@ -56,6 +57,10 @@ deploy: manifests
 # Generate manifests e.g. CRD, RBAC etc.
 manifests: controller-gen
 	$(CONTROLLER_GEN) $(CRD_OPTIONS) rbac:roleName=manager-role webhook paths="./..." output:crd:artifacts:config=config/crd/bases
+
+# Speed up Go module downloads in CI
+set-goproxy:
+	go env -w GOPROXY=https://goproxy.cn,direct
 
 # Run go fmt against code
 fmt:
@@ -102,6 +107,9 @@ helm-master-worker:
 
 helm-worker:
 	helm upgrade --install sym-ctl --namespace sym-admin --set image.tag=${VERSION},image.worker=true,image.master=false ./install/Kubernetes/helm/controller
+
+helm-api:
+	helm upgrade --install sym-api --namespace sym-admin --set image.tag=${VERSION} ./install/Kubernetes/helm/api
 
 # find or download controller-gen
 # download controller-gen if necessary

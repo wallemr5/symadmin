@@ -12,15 +12,13 @@ import (
 func (m *APIManager) GetClusterResource(c *gin.Context) {
 	clusterName := c.Param("name")
 	appName := c.Param("appName")
-	clusters := m.K8sMgr.GetAll(clusterName)
 	namespace := c.Param("namespace")
 	ldcLabel := c.DefaultQuery("ldcLabel", "")
 	group := c.DefaultQuery("group", "")
 	zone := c.DefaultQuery("symZone", "")
 
-	deployments, err := getDeployments(clusters, namespace, appName, group, ldcLabel, zone)
+	deployments, err := m.getDeployments(clusterName, namespace, appName, group, zone, ldcLabel)
 	if err != nil {
-		klog.Errorf("failed to get deployments: %v", err)
 		c.IndentedJSON(http.StatusBadRequest, gin.H{
 			"success":   false,
 			"message":   err.Error(),
@@ -28,7 +26,8 @@ func (m *APIManager) GetClusterResource(c *gin.Context) {
 		})
 		return
 	}
-	pods, err := getPodListByAppName(clusters, appName, group, ldcLabel, namespace, zone)
+
+	pods, err := m.getPodListByAppName(clusterName, namespace, appName, group, zone, ldcLabel)
 	if err != nil {
 		klog.Error(err, "failed to get pods")
 		c.IndentedJSON(http.StatusBadRequest, gin.H{
