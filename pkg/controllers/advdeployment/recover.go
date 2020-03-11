@@ -59,11 +59,12 @@ func (r *AdvDeploymentReconciler) buildAdvDeployment(req reconcile.Request, appI
 
 	err = r.Client.Get(context.TODO(), req.NamespacedName, adv)
 	if err != nil && apierrors.IsNotFound(err) {
-		klog.Errorf("Recover get AdvDeployment err:%s", err.Error())
-		return false, err
-	}
-	if err == nil {
-		isCreate = true
+		if apierrors.IsNotFound(err) {
+			isCreate = true
+		} else {
+			klog.Errorf("Recover get AdvDeployment err:%s", err.Error())
+			return false, err
+		}
 	}
 
 	if isCreate {
