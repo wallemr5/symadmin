@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"io"
 	"net/http"
 	"strconv"
 	"strings"
@@ -91,6 +92,7 @@ func (m *APIManager) GetTerminal(c *gin.Context) {
 		AbortHTTPError(c, WebsocketError, "", err)
 		return
 	}
+	defer ws.conn.Close()
 
 	err = startProcess(cluster, namespace, podName, containerName,
 		cmd, isStdin, isStdout, isStderr, tty, once, ws)
@@ -454,7 +456,7 @@ func InitWebsocket(resp http.ResponseWriter, req *http.Request) (ws *WsConnectio
 	go ws.ReadLoop()
 	go ws.WriteLoop()
 
-	return
+	return ws, nil
 }
 
 // Next ...
@@ -466,7 +468,7 @@ func (handler *streamHandler) Next() *remotecommand.TerminalSize {
 // Read ...
 func (handler *streamHandler) Read(p []byte) (size int, err error) {
 	if handler.ws.isClosed {
-		return 0, err
+		return 0, io.EOF
 	}
 	msg, err := handler.ws.Read()
 	if err != nil {
@@ -475,6 +477,7 @@ func (handler *streamHandler) Read(p []byte) (size int, err error) {
 	}
 
 	if msg == nil {
+		handler.ws.Close()
 		return 0, err
 	}
 
