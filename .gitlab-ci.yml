@@ -1,0 +1,34 @@
+image: golang:1.13.6
+
+variables:
+  REPO_NAME: gitlab.dmall.com/arch/sym-admin
+
+# The problem is that to be able to use go get, one needs to put
+# the repository in the $GOPATH. So for example if your gitlab domain
+# is gitlab.com, and that your repository is namespace/project, and
+# the default GOPATH being /go, then you'd need to have your
+# repository in /go/src/gitlab.com/namespace/project
+# Thus, making a symbolic link corrects this.
+before_script:
+  - cd $CI_PROJECT_DIR
+  - go env -w GO111MODULE=on
+
+stages:
+  - test
+  # - build
+
+test:
+  stage: test
+  script:
+    - make test
+
+# build-sym-api:
+#   stage: build
+#   variables:
+#     IMAGE: registry.cn-hangzhou.aliyuncs.com/r2d2
+#   script:
+#     - VERSION=${CI_COMMIT_TAG#"v"}
+#     - make docker-push-api
+#   only:
+#     - /^v\d+.\d+.\d+/
+

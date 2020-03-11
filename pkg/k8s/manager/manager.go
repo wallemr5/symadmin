@@ -207,6 +207,7 @@ func (m *ClusterManager) Add(cluster *Cluster) error {
 	return nil
 }
 
+// GetClusterIndex ...
 func (m *ClusterManager) GetClusterIndex(name string) (int, bool) {
 	for i, r := range m.clusters {
 		if r.Name == name {
@@ -239,7 +240,7 @@ func (m *ClusterManager) Delete(name string) error {
 	clusters := m.clusters
 	clusters = append(clusters[:index], clusters[index+1:]...)
 	m.clusters = clusters
-	klog.Infof("cluster:%s for the cluster %s has been deleted.", name)
+	klog.Infof("cluster: the cluster %s has been deleted.", name)
 	return nil
 }
 

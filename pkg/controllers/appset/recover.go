@@ -11,6 +11,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 )
 
+// Recover ...
 func (r *AppSetReconciler) Recover(ctx context.Context, req customctrl.CustomRequest) (reconcile.Result, error) {
 
 	app := &workloadv1beta1.AppSet{}
@@ -22,7 +23,7 @@ func (r *AppSetReconciler) Recover(ctx context.Context, req customctrl.CustomReq
 	if isCreate {
 		err := r.Client.Create(context.TODO(), app)
 		if err != nil {
-			klog.Error("Create AppSet failed:%s", err.Error())
+			klog.Errorf("Create AppSet failed: %s", err.Error())
 		}
 		return reconcile.Result{}, err
 	}

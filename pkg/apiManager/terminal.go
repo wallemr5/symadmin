@@ -95,8 +95,8 @@ func (m *APIManager) GetTerminal(c *gin.Context) {
 	err = startProcess(cluster, namespace, podName, containerName,
 		cmd, isStdin, isStdout, isStderr, tty, once, ws)
 	if err != nil {
-		klog.Errorf("error in startProcess: %v", err)
-		AbortHTTPError(c, RequestK8sExecError, "", err)
+		ws.Write(websocket.BinaryMessage, []byte(err.Error()+". "))
+		ws.closeChan <- 0
 	}
 }
 
@@ -465,9 +465,16 @@ func (handler *streamHandler) Next() *remotecommand.TerminalSize {
 
 // Read ...
 func (handler *streamHandler) Read(p []byte) (size int, err error) {
+	if handler.ws.isClosed {
+		return 0, err
+	}
 	msg, err := handler.ws.Read()
 	if err != nil {
 		handler.ws.Close()
+		return 0, err
+	}
+
+	if msg == nil {
 		return 0, err
 	}
 
@@ -506,6 +513,10 @@ func (ws *WsConnection) ReadLoop() {
 	for {
 		msgType, data, err := ws.conn.ReadMessage()
 		if err != nil {
+			if _, ok := err.(*websocket.CloseError); ok {
+				klog.Info("websocket closed")
+				break
+			}
 			klog.Errorf("readloop error: %v", err)
 			break
 		}
@@ -559,7 +570,6 @@ func (ws *WsConnection) Close() {
 	defer ws.mutex.Unlock()
 	if !ws.isClosed {
 		ws.isClosed = true
-		ws.closeChan <- 0
 		close(ws.closeChan)
 		ws.conn.Close()
 	}
