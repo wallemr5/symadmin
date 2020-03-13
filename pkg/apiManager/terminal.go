@@ -533,6 +533,8 @@ Loop:
 	for {
 		select {
 		case msg := <-ws.outChan:
+			// remove invalid UTF-8 characters
+			msg.Data = []byte(strings.ToValidUTF8(string(msg.Data), ""))
 			if err := ws.conn.WriteMessage(msg.MessageType, msg.Data); err != nil {
 				klog.Errorf("error in write websocket message: %v", err)
 				break Loop
