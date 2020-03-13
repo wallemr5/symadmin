@@ -13,11 +13,13 @@ import (
 	"k8s.io/apimachinery/pkg/api/equality"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	"k8s.io/client-go/util/retry"
 	"k8s.io/klog"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 )
 
 // GetStatefulSetByLabels Finding all statefuls with a label
@@ -95,13 +97,36 @@ func (r *AdvDeploymentReconciler) GetServiceByByLabels(ctx context.Context, advD
 	}
 }
 
+func IsUnUseObject(kind string, obj Object, ownerRes []string) bool {
+	name := GetFormattedName(kind, obj)
+	for i := range ownerRes {
+		if name == ownerRes[i] {
+			return false
+		}
+	}
+
+	return true
+}
+
 // RecalculateStatus According to the status of running deployments, calculate the advDeployment's status
-func (r *AdvDeploymentReconciler) RecalculateStatus(ctx context.Context, advDeploy *workloadv1beta1.AdvDeployment) (*workloadv1beta1.AdvDeploymentAggrStatus, error) {
+func (r *AdvDeploymentReconciler) RecalculateStatus(ctx context.Context, advDeploy *workloadv1beta1.AdvDeployment, ownerRes []string) (*workloadv1beta1.AdvDeploymentAggrStatus, error) {
 	deploys, err := r.GetDeployListByByLabels(ctx, advDeploy)
 	if err != nil {
 		return nil, errors.Wrapf(err, "Find all relative deployments with application name [%s] has an error", advDeploy.Name)
 	}
 
+	svc, err := r.GetServiceByByLabels(ctx, advDeploy)
+	if err == nil {
+		if !metav1.IsControlledBy(svc, advDeploy) {
+			err = controllerutil.SetControllerReference(advDeploy, svc, r.Mgr.GetScheme())
+			if err == nil {
+				err := r.Client.Update(ctx, svc)
+				if err != nil {
+					klog.Errorf("name: %s Update svc err: %#v", advDeploy.Name, err)
+				}
+			}
+		}
+	}
 	var statefulSets []*appsv1.StatefulSet
 	if len(deploys) == 0 {
 		statefulSets, err = r.GetStatefulSetByLabels(ctx, advDeploy)
@@ -110,10 +135,25 @@ func (r *AdvDeploymentReconciler) RecalculateStatus(ctx context.Context, advDepl
 		}
 	}
 
+	unUseObject := make([]runtime.Object, 0)
 	status := &workloadv1beta1.AdvDeploymentAggrStatus{}
 	for _, deploy := range deploys {
-		podSetStatus := &workloadv1beta1.PodSetStatusInfo{}
+		if IsUnUseObject(DeploymentKind, deploy, ownerRes) {
+			unUseObject = append(unUseObject, deploy)
+			continue
+		}
 
+		if !metav1.IsControlledBy(deploy, advDeploy) {
+			err = controllerutil.SetControllerReference(advDeploy, deploy, r.Mgr.GetScheme())
+			if err == nil {
+				err := r.Client.Update(ctx, deploy)
+				if err != nil {
+					klog.Errorf("name: %s Update deploy: %s err: %#v", advDeploy.Name, deploy.Name, err)
+				}
+			}
+		}
+
+		podSetStatus := &workloadv1beta1.PodSetStatusInfo{}
 		podSetStatus.Name = deploy.Name
 		podSetStatus.Version = utils.FillImageVersion(advDeploy.Name, &deploy.Spec.Template.Spec)
 		podSetStatus.Available = deploy.Status.AvailableReplicas
@@ -131,8 +171,21 @@ func (r *AdvDeploymentReconciler) RecalculateStatus(ctx context.Context, advDepl
 	}
 
 	for _, set := range statefulSets {
-		podSetStatus := &workloadv1beta1.PodSetStatusInfo{}
+		if IsUnUseObject(StatefulSetKind, set, ownerRes) {
+			unUseObject = append(unUseObject, set)
+			continue
+		}
 
+		if !metav1.IsControlledBy(set, advDeploy) {
+			err = controllerutil.SetControllerReference(advDeploy, set, r.Mgr.GetScheme())
+			if err == nil {
+				err := r.Client.Update(ctx, set)
+				if err != nil {
+					klog.Errorf("name: %s Update set: %s err: %#v", advDeploy.Name, set.Name, err)
+				}
+			}
+		}
+		podSetStatus := &workloadv1beta1.PodSetStatusInfo{}
 		podSetStatus.Name = set.Name
 		podSetStatus.Version = utils.FillImageVersion(advDeploy.Name, &set.Spec.Template.Spec)
 		podSetStatus.Available = set.Status.ReadyReplicas
@@ -156,6 +209,17 @@ func (r *AdvDeploymentReconciler) RecalculateStatus(ctx context.Context, advDepl
 	if status.Desired == status.Available {
 		status.Status = "Running"
 	}
+
+	if status.Desired <= status.Available {
+		for _, unobj := range unUseObject {
+			err := r.Client.Delete(ctx, unobj)
+			if err != nil {
+				klog.Errorf("name: %s Delete obj: %s err: %#v", advDeploy.Name, unobj.GetObjectKind().GroupVersionKind().String(), err)
+			}
+		}
+	}
+
+	status.OwnerResource = ownerRes
 	return status, nil
 }
 

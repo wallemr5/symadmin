@@ -144,6 +144,27 @@ func GetWatchPredicateForAdvDeploymentSpec() predicate.Funcs {
 	}
 }
 
+func GetWatchPredicateForClusterSpec() predicate.Funcs {
+	return predicate.Funcs{
+		CreateFunc: func(e event.CreateEvent) bool {
+			return true
+		},
+		DeleteFunc: func(e event.DeleteEvent) bool {
+			return true
+		},
+		UpdateFunc: func(e event.UpdateEvent) bool {
+			oldObj := e.ObjectOld.(*workloadv1beta1.Cluster)
+			newObj := e.ObjectNew.(*workloadv1beta1.Cluster)
+			if !equality.Semantic.DeepEqual(oldObj.Spec, newObj.Spec) ||
+				oldObj.GetDeletionTimestamp() != newObj.GetDeletionTimestamp() ||
+				oldObj.GetGeneration() != newObj.GetGeneration() {
+				return true
+			}
+			return false
+		},
+	}
+}
+
 func GetWatchPredicateForAppetSpec() predicate.Funcs {
 	return predicate.Funcs{
 		CreateFunc: func(e event.CreateEvent) bool {
