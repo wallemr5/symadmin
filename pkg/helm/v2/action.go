@@ -219,7 +219,7 @@ func ListToReleasesMeta(list *rls.ListReleasesResponse) []*GetReleaseResponse {
 	return res
 }
 
-func getRequestedChart(rlsName, chartName, chartVersion string, chartPackage []byte, env *helmenv.EnvSettings) (requestedChart *chart.Chart, err error) {
+func GetRequestedChart(rlsName, chartName, chartVersion string, chartPackage []byte, env *helmenv.EnvSettings) (requestedChart *chart.Chart, err error) {
 	// If the request has a chart package sent by the user we install that
 	if chartPackage != nil && len(chartPackage) != 0 {
 		requestedChart, err = chartutil.LoadArchive(bytes.NewReader(chartPackage))
@@ -252,7 +252,7 @@ func getRequestedChart(rlsName, chartName, chartVersion string, chartPackage []b
 
 // UpgradeRelease upgrades a Helm release
 func UpgradeRelease(rlsName, chartName, chartVersion string, chartPackage []byte, hClient *Client, env *helmenv.EnvSettings, overrideValue []byte, reuseValues bool) (*rls.UpdateReleaseResponse, error) {
-	chartRequested, err := getRequestedChart(rlsName, chartName, chartVersion, chartPackage, env)
+	chartRequested, err := GetRequestedChart(rlsName, chartName, chartVersion, chartPackage, env)
 	if err != nil {
 		return nil, fmt.Errorf("loading chart has an error: %v", err)
 	}
@@ -279,7 +279,7 @@ func UpgradeReleaseWarp(rlsName string, chartPackage []byte, overrideValue []byt
 // CreateRelease creates a Helm release in chosen namespace
 func CreateRelease(rlsName, chartName, chartVersion string, chartPackage []byte,
 	hClient *Client, env *helmenv.EnvSettings, namespace string, overrideOpts ...helm.InstallOption) (*rls.InstallReleaseResponse, error) {
-	chartRequested, err := getRequestedChart(rlsName, chartName, chartVersion, chartPackage, env)
+	chartRequested, err := GetRequestedChart(rlsName, chartName, chartVersion, chartPackage, env)
 	if err != nil {
 		return nil, fmt.Errorf("error loading chart: %v", err)
 	}

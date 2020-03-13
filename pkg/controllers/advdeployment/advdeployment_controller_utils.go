@@ -81,7 +81,7 @@ func (r *AdvDeploymentReconciler) CleanAllReleases(advDeploy *workloadv1beta1.Ad
 func (r *AdvDeploymentReconciler) ApplyReleases(ctx context.Context, advDeploy *workloadv1beta1.AdvDeployment) (bool, error) {
 	hasModifiedRls := false
 	// Initialize a new helm client
-	hClient, err := helmv2.NewClientFromConfig(r.Cfg, r.KubeCli, "")
+	hClient, err := helmv2.NewClientFromConfig(r.Cfg, r.KubeCli, "k8s")
 	if err != nil {
 		klog.Errorf("Initializing a new helm clinet has an error: %+v", err)
 		return hasModifiedRls, err

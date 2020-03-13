@@ -22,12 +22,10 @@ import (
 
 	"github.com/go-logr/logr"
 	"github.com/gofrs/uuid"
-	"github.com/pkg/errors"
 	workloadv1beta1 "gitlab.dmall.com/arch/sym-admin/pkg/apis/workload/v1beta1"
 	helmv2 "gitlab.dmall.com/arch/sym-admin/pkg/helm/v2"
 	"gitlab.dmall.com/arch/sym-admin/pkg/helm/v2repo"
 	k8sclient "gitlab.dmall.com/arch/sym-admin/pkg/k8s/client"
-	"gitlab.dmall.com/arch/sym-admin/pkg/labels"
 	pkgmanager "gitlab.dmall.com/arch/sym-admin/pkg/manager"
 	"gitlab.dmall.com/arch/sym-admin/pkg/utils"
 	appsv1 "k8s.io/api/apps/v1"
@@ -53,7 +51,6 @@ const (
 // AdvDeploymentReconciler reconciles a AdvDeployment object
 type AdvDeploymentReconciler struct {
 	client.Client
-
 	Name      string
 	Log       logr.Logger
 	Mgr       manager.Manager
@@ -94,6 +91,13 @@ func Add(mgr manager.Manager, cMgr *pkgmanager.DksManager) error {
 	err = ctl.Watch(&source.Kind{Type: &workloadv1beta1.AdvDeployment{}}, &handler.EnqueueRequestForObject{}, utils.GetWatchPredicateForAdvDeploymentSpec())
 	if err != nil {
 		r.Log.Error(err, "Watching AdvDeployment has an error")
+		return err
+	}
+
+	// Watch for changes to Service for runtime controller
+	err = ctl.Watch(&source.Kind{Type: &corev1.Service{}}, utils.GetEnqueueRequestsFucs(), utils.GetWatchPredicateForNs(), utils.GetWatchPredicateForApp())
+	if err != nil {
+		r.Log.Error(err, "Watching Deployment has an error")
 		return err
 	}
 
@@ -177,66 +181,69 @@ func (r *AdvDeploymentReconciler) Reconcile(req ctrl.Request) (ctrl.Result, erro
 		it also mean that we have to delete all releases of this advDeploy immediately.
 	*/
 	if !advDeploy.ObjectMeta.DeletionTimestamp.IsZero() {
-		logger.Info("Delete all releases of an advDeploy", "advDeploy", advDeploy.Name)
-		if err := r.CleanAllReleases(advDeploy); err != nil {
-			logger.Error(err, "Can not remove the helm releases which are related with this AdvDeployment")
-			r.recorder.Event(advDeploy, corev1.EventTypeWarning, "Remove helm release failed", err.Error())
-			return reconcile.Result{}, errors.Wrap(err, "Can not remove the helm releases which are related with this AdvDeployment")
-		}
+		// logger.Info("Delete all releases of an advDeploy", "advDeploy", advDeploy.Name)
+		// if err := r.CleanAllReleases(advDeploy); err != nil {
+		// 	logger.Error(err, "Can not remove the helm releases which are related with this AdvDeployment")
+		// 	r.recorder.Event(advDeploy, corev1.EventTypeWarning, "Remove helm release failed", err.Error())
+		// 	return reconcile.Result{}, errors.Wrap(err, "Can not remove the helm releases which are related with this AdvDeployment")
+		// }
 
 		return reconcile.Result{}, r.RemoveFinalizers(ctx, req)
 	}
 
-	// If you found that its finalizer list is empty or nil, we must append sym-admin's finalizer into this list if the deletionTimeStamp is nil.
-	if !utils.ContainsString(advDeploy.ObjectMeta.Finalizers, labels.ControllerFinalizersName) {
-		// This list may be nil if sym-admin is not its owner.
-		if advDeploy.ObjectMeta.Finalizers == nil {
-			advDeploy.ObjectMeta.Finalizers = []string{}
-		}
-
-		advDeploy.ObjectMeta.Finalizers = append(advDeploy.ObjectMeta.Finalizers, labels.ControllerFinalizersName)
-		if err := r.Client.Update(ctx, advDeploy); err != nil {
-			klog.Errorf("failed to update AdvDeployment[%s] for appending a finalizer to it: %v", advDeploy.Name, err)
-			r.recorder.Event(advDeploy, corev1.EventTypeWarning, "Add finalizer failed", err.Error())
-			return reconcile.Result{}, errors.Wrap(err, "Can not add sym-admin's finalizer to AdvDeployment")
-		}
-
-		klog.V(3).Infof("Adding the finalizer to advDeploy[%s] successfully", advDeploy.Name)
-		return reconcile.Result{
-			Requeue:      true,
-			RequeueAfter: time.Second * 5,
-		}, nil
-	}
+	// // If you found that its finalizer list is empty or nil, we must append sym-admin's finalizer into this list if the deletionTimeStamp is nil.
+	// if !utils.ContainsString(advDeploy.ObjectMeta.Finalizers, labels.ControllerFinalizersName) {
+	// 	// This list may be nil if sym-admin is not its owner.
+	// 	if advDeploy.ObjectMeta.Finalizers == nil {
+	// 		advDeploy.ObjectMeta.Finalizers = []string{}
+	// 	}
+	//
+	// 	advDeploy.ObjectMeta.Finalizers = append(advDeploy.ObjectMeta.Finalizers, labels.ControllerFinalizersName)
+	// 	if err := r.Client.Update(ctx, advDeploy); err != nil {
+	// 		klog.Errorf("failed to update AdvDeployment[%s] for appending a finalizer to it: %v", advDeploy.Name, err)
+	// 		r.recorder.Event(advDeploy, corev1.EventTypeWarning, "Add finalizer failed", err.Error())
+	// 		return reconcile.Result{}, errors.Wrap(err, "Can not add sym-admin's finalizer to AdvDeployment")
+	// 	}
+	//
+	// 	klog.V(3).Infof("Adding the finalizer to advDeploy[%s] successfully", advDeploy.Name)
+	// 	return reconcile.Result{
+	// 		Requeue:      true,
+	// 		RequeueAfter: time.Second * 5,
+	// 	}, nil
+	// }
 
 	// Converge the releases
 	// So far the advDeployment is not deleted by others, we must keep it right.
-	if advDeploy.Spec.PodSpec.DeployType == "helm" {
-		if advDeploy.Spec.PodSpec.Chart == nil {
-			klog.Errorf("advDeploy [%s]'s chart is empty, can not reconcile it.", advDeploy.Name)
-			r.recorder.Event(advDeploy, corev1.EventTypeWarning, "Chart is empty", "chart is empty, can not reconcile it.")
-			return reconcile.Result{}, nil
-		}
-		if advDeploy.Spec.PodSpec.Chart.ChartUrl == nil && advDeploy.Spec.PodSpec.Chart.RawChart == nil {
-			klog.Errorf("advDeploy [%s]: neither chart's url nor raw exist, can not reconcile it.", advDeploy.Name)
-			r.recorder.Event(advDeploy, corev1.EventTypeWarning, "Chart data not neither empty", "neither chart's url nor raw exist, can not reconcile it.")
-			return reconcile.Result{}, nil
-		}
-
-		_, err := r.ApplyReleases(ctx, advDeploy)
-		if err != nil {
-			r.recorder.Event(advDeploy, corev1.EventTypeWarning, "Apply releases failed", err.Error())
-			logger.Error(err, "failed to apply releases")
-		}
-
-		//if hasModifiedRls {
-		//	return reconcile.Result{}, err
-		//}
-	} else {
+	if advDeploy.Spec.PodSpec.DeployType != "helm" {
 		klog.Errorf("The deploy type %s don't be supported yet.", advDeploy.Name)
+		return reconcile.Result{}, nil
+	}
+
+	if advDeploy.Spec.PodSpec.Chart == nil {
+		klog.Errorf("advDeploy [%s]'s chart is empty, can not reconcile it.", advDeploy.Name)
+		r.recorder.Event(advDeploy, corev1.EventTypeWarning, "Chart is empty", "chart is empty, can not reconcile it.")
+		return reconcile.Result{}, nil
+	}
+	if advDeploy.Spec.PodSpec.Chart.ChartUrl == nil && advDeploy.Spec.PodSpec.Chart.RawChart == nil {
+		klog.Errorf("advDeploy [%s]: neither chart's url nor raw exist, can not reconcile it.", advDeploy.Name)
+		r.recorder.Event(advDeploy, corev1.EventTypeWarning, "Chart data not neither empty", "neither chart's url nor raw exist, can not reconcile it.")
+		return reconcile.Result{}, nil
+	}
+
+	// _, err = r.ApplyReleases(ctx, advDeploy)
+	// if err != nil {
+	// 	r.recorder.Event(advDeploy, corev1.EventTypeWarning, "Apply releases failed", err.Error())
+	// 	logger.Error(err, "failed to apply releases")
+	// }
+
+	ownerRes, err := r.ApplyResources(ctx, advDeploy)
+	if err != nil {
+		r.recorder.Event(advDeploy, corev1.EventTypeWarning, "Apply releases failed", err.Error())
+		logger.Error(err, "failed to apply releases")
 	}
 
 	// We can update the status for the advDeployment without modification for any release.
-	aggregatedStatus, err := r.RecalculateStatus(ctx, advDeploy)
+	aggregatedStatus, err := r.RecalculateStatus(ctx, advDeploy, ownerRes)
 	if err != nil {
 		klog.Errorf("failed to recalculate the newest status of an advancement deployment [%s]: %v", advDeploy.Name, err)
 		r.recorder.Event(advDeploy, corev1.EventTypeWarning, "Aggregate status failed", err.Error())
