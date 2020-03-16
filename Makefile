@@ -10,11 +10,11 @@ CRD_OPTIONS ?= "crd:trivialVersions=true"
 # This repo's root import path (under GOPATH).
 ROOT := gitlab.dmall.com/arch/sym-admin
 
-GO_VERSION := 1.13.6
+GO_VERSION := 1.14
 ARCH     ?= $(shell go env GOARCH)
 BUILD_DATE = $(shell date +'%Y-%m-%dT%H:%M:%SZ')
 COMMIT    = $(shell git rev-parse --short HEAD)
-GOENV    := CGO_ENABLED=0 GOOS=$(shell uname -s | tr A-Z a-z) GOARCH=$(ARCH) GOPROXY=https://goproxy.cn,direct
+GOENV    := CGO_ENABLED=0 GOOS=$(shell uname -s | tr A-Z a-z) GOARCH=$(ARCH) GOPROXY=https://goproxy.io,direct
 #GO       := $(GOENV) go build -mod=vendor
 GO       := $(GOENV) go build
 
@@ -76,7 +76,7 @@ generate: controller-gen
 
 # Build the docker image
 docker-build:
-	docker run --rm -v "$$PWD":/go/src/${ROOT} -w /go/src/${ROOT} golang:${GO_VERSION} make build
+	docker run --rm -v "$$PWD":/go/src/${ROOT} -v ${GOPATH}/pkg/mod:/go/pkg/mod -w /go/src/${ROOT} golang:${GO_VERSION} make build
 
 build:
 	$(GO) -v -o bin/sym-admin-controller -ldflags "-s -w -X $(ROOT)/pkg/version.Release=$(VERSION) -X  $(ROOT)/pkg/version.Commit=$(COMMIT)   \
@@ -98,6 +98,10 @@ docker-push-api: docker-build
 docker-push-release: docker-build
 	docker build -t ${IMG_CTL}:${VERSION} -f ./install/Dockerfile-ctl .
 	docker push ${IMG_CTL}:${VERSION}
+
+push: docker-build
+	docker build -t registry.cn-hangzhou.aliyuncs.com/dmall/sym-admin-controller:v0.1.0  -f ./install/Dockerfile-ctl .
+	docker push registry.cn-hangzhou.aliyuncs.com/dmall/sym-admin-controller:v0.1.0
 
 helm-master:
 	helm upgrade --install sym-ctl --namespace sym-admin --set image.tag=${VERSION},image.worker=false,image.master=true ./install/Kubernetes/helm/controller
