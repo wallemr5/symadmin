@@ -1,5 +1,14 @@
 package apiManager
 
+// GetClusterDesc describing api /api/cluster/:name
+var GetClusterDesc = `
+Get cluster status:<br/>
+name: url param,the unique cluster name and all <br/>
+<br/>
+e.g. <br/>
+<a href="/api/cluster/all">/api/cluster/all</a><br/>
+`
+
 // GetClusterResourceDesc ...
 var GetClusterResourceDesc = `
 Get cluster resources, include pods,services and deployments.<br/>
