@@ -21,6 +21,7 @@ spec:
         app: {{ include "polar.name" . }}
     spec:
       hostNetwork: {{ .Values.hostNetwork }}
+      dnsPolicy: ClusterFirstWithHostNet
       terminationGracePeriodSeconds: 30
       {{- if .Values.priorityClassName }}
       priorityClassName: {{ .Values.priorityClassName | quote }}
@@ -44,7 +45,7 @@ spec:
               mountPath: "/polar.yml"
               subPath: polar.yml
             - name: weblog
-              mountPath: /web/logs
+              mountPath: /web
             - name: localtime
               mountPath: /etc/localtime
               readOnly: true
@@ -65,7 +66,7 @@ spec:
       volumes:
       - name: weblog
         hostPath:
-          path: /web/logs
+          path: /web
       - name: localtime
         hostPath:
           path: /etc/localtime
