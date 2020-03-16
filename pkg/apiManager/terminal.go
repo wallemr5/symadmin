@@ -7,10 +7,12 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"math/rand"
 	"net/http"
 	"strconv"
 	"strings"
 	"sync"
+	"time"
 
 	"github.com/gin-gonic/gin"
 	"github.com/gorilla/websocket"
@@ -21,6 +23,8 @@ import (
 	"k8s.io/client-go/tools/remotecommand"
 	"k8s.io/klog"
 )
+
+var wsMap sync.Map
 
 var wsUpgrader = websocket.Upgrader{
 	CheckOrigin: func(r *http.Request) bool {
@@ -36,6 +40,7 @@ type WsMessage struct {
 
 // WsConnection ...
 type WsConnection struct {
+	id        uint32
 	conn      *websocket.Conn
 	inChan    chan *WsMessage
 	outChan   chan *WsMessage
@@ -86,13 +91,14 @@ func (m *APIManager) GetTerminal(c *gin.Context) {
 		return
 	}
 
-	ws, err := InitWebsocket(c.Writer, c.Request)
+	rand.Seed(time.Now().UnixNano())
+	ws, err := InitWebsocket(c.Writer, c.Request, rand.Uint32())
 	if err != nil {
 		klog.Errorf("init websocket conn error: %+v", err)
 		AbortHTTPError(c, WebsocketError, "", err)
 		return
 	}
-	defer ws.conn.Close()
+	defer ws.Close()
 
 	err = startProcess(cluster, namespace, podName, containerName,
 		cmd, isStdin, isStdout, isStderr, tty, once, ws)
@@ -440,18 +446,21 @@ func RunCmdOnceInContainer(cluster *k8smanager.Cluster, namespace, pod, containe
 }
 
 // InitWebsocket ...
-func InitWebsocket(resp http.ResponseWriter, req *http.Request) (ws *WsConnection, err error) {
+func InitWebsocket(resp http.ResponseWriter, req *http.Request, id uint32) (ws *WsConnection, err error) {
 	conn, err := wsUpgrader.Upgrade(resp, req, nil)
 	if err != nil {
 		return nil, err
 	}
 	ws = &WsConnection{
+		id:        id,
 		conn:      conn,
 		inChan:    make(chan *WsMessage, 1000),
 		outChan:   make(chan *WsMessage, 1000),
 		closeChan: make(chan byte),
 		isClosed:  false,
 	}
+	wsMap.Store(id, &ws)
+	klog.Infof("The total number of current websocket connections is: %d", getWsMapCount())
 
 	go ws.ReadLoop()
 	go ws.WriteLoop()
@@ -518,6 +527,7 @@ func (ws *WsConnection) ReadLoop() {
 		if err != nil {
 			if _, ok := err.(*websocket.CloseError); ok {
 				klog.Info("websocket closed")
+				ws.Close()
 				break
 			}
 			klog.Errorf("readloop error: %v", err)
@@ -568,13 +578,24 @@ func (ws *WsConnection) Read() (msg *WsMessage, err error) {
 	return nil, nil
 }
 
+func getWsMapCount() int {
+	length := 0
+	wsMap.Range(func(_, _ interface{}) bool {
+		length++
+		return true
+	})
+	return length
+}
+
 // Close ...
 func (ws *WsConnection) Close() {
 	ws.mutex.Lock()
 	defer ws.mutex.Unlock()
+	wsMap.Delete(ws.id)
 	if !ws.isClosed {
 		ws.isClosed = true
 		close(ws.closeChan)
 		ws.conn.Close()
+		klog.Infof("The total number of current websocket connections is: %d", getWsMapCount())
 	}
 }
