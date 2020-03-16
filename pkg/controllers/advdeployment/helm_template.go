@@ -117,10 +117,6 @@ func ConvertToLabel(labels map[string]string) {
 }
 
 func ConvertToSvc(mgr manager.Manager, advDeploy *workloadv1beta1.AdvDeployment, obj *unstructured.Unstructured) (*corev1.Service, bool) {
-	if obj.GetKind() != ServiceKind {
-		return nil, false
-	}
-
 	var svc corev1.Service
 	err := mgr.GetScheme().Convert(obj, &svc, nil)
 	if err != nil {
@@ -132,10 +128,6 @@ func ConvertToSvc(mgr manager.Manager, advDeploy *workloadv1beta1.AdvDeployment,
 }
 
 func ConvertToDeployment(mgr manager.Manager, advDeploy *workloadv1beta1.AdvDeployment, obj *unstructured.Unstructured) (*appsv1.Deployment, bool) {
-	if obj.GetKind() != DeploymentKind {
-		return nil, false
-	}
-
 	var deploy appsv1.Deployment
 	err := mgr.GetScheme().Convert(obj, &deploy, nil)
 	if err != nil {
@@ -168,10 +160,6 @@ func ConvertToDeployment(mgr manager.Manager, advDeploy *workloadv1beta1.AdvDepl
 }
 
 func ConvertToStatefulSet(mgr manager.Manager, advDeploy *workloadv1beta1.AdvDeployment, obj *unstructured.Unstructured) (*appsv1.StatefulSet, bool) {
-	if obj.GetKind() != StatefulSetKind {
-		return nil, false
-	}
-
 	var sta appsv1.StatefulSet
 	err := mgr.GetScheme().Convert(obj, &sta, nil)
 	if err != nil {
@@ -214,34 +202,35 @@ func (r *AdvDeploymentReconciler) ApplyResources(ctx context.Context, advDeploy 
 
 	ownerRes := make([]string, 0)
 	for _, obj := range objects {
-		svc, ok := ConvertToSvc(r.Mgr, advDeploy, obj.UnstructuredObject())
-		if ok {
-			ownerRes = append(ownerRes, GetFormattedName(ServiceKind, svc))
-			err = Reconcile(r, svc, advDeploy, DesiredStatePresent)
-			if err != nil {
-				klog.Errorf("svc name: %s err: %v", svc.Name, err)
+		switch obj.Kind {
+		case ServiceKind:
+			svc, ok := ConvertToSvc(r.Mgr, advDeploy, obj.UnstructuredObject())
+			if ok {
+				ownerRes = append(ownerRes, GetFormattedName(ServiceKind, svc))
+				err = Reconcile(r, svc, advDeploy, DesiredStatePresent)
+				if err != nil {
+					klog.Errorf("svc name: %s err: %v", svc.Name, err)
+				}
 			}
-			continue
-		}
-
-		deploy, ok := ConvertToDeployment(r.Mgr, advDeploy, obj.UnstructuredObject())
-		if ok {
-			ownerRes = append(ownerRes, GetFormattedName(DeploymentKind, deploy))
-			err = Reconcile(r, deploy, advDeploy, DesiredStatePresent)
-			if err != nil {
-				klog.Errorf("deploy name: %s err: %v", deploy.Name, err)
+		case DeploymentKind:
+			deploy, ok := ConvertToDeployment(r.Mgr, advDeploy, obj.UnstructuredObject())
+			if ok {
+				ownerRes = append(ownerRes, GetFormattedName(DeploymentKind, deploy))
+				err = Reconcile(r, deploy, advDeploy, DesiredStatePresent)
+				if err != nil {
+					klog.Errorf("deploy name: %s err: %v", deploy.Name, err)
+				}
 			}
-			continue
-		}
-
-		sta, ok := ConvertToStatefulSet(r.Mgr, advDeploy, obj.UnstructuredObject())
-		if ok {
-			ownerRes = append(ownerRes, GetFormattedName(ServiceKind, sta))
-			err = Reconcile(r, sta, advDeploy, DesiredStatePresent)
-			if err != nil {
-				klog.Errorf("sta name: %s err: %v", deploy.Name, err)
+		case StatefulSetKind:
+			sta, ok := ConvertToStatefulSet(r.Mgr, advDeploy, obj.UnstructuredObject())
+			if ok {
+				ownerRes = append(ownerRes, GetFormattedName(ServiceKind, sta))
+				err = Reconcile(r, sta, advDeploy, DesiredStatePresent)
+				if err != nil {
+					klog.Errorf("sta name: %s err: %v", sta.Name, err)
+				}
 			}
-			continue
+		default:
 		}
 	}
 
