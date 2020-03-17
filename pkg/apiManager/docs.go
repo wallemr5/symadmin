@@ -124,7 +124,7 @@ appName: url param, the unique app name. <br/>
 group: query string, the unique group name. <br/>
 <br/>
 e.g. <br/>
-<a href="/api/cluster/all/service/bbcc?group=blue">/api/cluster/all/service/bbcc?=blue</a><br/>
+<a href="/api/cluster/all/namespace/dmall-inner/services/erp-dmall-test-wm-gw">/api/cluster/all/namespace/dmall-inner/services/erp-dmall-test-wm-gw</a><br/>
 `
 
 // GetDeploymentsDesc ...
@@ -151,6 +151,18 @@ format: query string, default is yaml, return json response when the format valu
 <br/>
 e.g. <br/>
 <a href="/api/cluster/tcc-gz01-bj5-test/namespace/dmall-inner/deployment/dm-cx-supplier-gz01a-blue">/api/cluster/tcc-gz01-bj5-test/namespace/dmall-inner/deployment/dm-cx-supplier-gz01a-blue</a><br/>
+`
+
+// GetServiceInfoDesc ...
+var GetServiceInfoDesc = `
+Get a service in assigned namespace. <br/>
+name: url param, the unique cluster name and all. <br/>
+namespace: url string, the unique namespace in a cluster. Default is 'default' namespace. <br/>
+svcName: url string, the unique name of service. <br/>
+format: query string, default is yaml, return json response when the format value is not yaml. <br/>
+<br/>
+e.g. <br/>
+<a href="/api/cluster/tcc-gz01-bj5-test/namespace/dmall-inner/service/erp-dmall-test-wm-gw-dmall-com">/api/cluster/tcc-gz01-bj5-test/namespace/dmall-inner/service/erp-dmall-test-wm-gw-dmall-com</a><br/>
 `
 
 // GetDeploymentsStatDesc ...

@@ -5,11 +5,13 @@ import (
 	"net/http"
 	"sort"
 
+	"github.com/ghodss/yaml"
 	"github.com/gin-gonic/gin"
 	"gitlab.dmall.com/arch/sym-admin/pkg/apiManager/model"
 	k8smanager "gitlab.dmall.com/arch/sym-admin/pkg/k8s/manager"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
+	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/klog"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
@@ -18,25 +20,79 @@ import (
 func (m *APIManager) GetServices(c *gin.Context) {
 	appName := c.Param("appName")
 	clusterName := c.Param("name")
+	namespace := c.Param("namespace")
 	clusters := m.K8sMgr.GetAll(clusterName)
-	group := c.DefaultQuery("group", "")
 
-	result, err := getService(clusters, appName, group)
+	result, err := getService(clusters, namespace, appName)
 	if err != nil {
 		klog.Error(err, "failed to get service")
 		AbortHTTPError(c, GetServiceError, "", err)
 		return
 	}
-	c.IndentedJSON(http.StatusOK, result)
+
+	c.IndentedJSON(http.StatusOK, gin.H{
+		"success":   true,
+		"message":   nil,
+		"resultMap": result,
+	})
 }
 
-func getService(clusters []*k8smanager.Cluster, appName, group string) ([]*model.ServiceInfo, error) {
+// GetServiceInfo ...
+func (m *APIManager) GetServiceInfo(c *gin.Context) {
+	clusterName := c.Param("name")
+	namespace := c.Param("namespace")
+	serviceName := c.Param("svcName")
+	outFormat := c.DefaultQuery("format", "yaml")
+
+	cluster, err := m.K8sMgr.Get(clusterName)
+	if err != nil {
+		klog.Errorf("get cluster error: %v", err)
+		AbortHTTPError(c, GetClusterError, "", err)
+		return
+	}
+
+	ctx := context.Background()
+	service := &corev1.Service{}
+	err = cluster.Client.Get(ctx, types.NamespacedName{
+		Namespace: namespace,
+		Name:      serviceName,
+	}, service)
+	if err != nil {
+		klog.Errorf("get service error: %v", err)
+		AbortHTTPError(c, GetServiceError, "", err)
+		return
+	}
+
+	if outFormat == "yaml" {
+		svcByte, err := yaml.Marshal(service)
+		if err != nil {
+			klog.Errorf("Marshal service info err:%+v", err)
+			AbortHTTPError(c, 0, "", err)
+			return
+		}
+
+		c.IndentedJSON(http.StatusOK, gin.H{
+			"success":   true,
+			"message":   nil,
+			"resultMap": string(svcByte),
+		})
+		return
+	}
+
+	c.IndentedJSON(http.StatusOK, gin.H{
+		"success":   true,
+		"message":   nil,
+		"resultMap": service,
+	})
+
+}
+
+func getService(clusters []*k8smanager.Cluster, namespace, appName string) ([]*model.ServiceInfo, error) {
 	ctx := context.Background()
 	result := make([]*model.ServiceInfo, 0, 4)
-	options := &client.ListOptions{}
+	options := &client.ListOptions{Namespace: namespace}
 	options.MatchingLabels(map[string]string{
-		"app":       appName + "-svc", // 协商service selector 需要加"-svc"加后缀
-		"sym-group": group,
+		"app": appName + "-svc", // 协商service selector 需要加"-svc"加后缀
 	})
 	for _, cluster := range clusters {
 		svclist := &corev1.ServiceList{}
