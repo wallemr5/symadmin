@@ -131,13 +131,26 @@ e.g. <br/>
 var GetDeploymentsDesc = `
 Get all deployments in assigned namespace. <br/>
 name: url param, the unique cluster name and all. <br/>
-namespace: query string, the unique namespace in a cluster. Default is 'default' namespace. <br/>
+namespace: url string, the unique namespace in a cluster.<br/>
+appName: url string, the unique app name and all.<br/>
 group: query string, the unique group name. <br/>
+symZone: query string, the unique zone name. <br/>
 ldcLabel: query string, the unique ldc name. <br/>
-zone: query string, the unique zone name. <br/>
 <br/>
 e.g. <br/>
-<a href="/api/cluster/all/deployment/bbcc?group=blue">/api/cluster/all/deployment/bbcc?group=blue</a><br/>
+<a href="/api/cluster/all/namespace/dmall-inner/deployments/all?symZone=gz01">/api/cluster/all/namespace/dmall-inner/deployments/all?symZone=gz01</a><br/>
+`
+
+// GetDeploymentInfoDesc ...
+var GetDeploymentInfoDesc = `
+Get a deployment in assigned namespace. <br/>
+name: url param, the unique cluster name and all. <br/>
+namespace: url string, the unique namespace in a cluster. Default is 'default' namespace. <br/>
+deployName: url string, the unique name of deployment. <br/>
+format: query string, default is yaml, return json response when the format value is not yaml. <br/>
+<br/>
+e.g. <br/>
+<a href="/api/cluster/tcc-gz01-bj5-test/namespace/dmall-inner/deployment/dm-cx-supplier-gz01a-blue">/api/cluster/tcc-gz01-bj5-test/namespace/dmall-inner/deployment/dm-cx-supplier-gz01a-blue</a><br/>
 `
 
 // GetDeploymentsStatDesc ...

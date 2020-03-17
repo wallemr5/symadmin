@@ -1,11 +1,15 @@
 package apiManager
 
 import (
+	"context"
 	"net/http"
 	"sort"
 
+	"github.com/ghodss/yaml"
 	"github.com/gin-gonic/gin"
 	"gitlab.dmall.com/arch/sym-admin/pkg/apiManager/model"
+	appv1 "k8s.io/api/apps/v1"
+	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/klog"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
@@ -13,11 +17,11 @@ import (
 // GetDeployments get all deployments in assigned namespace
 func (m *APIManager) GetDeployments(c *gin.Context) {
 	clusterName := c.Param("name")
+	namespace := c.Param("namespace")
 	appName := c.Param("appName")
 	group := c.DefaultQuery("group", "")
 	zone := c.DefaultQuery("symZone", "")
 	ldcLabel := c.DefaultQuery("ldcLabel", "")
-	namespace := c.DefaultQuery("namespace", "")
 
 	result, err := m.getDeployments(clusterName, namespace, appName, group, zone, ldcLabel)
 	if err != nil {
@@ -26,7 +30,82 @@ func (m *APIManager) GetDeployments(c *gin.Context) {
 		return
 	}
 
-	c.IndentedJSON(http.StatusOK, result)
+	var blue, green, canary []*model.DeploymentInfo
+	for _, deploy := range result {
+		deploy.Annotations = nil
+		deploy.Selector = nil
+		deploy.Labels = nil
+		switch deploy.Group {
+		case string(model.BlueGroup):
+			blue = append(blue, deploy)
+		case string(model.GreenGroup):
+			green = append(green, deploy)
+		case string(model.CanaryGroup):
+			canary = append(canary, deploy)
+		default:
+			continue
+		}
+	}
+
+	c.IndentedJSON(http.StatusOK, gin.H{
+		"success": true,
+		"message": nil,
+		"resultMap": gin.H{
+			"greenReleases":  green,
+			"blueReleases":   blue,
+			"canaryReleases": canary,
+		},
+	})
+}
+
+// GetDeploymentInfo ...
+func (m *APIManager) GetDeploymentInfo(c *gin.Context) {
+	clusterName := c.Param("name")
+	namespace := c.Param("namespace")
+	deployName := c.Param("deployName")
+	outFormat := c.DefaultQuery("format", "yaml")
+
+	cluster, err := m.K8sMgr.Get(clusterName)
+	if err != nil {
+		klog.Errorf("get cluster error: %v", err)
+		AbortHTTPError(c, GetClusterError, "", err)
+		return
+	}
+
+	ctx := context.Background()
+	deploy := &appv1.Deployment{}
+	err = cluster.Client.Get(ctx, types.NamespacedName{
+		Namespace: namespace,
+		Name:      deployName,
+	}, deploy)
+	if err != nil {
+		klog.Errorf("get deployment error: %v", err)
+		AbortHTTPError(c, GetDeploymentError, "", err)
+		return
+	}
+
+	if outFormat == "yaml" {
+		depByte, err := yaml.Marshal(deploy)
+		if err != nil {
+			klog.Errorf("Marshal deployment info err:%+v", err)
+			AbortHTTPError(c, 0, "", err)
+			return
+		}
+
+		c.IndentedJSON(http.StatusOK, gin.H{
+			"success":   true,
+			"message":   nil,
+			"resultMap": string(depByte),
+		})
+		return
+	}
+
+	c.IndentedJSON(http.StatusOK, gin.H{
+		"success":   true,
+		"message":   nil,
+		"resultMap": deploy,
+	})
+
 }
 
 // GetDeploymentsStat ...
@@ -101,18 +180,18 @@ func (m *APIManager) getDeployments(clusterName, namespace, appName, group, zone
 
 	for _, deploy := range deployments {
 		info := model.DeploymentInfo{
-			Name:                deploy.GetName(),
-			ClusterCode:         deploy.GetClusterName(),
-			Annotations:         deploy.GetAnnotations(),
-			Labels:              deploy.GetLabels(),
-			StartTime:           deploy.GetCreationTimestamp().Format("2006-01-02 15:04:05"),
-			NameSpace:           deploy.GetNamespace(),
+			Name:                deploy.Name,
+			ClusterCode:         deploy.Labels["sym-cluster-info"],
+			Annotations:         deploy.Annotations,
+			Labels:              deploy.Labels,
+			StartTime:           deploy.CreationTimestamp.Format("2006-01-02 15:04:05"),
+			NameSpace:           deploy.Namespace,
 			DesiredReplicas:     deploy.Spec.Replicas,
 			UpdatedReplicas:     deploy.Status.UpdatedReplicas,
 			ReadyReplicas:       deploy.Status.ReadyReplicas,
 			AvailableReplicas:   deploy.Status.AvailableReplicas,
 			UnavailableReplicas: deploy.Status.UnavailableReplicas,
-			Group:               deploy.GetLabels()["sym-group"],
+			Group:               deploy.Labels["sym-group"],
 			Selector:            deploy.Spec.Selector,
 		}
 		result = append(result, &info)

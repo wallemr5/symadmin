@@ -250,9 +250,15 @@ func (m *APIManager) Routes() []*router.Route {
 		},
 		{
 			Method:  "GET",
-			Path:    "/api/cluster/:name/deployment/:appName",
+			Path:    "/api/cluster/:name/namespace/:namespace/deployments/:appName",
 			Handler: m.GetDeployments,
 			Desc:    GetDeploymentsDesc,
+		},
+		{
+			Method:  "GET",
+			Path:    "/api/cluster/:name/namespace/:namespace/deployment/:deployName",
+			Handler: m.GetDeploymentInfo,
+			Desc:    GetDeploymentInfoDesc,
 		},
 		{
 			Method:  "GET",
