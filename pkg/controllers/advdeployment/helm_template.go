@@ -82,7 +82,7 @@ func TemplateK8sObject(rlsName, chartName, chartVersion string, chartPackage []b
 		if yaml == "" {
 			continue
 		}
-		klog.V(5).Infof("start ation name: %s ... ", name)
+		klog.V(4).Infof("start ation name: %s ... \n %s", name, yaml)
 		o, err := object.ParseYAMLToK8sObject([]byte(yaml))
 		if err != nil {
 			klog.Errorf("Failed to parse YAML to a k8s object: %v", err.Error())
@@ -207,7 +207,7 @@ func (r *AdvDeploymentReconciler) ApplyResources(ctx context.Context, advDeploy 
 			svc, ok := ConvertToSvc(r.Mgr, advDeploy, obj.UnstructuredObject())
 			if ok {
 				ownerRes = append(ownerRes, GetFormattedName(ServiceKind, svc))
-				err = Reconcile(r, svc, advDeploy, DesiredStatePresent)
+				err = Reconcile(ctx, r, svc, advDeploy, DesiredStatePresent)
 				if err != nil {
 					klog.Errorf("svc name: %s err: %v", svc.Name, err)
 				}
@@ -216,7 +216,7 @@ func (r *AdvDeploymentReconciler) ApplyResources(ctx context.Context, advDeploy 
 			deploy, ok := ConvertToDeployment(r.Mgr, advDeploy, obj.UnstructuredObject())
 			if ok {
 				ownerRes = append(ownerRes, GetFormattedName(DeploymentKind, deploy))
-				err = Reconcile(r, deploy, advDeploy, DesiredStatePresent)
+				err = Reconcile(ctx, r, deploy, advDeploy, DesiredStatePresent)
 				if err != nil {
 					klog.Errorf("deploy name: %s err: %v", deploy.Name, err)
 				}
@@ -225,7 +225,7 @@ func (r *AdvDeploymentReconciler) ApplyResources(ctx context.Context, advDeploy 
 			sta, ok := ConvertToStatefulSet(r.Mgr, advDeploy, obj.UnstructuredObject())
 			if ok {
 				ownerRes = append(ownerRes, GetFormattedName(ServiceKind, sta))
-				err = Reconcile(r, sta, advDeploy, DesiredStatePresent)
+				err = Reconcile(ctx, r, sta, advDeploy, DesiredStatePresent)
 				if err != nil {
 					klog.Errorf("sta name: %s err: %v", sta.Name, err)
 				}
@@ -266,7 +266,7 @@ func prepareResourceForUpdate(current, desired runtime.Object) {
 	}
 }
 
-func Reconcile(r *AdvDeploymentReconciler, desired Object, owner Object, desiredState DesiredState) error {
+func Reconcile(ctx context.Context, r *AdvDeploymentReconciler, desired Object, owner Object, desiredState DesiredState) error {
 	if desiredState == "" {
 		desiredState = DesiredStatePresent
 	}
@@ -280,7 +280,7 @@ func Reconcile(r *AdvDeploymentReconciler, desired Object, owner Object, desired
 		return errors.Wrapf(err, "get key[%s]", key)
 	}
 
-	err = c.Get(context.TODO(), key, current)
+	err = c.Get(ctx, key, current)
 	if err != nil && !apierrors.IsNotFound(err) {
 		return errors.Wrapf(err, "getting resource failed key[%s]", key)
 	}
@@ -289,7 +289,7 @@ func Reconcile(r *AdvDeploymentReconciler, desired Object, owner Object, desired
 			if err := patch.DefaultAnnotator.SetLastAppliedAnnotation(desired); err != nil {
 				klog.Errorf("Failed to set last applied annotation key[%s] err: %v", key, err)
 			}
-			if err := c.Create(context.TODO(), desired); err != nil {
+			if err := c.Create(ctx, desired); err != nil {
 				return errors.Wrapf(err, "creating resource failed key[%s]", key)
 			}
 			klog.Infof("resource created")
@@ -321,14 +321,14 @@ func Reconcile(r *AdvDeploymentReconciler, desired Object, owner Object, desired
 				metaAccessor.SetResourceVersion(desired, currentResourceVersion)
 				prepareResourceForUpdate(current, desired)
 
-				updateErr := r.Client.Update(context.TODO(), desired)
+				updateErr := r.Client.Update(ctx, desired)
 				if updateErr == nil {
-					klog.V(3).Infof("Updating resource key[%s] successfully", key)
+					klog.V(2).Infof("Updating resource key[%s] successfully", key)
 					return nil
 				}
 
 				// Get the advdeploy again when updating is failed.
-				getErr := r.Client.Get(context.TODO(), key, current)
+				getErr := r.Client.Get(ctx, key, current)
 				if getErr != nil {
 					return errors.Wrapf(err, "updated get resource key[%s] err: %v", key, err)
 				}
@@ -336,15 +336,15 @@ func Reconcile(r *AdvDeploymentReconciler, desired Object, owner Object, desired
 				return updateErr
 			})
 
-			// if err := c.Update(context.TODO(), desired); err != nil {
+			// if err := c.Update(ctx, desired); err != nil {
 			// 	if apierrors.IsConflict(err) || apierrors.IsInvalid(err) {
 			// 		klog.Infof("resource key:%s needs to be re-created err: %v", key, err)
-			// 		err := c.Delete(context.TODO(), current)
+			// 		err := c.Delete(ctx, current)
 			// 		if err != nil {
 			// 			return errors.Wrapf(err, "could not delete resource key:%s", key)
 			// 		}
 			// 		klog.Infof("resource key:%s deleted", key)
-			// 		if err := c.Create(context.TODO(), desiredCopy); err != nil {
+			// 		if err := c.Create(ctx, desiredCopy); err != nil {
 			// 			return errors.Wrapf(err, "creating resource failed key:%s", key)
 			// 		}
 			// 		klog.Infof("resource key:%s created", key)
@@ -355,7 +355,7 @@ func Reconcile(r *AdvDeploymentReconciler, desired Object, owner Object, desired
 			// klog.Infof("resource key:%s updated", key)
 			return err
 		} else if desiredState == DesiredStateAbsent {
-			if err := c.Delete(context.TODO(), current); err != nil {
+			if err := c.Delete(ctx, current); err != nil {
 				return errors.Wrapf(err, "deleting resource key[%s] failed", key)
 			}
 			klog.Infof("resource key[%s] deleted", key)

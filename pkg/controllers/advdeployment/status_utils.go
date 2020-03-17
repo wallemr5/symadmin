@@ -13,7 +13,6 @@ import (
 	"k8s.io/apimachinery/pkg/api/equality"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	"k8s.io/client-go/util/retry"
@@ -135,7 +134,7 @@ func (r *AdvDeploymentReconciler) RecalculateStatus(ctx context.Context, advDepl
 		}
 	}
 
-	unUseObject := make([]runtime.Object, 0)
+	unUseObject := make([]Object, 0)
 	status := &workloadv1beta1.AdvDeploymentAggrStatus{}
 	for _, deploy := range deploys {
 		if IsUnUseObject(DeploymentKind, deploy, ownerRes) {
@@ -212,9 +211,12 @@ func (r *AdvDeploymentReconciler) RecalculateStatus(ctx context.Context, advDepl
 
 	if status.Desired <= status.Available {
 		for _, unobj := range unUseObject {
+			klog.Infof("start delete unuse obj: %s/%s", unobj.GetNamespace(), unobj.GetName())
 			err := r.Client.Delete(ctx, unobj)
 			if err != nil {
-				klog.Errorf("name: %s Delete obj: %s err: %#v", advDeploy.Name, unobj.GetObjectKind().GroupVersionKind().String(), err)
+				klog.Errorf("unuse obj[%s/%s] delete err:%v", unobj.GetNamespace(), unobj.GetName(), err)
+			} else {
+				klog.Infof("unuse obj[%s/%s] delete successfully", unobj.GetNamespace(), unobj.GetName())
 			}
 		}
 	}
@@ -242,7 +244,7 @@ func (r *AdvDeploymentReconciler) updateStatus(ctx context.Context, advDeploy *w
 	}
 
 	if obj.Status.ObservedGeneration == obj.ObjectMeta.Generation && equality.Semantic.DeepEqual(&obj.Status.AggrStatus, recalStatus) {
-		klog.V(4).Infof("advDeploy[%s]'s status is equivalent with recalculated status, so no need to update it again", advDeploy.Name)
+		klog.V(4).Infof("advDeploy[%s]'s status is equal", advDeploy.Name)
 		return nil
 	}
 
