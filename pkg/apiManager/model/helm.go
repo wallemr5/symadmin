@@ -7,7 +7,7 @@ type GroupEnum string
 const (
 	BlueGroup   GroupEnum = "blue"
 	GreenGroup  GroupEnum = "green"
-	CanaryGroup GroupEnum = "canary"
+	CanaryGroup GroupEnum = "gray"
 	SvcGroup    GroupEnum = "svc"
 	Unkonwn     GroupEnum = "unknown"
 )

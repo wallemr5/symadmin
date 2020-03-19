@@ -334,7 +334,7 @@ func (m *APIManager) getPodListByAppName(clusterName, namespace, appName, group,
 			bluePods = append(bluePods, apiPod)
 		case "green":
 			greenPods = append(greenPods, apiPod)
-		case "canary":
+		case "gray":
 			canaryPods = append(canaryPods, apiPod)
 		}
 	}

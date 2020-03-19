@@ -53,7 +53,7 @@ func (m *APIManager) GetHelmReleases(c *gin.Context) {
 					blue = append(blue, item)
 				case "green":
 					green = append(green, item)
-				case "canary":
+				case "gray":
 					canary = append(canary, item)
 				}
 			}
