@@ -135,6 +135,21 @@ func Add(mgr manager.Manager, cMgr *pkgmanager.DksManager) error {
 	return nil
 }
 
+func (r *AdvDeploymentReconciler) DeployTypeCheck(advDeploy *workloadv1beta1.AdvDeployment) error {
+	if advDeploy.Spec.PodSpec.DeployType != "helm" {
+		return fmt.Errorf("advDeploy: %s not supported deploy type: %s", advDeploy.Name, advDeploy.Spec.PodSpec.DeployType)
+	}
+
+	if advDeploy.Spec.PodSpec.Chart == nil {
+		return fmt.Errorf("advDeploy: %s Chart is nil", advDeploy.Name)
+	}
+	if advDeploy.Spec.PodSpec.Chart.ChartUrl == nil && advDeploy.Spec.PodSpec.Chart.RawChart == nil {
+		return fmt.Errorf("advDeploy: %s Chart url or RawChart is nil", advDeploy.Name)
+	}
+
+	return nil
+}
+
 // +kubebuilder:rbac:groups=workload.dmall.com,resources=advdeployments,verbs=get;list;watch;create;update;patch;delete
 // +kubebuilder:rbac:groups=workload.dmall.com,resources=advdeployments/status,verbs=get;update;patch
 
@@ -158,11 +173,6 @@ func (r *AdvDeploymentReconciler) Reconcile(req ctrl.Request) (ctrl.Result, erro
 		}
 		klog.V(logLevel).Infof("##### [%s] reconciling is finished. time taken: %v. ", req.NamespacedName, diffTime)
 	}()
-
-	// exec recover logic
-	if r.IsRecover {
-		return r.Recover(req)
-	}
 
 	// At first, find the advDeployment with its namespaced name.
 	advDeploy := &workloadv1beta1.AdvDeployment{}
@@ -214,19 +224,4 @@ func (r *AdvDeploymentReconciler) Reconcile(req ctrl.Request) (ctrl.Result, erro
 	}
 
 	return reconcile.Result{}, nil
-}
-
-func (r *AdvDeploymentReconciler) DeployTypeCheck(advDeploy *workloadv1beta1.AdvDeployment) error {
-	if advDeploy.Spec.PodSpec.DeployType != "helm" {
-		return fmt.Errorf("advDeploy: %s not supported deploy type: %s", advDeploy.Name, advDeploy.Spec.PodSpec.DeployType)
-	}
-
-	if advDeploy.Spec.PodSpec.Chart == nil {
-		return fmt.Errorf("advDeploy: %s Chart is nil", advDeploy.Name)
-	}
-	if advDeploy.Spec.PodSpec.Chart.ChartUrl == nil && advDeploy.Spec.PodSpec.Chart.RawChart == nil {
-		return fmt.Errorf("advDeploy: %s Chart url or RawChart is nil", advDeploy.Name)
-	}
-
-	return nil
 }

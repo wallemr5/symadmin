@@ -210,6 +210,7 @@ func (r *AdvDeploymentReconciler) ApplyResources(ctx context.Context, advDeploy 
 				err = Reconcile(ctx, r, svc, advDeploy, DesiredStatePresent)
 				if err != nil {
 					klog.Errorf("svc name: %s err: %v", svc.Name, err)
+					return ownerRes, err
 				}
 			}
 		case DeploymentKind:
@@ -219,6 +220,7 @@ func (r *AdvDeploymentReconciler) ApplyResources(ctx context.Context, advDeploy 
 				err = Reconcile(ctx, r, deploy, advDeploy, DesiredStatePresent)
 				if err != nil {
 					klog.Errorf("deploy name: %s err: %v", deploy.Name, err)
+					return ownerRes, err
 				}
 			}
 		case StatefulSetKind:
@@ -227,7 +229,8 @@ func (r *AdvDeploymentReconciler) ApplyResources(ctx context.Context, advDeploy 
 				ownerRes = append(ownerRes, GetFormattedName(ServiceKind, sta))
 				err = Reconcile(ctx, r, sta, advDeploy, DesiredStatePresent)
 				if err != nil {
-					klog.Errorf("sta name: %s err: %v", sta.Name, err)
+					klog.Errorf("statefulset name: %s err: %v", sta.Name, err)
+					return ownerRes, err
 				}
 			}
 		default:

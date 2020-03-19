@@ -5,6 +5,10 @@ import (
 	"fmt"
 	"sort"
 
+	"strings"
+
+	"time"
+
 	"github.com/pkg/errors"
 	workloadv1beta1 "gitlab.dmall.com/arch/sym-admin/pkg/apis/workload/v1beta1"
 	"gitlab.dmall.com/arch/sym-admin/pkg/utils"
@@ -217,6 +221,28 @@ func (r *AdvDeploymentReconciler) RecalculateStatus(ctx context.Context, advDepl
 				klog.Errorf("unuse obj[%s/%s] delete err:%v", unobj.GetNamespace(), unobj.GetName(), err)
 			} else {
 				klog.Infof("unuse obj[%s/%s] delete successfully", unobj.GetNamespace(), unobj.GetName())
+			}
+		}
+
+		if r.IsRecover {
+			cms := &corev1.ConfigMapList{}
+			listOptions := &client.ListOptions{Namespace: "kube-system"}
+			err := r.Client.List(ctx, listOptions, cms)
+			if err == nil {
+				for i := range cms.Items {
+					cm := &cms.Items[i]
+					if strings.HasPrefix(cm.Name, advDeploy.Name) {
+						err := r.Client.Delete(ctx, cm)
+						if err == nil {
+							klog.Infof("start delete unuse helm configmap name: %s successfully", cm.Name)
+						} else {
+							klog.Errorf("delete unuse helm configmap name: %s err:%v", cm.Name, err)
+						}
+
+						// Throttling request
+						time.Sleep(time.Millisecond * 100)
+					}
+				}
 			}
 		}
 	}

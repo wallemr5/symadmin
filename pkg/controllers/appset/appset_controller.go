@@ -198,11 +198,6 @@ func (r *AppSetReconciler) ClusterChange() {
 
 // CustomReconcile for multi cluster reconcile
 func (r *AppSetReconciler) CustomReconcile(ctx context.Context, req customctrl.CustomRequest) (reconcile.Result, error) {
-	if r.DksMgr.Opt.Recover {
-		// exec recover logic
-		return r.Recover(ctx, req)
-	}
-
 	logger := r.Log.WithValues("key", req.NamespacedName, "id", uuid.Must(uuid.NewV4()).String())
 	ctx = utils.SetCtxLogger(ctx, logger)
 
