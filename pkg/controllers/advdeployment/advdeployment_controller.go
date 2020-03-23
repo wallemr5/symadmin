@@ -207,6 +207,7 @@ func (r *AdvDeploymentReconciler) Reconcile(req ctrl.Request) (ctrl.Result, erro
 	if err != nil {
 		r.recorder.Event(advDeploy, corev1.EventTypeWarning, "Apply releases failed", err.Error())
 		logger.Error(err, "failed to apply releases")
+		return reconcile.Result{}, err
 	}
 
 	// We can update the status for the advDeployment without modification for any release.
@@ -217,7 +218,7 @@ func (r *AdvDeploymentReconciler) Reconcile(req ctrl.Request) (ctrl.Result, erro
 		return reconcile.Result{}, err
 	}
 
-	if err := r.updateStatus(ctx, advDeploy, aggregatedStatus); err != nil {
+	if err = r.updateStatus(ctx, advDeploy, aggregatedStatus); err != nil {
 		klog.Errorf("failed to update tthe status of advDeploy [%s]: %v", advDeploy.Name, err)
 		r.recorder.Event(advDeploy, corev1.EventTypeWarning, "Update newest status failed", err.Error())
 		return reconcile.Result{}, err

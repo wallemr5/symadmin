@@ -275,8 +275,8 @@ func (r *AdvDeploymentReconciler) updateStatus(ctx context.Context, advDeploy *w
 	}
 
 	err = retry.RetryOnConflict(retry.DefaultRetry, func() error {
-		time := metav1.Now()
-		obj.Status.LastUpdateTime = &time
+		now := metav1.Now()
+		obj.Status.LastUpdateTime = &now
 		recalStatus.DeepCopyInto(&obj.Status.AggrStatus)
 		// It is very useful for controller that support this field
 		// without this, you might trigger a sync as a result of updating your own status.

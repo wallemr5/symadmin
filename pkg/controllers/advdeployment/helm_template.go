@@ -85,8 +85,8 @@ func TemplateK8sObject(rlsName, chartName, chartVersion string, chartPackage []b
 		klog.V(4).Infof("start ation name: %s ... \n %s", name, yaml)
 		o, err := object.ParseYAMLToK8sObject([]byte(yaml))
 		if err != nil {
-			klog.Errorf("Failed to parse YAML to a k8s object: %v", err.Error())
-			continue
+			klog.Errorf("name: %s Failed to parse YAML to a k8s object: %v", name, err.Error())
+			return nil, errors.Wrapf(err, "Resource name: %s Failed to parse YAML to a k8s object", name)
 		}
 
 		objects = append(objects, o)
@@ -195,7 +195,7 @@ func (r *AdvDeploymentReconciler) ApplyResources(ctx context.Context, advDeploy 
 			r.HelmEnv.Helmv2env, advDeploy.Namespace, podSet.RawValues)
 		if err != nil {
 			klog.Errorf("Template podSet Name: %s err: %v", podSet.Name, err)
-			continue
+			return nil, errors.Wrapf(err, "podSet Name: %s", podSet.Name)
 		}
 		objects = append(objects, obj...)
 	}
