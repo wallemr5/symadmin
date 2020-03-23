@@ -205,35 +205,40 @@ func (r *AdvDeploymentReconciler) ApplyResources(ctx context.Context, advDeploy 
 		switch obj.Kind {
 		case ServiceKind:
 			svc, ok := ConvertToSvc(r.Mgr, advDeploy, obj.UnstructuredObject())
-			if ok {
-				ownerRes = append(ownerRes, GetFormattedName(ServiceKind, svc))
-				err = Reconcile(ctx, r, svc, advDeploy, DesiredStatePresent)
-				if err != nil {
-					klog.Errorf("svc name: %s err: %v", svc.Name, err)
-					return ownerRes, err
-				}
+			if !ok {
+				return nil, fmt.Errorf("Convert Failed kind: %s Name: %s/%s ", obj.Kind, obj.Namespace, obj.Name)
+			}
+
+			ownerRes = append(ownerRes, GetFormattedName(ServiceKind, svc))
+			err = Reconcile(ctx, r, svc, advDeploy, DesiredStatePresent)
+			if err != nil {
+				klog.Errorf("svc name: %s err: %v", svc.Name, err)
+				return ownerRes, err
 			}
 		case DeploymentKind:
 			deploy, ok := ConvertToDeployment(r.Mgr, advDeploy, obj.UnstructuredObject())
-			if ok {
-				ownerRes = append(ownerRes, GetFormattedName(DeploymentKind, deploy))
-				err = Reconcile(ctx, r, deploy, advDeploy, DesiredStatePresent)
-				if err != nil {
-					klog.Errorf("deploy name: %s err: %v", deploy.Name, err)
-					return ownerRes, err
-				}
+			if !ok {
+				return nil, fmt.Errorf("Convert Failed kind: %s Name: %s/%s ", obj.Kind, obj.Namespace, obj.Name)
+			}
+			ownerRes = append(ownerRes, GetFormattedName(DeploymentKind, deploy))
+			err = Reconcile(ctx, r, deploy, advDeploy, DesiredStatePresent)
+			if err != nil {
+				klog.Errorf("deploy name: %s err: %v", deploy.Name, err)
+				return ownerRes, err
 			}
 		case StatefulSetKind:
 			sta, ok := ConvertToStatefulSet(r.Mgr, advDeploy, obj.UnstructuredObject())
-			if ok {
-				ownerRes = append(ownerRes, GetFormattedName(ServiceKind, sta))
-				err = Reconcile(ctx, r, sta, advDeploy, DesiredStatePresent)
-				if err != nil {
-					klog.Errorf("statefulset name: %s err: %v", sta.Name, err)
-					return ownerRes, err
-				}
+			if !ok {
+				return nil, fmt.Errorf("Convert Failed kind: %s Name: %s/%s ", obj.Kind, obj.Namespace, obj.Name)
+			}
+			ownerRes = append(ownerRes, GetFormattedName(ServiceKind, sta))
+			err = Reconcile(ctx, r, sta, advDeploy, DesiredStatePresent)
+			if err != nil {
+				klog.Errorf("statefulset name: %s err: %v", sta.Name, err)
+				return ownerRes, err
 			}
 		default:
+			return nil, fmt.Errorf("unknown kind: %s Name: %s/%s ", obj.Kind, obj.Namespace, obj.Name)
 		}
 	}
 
