@@ -224,7 +224,7 @@ func (r *AdvDeploymentReconciler) RecalculateStatus(ctx context.Context, advDepl
 			}
 		}
 
-		if r.IsRecover {
+		if r.Opt.Recover {
 			cms := &corev1.ConfigMapList{}
 			listOptions := &client.ListOptions{Namespace: "kube-system"}
 			err := r.Client.List(ctx, listOptions, cms)

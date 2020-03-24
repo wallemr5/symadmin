@@ -319,48 +319,50 @@ func Reconcile(ctx context.Context, r *AdvDeploymentReconciler, desired Object, 
 				klog.Errorf("Failed to set last applied annotation key[%s] err: %v", key, err)
 			}
 
-			metaAccessor := meta.NewAccessor()
-			err = retry.RetryOnConflict(retry.DefaultRetry, func() error {
-				currentResourceVersion, err := metaAccessor.ResourceVersion(current)
-				if err != nil {
-					return err
+			if r.Opt.Debug {
+				if err := c.Update(ctx, desired); err != nil {
+					if apierrors.IsConflict(err) || apierrors.IsInvalid(err) {
+						klog.Infof("resource key:%s needs to be re-created err: %v", key, err)
+						err := c.Delete(ctx, current)
+						if err != nil {
+							return errors.Wrapf(err, "could not delete resource key:%s", key)
+						}
+						klog.Infof("resource key:%s deleted", key)
+						if err := c.Create(ctx, desired); err != nil {
+							return errors.Wrapf(err, "creating resource failed key:%s", key)
+						}
+						klog.Infof("resource key:%s created", key)
+						return nil
+					}
+					return errors.Wrapf(err, "updating resource key:%s failed", key)
 				}
+				klog.Infof("resource key:%s updated", key)
+			} else {
+				metaAccessor := meta.NewAccessor()
+				err = retry.RetryOnConflict(retry.DefaultRetry, func() error {
+					currentResourceVersion, err := metaAccessor.ResourceVersion(current)
+					if err != nil {
+						return err
+					}
 
-				metaAccessor.SetResourceVersion(desired, currentResourceVersion)
-				prepareResourceForUpdate(current, desired)
+					metaAccessor.SetResourceVersion(desired, currentResourceVersion)
+					prepareResourceForUpdate(current, desired)
 
-				updateErr := r.Client.Update(ctx, desired)
-				if updateErr == nil {
-					klog.V(2).Infof("Updating resource key[%s] successfully", key)
-					return nil
-				}
+					updateErr := r.Client.Update(ctx, desired)
+					if updateErr == nil {
+						klog.V(2).Infof("Updating resource key[%s] successfully", key)
+						return nil
+					}
 
-				// Get the advdeploy again when updating is failed.
-				getErr := r.Client.Get(ctx, key, current)
-				if getErr != nil {
-					return errors.Wrapf(err, "updated get resource key[%s] err: %v", key, err)
-				}
+					// Get the advdeploy again when updating is failed.
+					getErr := r.Client.Get(ctx, key, current)
+					if getErr != nil {
+						return errors.Wrapf(err, "updated get resource key[%s] err: %v", key, err)
+					}
 
-				return updateErr
-			})
-
-			// if err := c.Update(ctx, desired); err != nil {
-			// 	if apierrors.IsConflict(err) || apierrors.IsInvalid(err) {
-			// 		klog.Infof("resource key:%s needs to be re-created err: %v", key, err)
-			// 		err := c.Delete(ctx, current)
-			// 		if err != nil {
-			// 			return errors.Wrapf(err, "could not delete resource key:%s", key)
-			// 		}
-			// 		klog.Infof("resource key:%s deleted", key)
-			// 		if err := c.Create(ctx, desiredCopy); err != nil {
-			// 			return errors.Wrapf(err, "creating resource failed key:%s", key)
-			// 		}
-			// 		klog.Infof("resource key:%s created", key)
-			// 		return nil
-			// 	}
-			// 	return errors.Wrapf(err, "updating resource key:%s failed", key)
-			// }
-			// klog.Infof("resource key:%s updated", key)
+					return updateErr
+				})
+			}
 			return err
 		} else if desiredState == DesiredStateAbsent {
 			if err := c.Delete(ctx, current); err != nil {

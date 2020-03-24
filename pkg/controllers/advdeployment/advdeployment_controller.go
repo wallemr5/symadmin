@@ -53,25 +53,25 @@ const (
 // AdvDeploymentReconciler reconciles a AdvDeployment object
 type AdvDeploymentReconciler struct {
 	client.Client
-	Name      string
-	Log       logr.Logger
-	Mgr       manager.Manager
-	KubeCli   kubernetes.Interface
-	Cfg       *rest.Config
-	HelmEnv   *v2repo.HelmIndexSyncer
-	IsRecover bool
-	recorder  record.EventRecorder
+	Name     string
+	Log      logr.Logger
+	Mgr      manager.Manager
+	KubeCli  kubernetes.Interface
+	Cfg      *rest.Config
+	HelmEnv  *v2repo.HelmIndexSyncer
+	Opt      *pkgmanager.ManagerOption
+	recorder record.EventRecorder
 }
 
 // Add add controller to runtime manager
 func Add(mgr manager.Manager, cMgr *pkgmanager.DksManager) error {
 	r := &AdvDeploymentReconciler{
-		Name:      controllerName,
-		Client:    mgr.GetClient(),
-		Mgr:       mgr,
-		Log:       ctrl.Log.WithName("controllers").WithName("AdvDeployment"),
-		IsRecover: cMgr.Opt.Recover,
-		recorder:  mgr.GetRecorder(controllerName),
+		Name:     controllerName,
+		Client:   mgr.GetClient(),
+		Mgr:      mgr,
+		Log:      ctrl.Log.WithName("controllers").WithName("AdvDeployment"),
+		Opt:      cMgr.Opt,
+		recorder: mgr.GetRecorder(controllerName),
 	}
 
 	r.Cfg = mgr.GetConfig()
