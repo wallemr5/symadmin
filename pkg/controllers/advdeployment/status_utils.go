@@ -141,11 +141,6 @@ func (r *AdvDeploymentReconciler) RecalculateStatus(ctx context.Context, advDepl
 	unUseObject := make([]Object, 0)
 	status := &workloadv1beta1.AdvDeploymentAggrStatus{}
 	for _, deploy := range deploys {
-		if IsUnUseObject(DeploymentKind, deploy, ownerRes) {
-			unUseObject = append(unUseObject, deploy)
-			continue
-		}
-
 		if !metav1.IsControlledBy(deploy, advDeploy) {
 			err = controllerutil.SetControllerReference(advDeploy, deploy, r.Mgr.GetScheme())
 			if err == nil {
@@ -154,6 +149,11 @@ func (r *AdvDeploymentReconciler) RecalculateStatus(ctx context.Context, advDepl
 					klog.Errorf("name: %s Update deploy: %s err: %#v", advDeploy.Name, deploy.Name, err)
 				}
 			}
+		}
+
+		if IsUnUseObject(DeploymentKind, deploy, ownerRes) {
+			unUseObject = append(unUseObject, deploy)
+			continue
 		}
 
 		podSetStatus := &workloadv1beta1.PodSetStatusInfo{}
@@ -174,11 +174,6 @@ func (r *AdvDeploymentReconciler) RecalculateStatus(ctx context.Context, advDepl
 	}
 
 	for _, set := range statefulSets {
-		if IsUnUseObject(StatefulSetKind, set, ownerRes) {
-			unUseObject = append(unUseObject, set)
-			continue
-		}
-
 		if !metav1.IsControlledBy(set, advDeploy) {
 			err = controllerutil.SetControllerReference(advDeploy, set, r.Mgr.GetScheme())
 			if err == nil {
@@ -188,6 +183,12 @@ func (r *AdvDeploymentReconciler) RecalculateStatus(ctx context.Context, advDepl
 				}
 			}
 		}
+
+		if IsUnUseObject(StatefulSetKind, set, ownerRes) {
+			unUseObject = append(unUseObject, set)
+			continue
+		}
+
 		podSetStatus := &workloadv1beta1.PodSetStatusInfo{}
 		podSetStatus.Name = set.Name
 		podSetStatus.Version = utils.FillImageVersion(advDeploy.Name, &set.Spec.Template.Spec)
