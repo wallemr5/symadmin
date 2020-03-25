@@ -97,7 +97,7 @@ func buildAppSetStatus(ctx context.Context, dksManger *k8smanager.ClusterManager
 		// aggregate events
 		evts := []*workloadv1beta1.Event{}
 		for _, evt := range events.Items {
-			if _, ok := labels.CheckAndGetAppInfo(evt.InvolvedObject.Name); ok && evt.Type == corev1.EventTypeWarning {
+			if ok := labels.CheckEventLabel(evt.InvolvedObject.Name); ok && evt.Type == corev1.EventTypeWarning {
 				evts = append(evts, &workloadv1beta1.Event{
 					Message:         evt.Message,
 					SourceComponent: evt.Source.Component,

@@ -114,6 +114,13 @@ func CheckAndGetAppInfo(name string) (info AppInfo, check bool) {
 	return info, true
 }
 
+// CheckEventLabel checkeventlabel
+func CheckEventLabel(name string) bool {
+	// name dmall-container-api-gz01a-blue-7488db8644-8zmfh
+	rep, _ := regexp.Compile(`^(.*?)-(gz|rz)(.*?)-(blue|green|canary|svc).*?$`)
+	return rep.Match([]byte(name))
+}
+
 // IsValidGroup ...
 func IsValidGroup(group string) bool {
 	switch group {
