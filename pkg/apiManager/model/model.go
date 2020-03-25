@@ -143,14 +143,14 @@ type PodOfCluster struct {
 
 // Event ...
 type Event struct {
-	ClusterName string      `json:"clusterCode,omitempty"`
-	Namespace   string      `json:"namespace,omitempty"`
-	ObjectKind  string      `json:"objectKind,omitempty"`
-	ObjectName  string      `json:"objectName,omitempty"`
-	Type        string      `json:"type,omitempty"`
-	Count       int32       `json:"count,omitempty"`
-	FirstTime   metav1.Time `json:"firstTime,omitempty"`
-	LastTime    metav1.Time `json:"lastTime,omitempty"`
-	Message     string      `json:"message,omitempty"`
-	Reason      string      `json:"reason,omitempty"`
+	ClusterName string `json:"clusterCode,omitempty"`
+	Namespace   string `json:"namespace,omitempty"`
+	ObjectKind  string `json:"objectKind,omitempty"`
+	ObjectName  string `json:"objectName,omitempty"`
+	Type        string `json:"type,omitempty"`
+	Count       int32  `json:"count,omitempty"`
+	FirstTime   string `json:"firstTime,omitempty"`
+	LastTime    string `json:"lastTime,omitempty"`
+	Message     string `json:"message,omitempty"`
+	Reason      string `json:"reason,omitempty"`
 }

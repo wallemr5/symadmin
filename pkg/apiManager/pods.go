@@ -86,8 +86,8 @@ func (m *APIManager) GetPodEvent(c *gin.Context) {
 				ObjectKind:  event.InvolvedObject.Kind,
 				Type:        event.Type,
 				Count:       event.Count,
-				FirstTime:   event.FirstTimestamp,
-				LastTime:    event.LastTimestamp,
+				FirstTime:   formatTime(event.FirstTimestamp.String()),
+				LastTime:    formatTime(event.LastTimestamp.String()),
 				Message:     event.Message,
 				Reason:      event.Reason,
 			}
@@ -99,7 +99,9 @@ func (m *APIManager) GetPodEvent(c *gin.Context) {
 		}
 	}
 	sort.Slice(result, func(i, j int) bool {
-		return result[i].LastTime.Before(&result[j].LastTime)
+		t1, _ := time.Parse("2006-01-02 15:04:05", result[i].LastTime)
+		t2, _ := time.Parse("2006-01-02 15:04:05", result[j].LastTime)
+		return t1.After(t2)
 	})
 
 	c.IndentedJSON(http.StatusOK, gin.H{
