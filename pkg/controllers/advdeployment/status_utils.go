@@ -5,6 +5,10 @@ import (
 	"fmt"
 	"sort"
 
+	"strings"
+
+	"time"
+
 	"github.com/pkg/errors"
 	workloadv1beta1 "gitlab.dmall.com/arch/sym-admin/pkg/apis/workload/v1beta1"
 	"gitlab.dmall.com/arch/sym-admin/pkg/utils"
@@ -137,11 +141,6 @@ func (r *AdvDeploymentReconciler) RecalculateStatus(ctx context.Context, advDepl
 	unUseObject := make([]Object, 0)
 	status := &workloadv1beta1.AdvDeploymentAggrStatus{}
 	for _, deploy := range deploys {
-		if IsUnUseObject(DeploymentKind, deploy, ownerRes) {
-			unUseObject = append(unUseObject, deploy)
-			continue
-		}
-
 		if !metav1.IsControlledBy(deploy, advDeploy) {
 			err = controllerutil.SetControllerReference(advDeploy, deploy, r.Mgr.GetScheme())
 			if err == nil {
@@ -150,6 +149,11 @@ func (r *AdvDeploymentReconciler) RecalculateStatus(ctx context.Context, advDepl
 					klog.Errorf("name: %s Update deploy: %s err: %#v", advDeploy.Name, deploy.Name, err)
 				}
 			}
+		}
+
+		if IsUnUseObject(DeploymentKind, deploy, ownerRes) {
+			unUseObject = append(unUseObject, deploy)
+			continue
 		}
 
 		podSetStatus := &workloadv1beta1.PodSetStatusInfo{}
@@ -170,11 +174,6 @@ func (r *AdvDeploymentReconciler) RecalculateStatus(ctx context.Context, advDepl
 	}
 
 	for _, set := range statefulSets {
-		if IsUnUseObject(StatefulSetKind, set, ownerRes) {
-			unUseObject = append(unUseObject, set)
-			continue
-		}
-
 		if !metav1.IsControlledBy(set, advDeploy) {
 			err = controllerutil.SetControllerReference(advDeploy, set, r.Mgr.GetScheme())
 			if err == nil {
@@ -184,6 +183,12 @@ func (r *AdvDeploymentReconciler) RecalculateStatus(ctx context.Context, advDepl
 				}
 			}
 		}
+
+		if IsUnUseObject(StatefulSetKind, set, ownerRes) {
+			unUseObject = append(unUseObject, set)
+			continue
+		}
+
 		podSetStatus := &workloadv1beta1.PodSetStatusInfo{}
 		podSetStatus.Name = set.Name
 		podSetStatus.Version = utils.FillImageVersion(advDeploy.Name, &set.Spec.Template.Spec)
@@ -219,6 +224,28 @@ func (r *AdvDeploymentReconciler) RecalculateStatus(ctx context.Context, advDepl
 				klog.Infof("unuse obj[%s/%s] delete successfully", unobj.GetNamespace(), unobj.GetName())
 			}
 		}
+
+		if r.Opt.Recover {
+			cms := &corev1.ConfigMapList{}
+			listOptions := &client.ListOptions{Namespace: "kube-system"}
+			err := r.Client.List(ctx, listOptions, cms)
+			if err == nil {
+				for i := range cms.Items {
+					cm := &cms.Items[i]
+					if strings.HasPrefix(cm.Name, advDeploy.Name) {
+						err := r.Client.Delete(ctx, cm)
+						if err == nil {
+							klog.Infof("start delete unuse helm configmap name: %s successfully", cm.Name)
+						} else {
+							klog.Errorf("delete unuse helm configmap name: %s err:%v", cm.Name, err)
+						}
+
+						// Throttling request
+						time.Sleep(time.Millisecond * 100)
+					}
+				}
+			}
+		}
 	}
 
 	status.OwnerResource = ownerRes
@@ -249,8 +276,8 @@ func (r *AdvDeploymentReconciler) updateStatus(ctx context.Context, advDeploy *w
 	}
 
 	err = retry.RetryOnConflict(retry.DefaultRetry, func() error {
-		time := metav1.Now()
-		obj.Status.LastUpdateTime = &time
+		now := metav1.Now()
+		obj.Status.LastUpdateTime = &now
 		recalStatus.DeepCopyInto(&obj.Status.AggrStatus)
 		// It is very useful for controller that support this field
 		// without this, you might trigger a sync as a result of updating your own status.

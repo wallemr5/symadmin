@@ -22,6 +22,7 @@ spec:
       containers:
         - name: {{ .Chart.Name }}
           image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
           args:
           - "controller"
           - "-v"
@@ -38,7 +39,7 @@ spec:
           {{- if .Values.image.leader }}
           - "--enable-leader"
           {{- end }}
-          
+
           ports:
             - name: http
               containerPort: {{ .Values.service.port }}

@@ -53,25 +53,25 @@ const (
 // AdvDeploymentReconciler reconciles a AdvDeployment object
 type AdvDeploymentReconciler struct {
 	client.Client
-	Name      string
-	Log       logr.Logger
-	Mgr       manager.Manager
-	KubeCli   kubernetes.Interface
-	Cfg       *rest.Config
-	HelmEnv   *v2repo.HelmIndexSyncer
-	IsRecover bool
-	recorder  record.EventRecorder
+	Name     string
+	Log      logr.Logger
+	Mgr      manager.Manager
+	KubeCli  kubernetes.Interface
+	Cfg      *rest.Config
+	HelmEnv  *v2repo.HelmIndexSyncer
+	Opt      *pkgmanager.ManagerOption
+	recorder record.EventRecorder
 }
 
 // Add add controller to runtime manager
 func Add(mgr manager.Manager, cMgr *pkgmanager.DksManager) error {
 	r := &AdvDeploymentReconciler{
-		Name:      controllerName,
-		Client:    mgr.GetClient(),
-		Mgr:       mgr,
-		Log:       ctrl.Log.WithName("controllers").WithName("AdvDeployment"),
-		IsRecover: cMgr.Opt.Recover,
-		recorder:  mgr.GetRecorder(controllerName),
+		Name:     controllerName,
+		Client:   mgr.GetClient(),
+		Mgr:      mgr,
+		Log:      ctrl.Log.WithName("controllers").WithName("AdvDeployment"),
+		Opt:      cMgr.Opt,
+		recorder: mgr.GetRecorder(controllerName),
 	}
 
 	r.Cfg = mgr.GetConfig()
@@ -135,6 +135,21 @@ func Add(mgr manager.Manager, cMgr *pkgmanager.DksManager) error {
 	return nil
 }
 
+func (r *AdvDeploymentReconciler) DeployTypeCheck(advDeploy *workloadv1beta1.AdvDeployment) error {
+	if advDeploy.Spec.PodSpec.DeployType != "helm" {
+		return fmt.Errorf("advDeploy: %s not supported deploy type: %s", advDeploy.Name, advDeploy.Spec.PodSpec.DeployType)
+	}
+
+	if advDeploy.Spec.PodSpec.Chart == nil {
+		return fmt.Errorf("advDeploy: %s Chart is nil", advDeploy.Name)
+	}
+	if advDeploy.Spec.PodSpec.Chart.ChartUrl == nil && advDeploy.Spec.PodSpec.Chart.RawChart == nil {
+		return fmt.Errorf("advDeploy: %s Chart url or RawChart is nil", advDeploy.Name)
+	}
+
+	return nil
+}
+
 // +kubebuilder:rbac:groups=workload.dmall.com,resources=advdeployments,verbs=get;list;watch;create;update;patch;delete
 // +kubebuilder:rbac:groups=workload.dmall.com,resources=advdeployments/status,verbs=get;update;patch
 
@@ -158,11 +173,6 @@ func (r *AdvDeploymentReconciler) Reconcile(req ctrl.Request) (ctrl.Result, erro
 		}
 		klog.V(logLevel).Infof("##### [%s] reconciling is finished. time taken: %v. ", req.NamespacedName, diffTime)
 	}()
-
-	// exec recover logic
-	if r.IsRecover {
-		return r.Recover(req)
-	}
 
 	// At first, find the advDeployment with its namespaced name.
 	advDeploy := &workloadv1beta1.AdvDeployment{}
@@ -197,6 +207,7 @@ func (r *AdvDeploymentReconciler) Reconcile(req ctrl.Request) (ctrl.Result, erro
 	if err != nil {
 		r.recorder.Event(advDeploy, corev1.EventTypeWarning, "Apply releases failed", err.Error())
 		logger.Error(err, "failed to apply releases")
+		return reconcile.Result{}, err
 	}
 
 	// We can update the status for the advDeployment without modification for any release.
@@ -207,26 +218,11 @@ func (r *AdvDeploymentReconciler) Reconcile(req ctrl.Request) (ctrl.Result, erro
 		return reconcile.Result{}, err
 	}
 
-	if err := r.updateStatus(ctx, advDeploy, aggregatedStatus); err != nil {
+	if err = r.updateStatus(ctx, advDeploy, aggregatedStatus); err != nil {
 		klog.Errorf("failed to update tthe status of advDeploy [%s]: %v", advDeploy.Name, err)
 		r.recorder.Event(advDeploy, corev1.EventTypeWarning, "Update newest status failed", err.Error())
 		return reconcile.Result{}, err
 	}
 
 	return reconcile.Result{}, nil
-}
-
-func (r *AdvDeploymentReconciler) DeployTypeCheck(advDeploy *workloadv1beta1.AdvDeployment) error {
-	if advDeploy.Spec.PodSpec.DeployType != "helm" {
-		return fmt.Errorf("advDeploy: %s not supported deploy type: %s", advDeploy.Name, advDeploy.Spec.PodSpec.DeployType)
-	}
-
-	if advDeploy.Spec.PodSpec.Chart == nil {
-		return fmt.Errorf("advDeploy: %s Chart is nil", advDeploy.Name)
-	}
-	if advDeploy.Spec.PodSpec.Chart.ChartUrl == nil && advDeploy.Spec.PodSpec.Chart.RawChart == nil {
-		return fmt.Errorf("advDeploy: %s Chart url or RawChart is nil", advDeploy.Name)
-	}
-
-	return nil
 }

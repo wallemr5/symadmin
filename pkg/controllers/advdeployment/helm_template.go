@@ -85,8 +85,8 @@ func TemplateK8sObject(rlsName, chartName, chartVersion string, chartPackage []b
 		klog.V(4).Infof("start ation name: %s ... \n %s", name, yaml)
 		o, err := object.ParseYAMLToK8sObject([]byte(yaml))
 		if err != nil {
-			klog.Errorf("Failed to parse YAML to a k8s object: %v", err.Error())
-			continue
+			klog.Errorf("name: %s Failed to parse YAML to a k8s object: %v", name, err.Error())
+			return nil, errors.Wrapf(err, "Resource name: %s Failed to parse YAML to a k8s object", name)
 		}
 
 		objects = append(objects, o)
@@ -195,7 +195,7 @@ func (r *AdvDeploymentReconciler) ApplyResources(ctx context.Context, advDeploy 
 			r.HelmEnv.Helmv2env, advDeploy.Namespace, podSet.RawValues)
 		if err != nil {
 			klog.Errorf("Template podSet Name: %s err: %v", podSet.Name, err)
-			continue
+			return nil, errors.Wrapf(err, "podSet Name: %s", podSet.Name)
 		}
 		objects = append(objects, obj...)
 	}
@@ -205,32 +205,40 @@ func (r *AdvDeploymentReconciler) ApplyResources(ctx context.Context, advDeploy 
 		switch obj.Kind {
 		case ServiceKind:
 			svc, ok := ConvertToSvc(r.Mgr, advDeploy, obj.UnstructuredObject())
-			if ok {
-				ownerRes = append(ownerRes, GetFormattedName(ServiceKind, svc))
-				err = Reconcile(ctx, r, svc, advDeploy, DesiredStatePresent)
-				if err != nil {
-					klog.Errorf("svc name: %s err: %v", svc.Name, err)
-				}
+			if !ok {
+				return nil, fmt.Errorf("Convert Failed kind: %s Name: %s/%s ", obj.Kind, obj.Namespace, obj.Name)
+			}
+
+			ownerRes = append(ownerRes, GetFormattedName(ServiceKind, svc))
+			err = Reconcile(ctx, r, svc, advDeploy, DesiredStatePresent)
+			if err != nil {
+				klog.Errorf("svc name: %s err: %v", svc.Name, err)
+				return ownerRes, err
 			}
 		case DeploymentKind:
 			deploy, ok := ConvertToDeployment(r.Mgr, advDeploy, obj.UnstructuredObject())
-			if ok {
-				ownerRes = append(ownerRes, GetFormattedName(DeploymentKind, deploy))
-				err = Reconcile(ctx, r, deploy, advDeploy, DesiredStatePresent)
-				if err != nil {
-					klog.Errorf("deploy name: %s err: %v", deploy.Name, err)
-				}
+			if !ok {
+				return nil, fmt.Errorf("Convert Failed kind: %s Name: %s/%s ", obj.Kind, obj.Namespace, obj.Name)
+			}
+			ownerRes = append(ownerRes, GetFormattedName(DeploymentKind, deploy))
+			err = Reconcile(ctx, r, deploy, advDeploy, DesiredStatePresent)
+			if err != nil {
+				klog.Errorf("deploy name: %s err: %v", deploy.Name, err)
+				return ownerRes, err
 			}
 		case StatefulSetKind:
 			sta, ok := ConvertToStatefulSet(r.Mgr, advDeploy, obj.UnstructuredObject())
-			if ok {
-				ownerRes = append(ownerRes, GetFormattedName(ServiceKind, sta))
-				err = Reconcile(ctx, r, sta, advDeploy, DesiredStatePresent)
-				if err != nil {
-					klog.Errorf("sta name: %s err: %v", sta.Name, err)
-				}
+			if !ok {
+				return nil, fmt.Errorf("Convert Failed kind: %s Name: %s/%s ", obj.Kind, obj.Namespace, obj.Name)
+			}
+			ownerRes = append(ownerRes, GetFormattedName(ServiceKind, sta))
+			err = Reconcile(ctx, r, sta, advDeploy, DesiredStatePresent)
+			if err != nil {
+				klog.Errorf("statefulset name: %s err: %v", sta.Name, err)
+				return ownerRes, err
 			}
 		default:
+			return nil, fmt.Errorf("unknown kind: %s Name: %s/%s ", obj.Kind, obj.Namespace, obj.Name)
 		}
 	}
 
@@ -311,48 +319,50 @@ func Reconcile(ctx context.Context, r *AdvDeploymentReconciler, desired Object, 
 				klog.Errorf("Failed to set last applied annotation key[%s] err: %v", key, err)
 			}
 
-			metaAccessor := meta.NewAccessor()
-			err = retry.RetryOnConflict(retry.DefaultRetry, func() error {
-				currentResourceVersion, err := metaAccessor.ResourceVersion(current)
-				if err != nil {
-					return err
+			if r.Opt.Debug {
+				if err := c.Update(ctx, desired); err != nil {
+					if apierrors.IsConflict(err) || apierrors.IsInvalid(err) {
+						klog.Infof("resource key:%s needs to be re-created err: %v", key, err)
+						err := c.Delete(ctx, current)
+						if err != nil {
+							return errors.Wrapf(err, "could not delete resource key:%s", key)
+						}
+						klog.Infof("resource key:%s deleted", key)
+						if err := c.Create(ctx, desired); err != nil {
+							return errors.Wrapf(err, "creating resource failed key:%s", key)
+						}
+						klog.Infof("resource key:%s created", key)
+						return nil
+					}
+					return errors.Wrapf(err, "updating resource key:%s failed", key)
 				}
+				klog.Infof("resource key:%s updated", key)
+			} else {
+				metaAccessor := meta.NewAccessor()
+				err = retry.RetryOnConflict(retry.DefaultRetry, func() error {
+					currentResourceVersion, err := metaAccessor.ResourceVersion(current)
+					if err != nil {
+						return err
+					}
 
-				metaAccessor.SetResourceVersion(desired, currentResourceVersion)
-				prepareResourceForUpdate(current, desired)
+					metaAccessor.SetResourceVersion(desired, currentResourceVersion)
+					prepareResourceForUpdate(current, desired)
 
-				updateErr := r.Client.Update(ctx, desired)
-				if updateErr == nil {
-					klog.V(2).Infof("Updating resource key[%s] successfully", key)
-					return nil
-				}
+					updateErr := r.Client.Update(ctx, desired)
+					if updateErr == nil {
+						klog.V(2).Infof("Updating resource key[%s] successfully", key)
+						return nil
+					}
 
-				// Get the advdeploy again when updating is failed.
-				getErr := r.Client.Get(ctx, key, current)
-				if getErr != nil {
-					return errors.Wrapf(err, "updated get resource key[%s] err: %v", key, err)
-				}
+					// Get the advdeploy again when updating is failed.
+					getErr := r.Client.Get(ctx, key, current)
+					if getErr != nil {
+						return errors.Wrapf(err, "updated get resource key[%s] err: %v", key, err)
+					}
 
-				return updateErr
-			})
-
-			// if err := c.Update(ctx, desired); err != nil {
-			// 	if apierrors.IsConflict(err) || apierrors.IsInvalid(err) {
-			// 		klog.Infof("resource key:%s needs to be re-created err: %v", key, err)
-			// 		err := c.Delete(ctx, current)
-			// 		if err != nil {
-			// 			return errors.Wrapf(err, "could not delete resource key:%s", key)
-			// 		}
-			// 		klog.Infof("resource key:%s deleted", key)
-			// 		if err := c.Create(ctx, desiredCopy); err != nil {
-			// 			return errors.Wrapf(err, "creating resource failed key:%s", key)
-			// 		}
-			// 		klog.Infof("resource key:%s created", key)
-			// 		return nil
-			// 	}
-			// 	return errors.Wrapf(err, "updating resource key:%s failed", key)
-			// }
-			// klog.Infof("resource key:%s updated", key)
+					return updateErr
+				})
+			}
 			return err
 		} else if desiredState == DesiredStateAbsent {
 			if err := c.Delete(ctx, current); err != nil {
