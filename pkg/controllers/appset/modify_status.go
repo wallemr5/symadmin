@@ -179,7 +179,7 @@ func (r *AppSetReconciler) applyStatus(ctx context.Context, req customctrl.Custo
 }
 
 func isAppendEvt(evt corev1.Event, app *workloadv1beta1.AppSet) bool {
-	if evt.Type != corev1.EventTypeWarning {
+	if evt.Type == corev1.EventTypeNormal {
 		return false
 	}
 
