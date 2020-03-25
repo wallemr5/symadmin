@@ -97,7 +97,7 @@ func buildAppSetStatus(ctx context.Context, dksManger *k8smanager.ClusterManager
 		// aggregate events
 		evts := []*workloadv1beta1.Event{}
 		for _, evt := range events.Items {
-			if ok := labels.CheckEventLabel(evt.InvolvedObject.Name); ok && evt.Type == corev1.EventTypeWarning {
+			if isAppendEvt(evt, app) {
 				evts = append(evts, &workloadv1beta1.Event{
 					Message:         evt.Message,
 					SourceComponent: evt.Source.Component,
@@ -176,4 +176,20 @@ func (r *AppSetReconciler) applyStatus(ctx context.Context, req customctrl.Custo
 		return updateErr
 	})
 	return true, err
+}
+
+func isAppendEvt(evt corev1.Event, app *workloadv1beta1.AppSet) bool {
+	if evt.Type != corev1.EventTypeWarning {
+		return false
+	}
+
+	ok := labels.CheckEventLabel(evt.InvolvedObject.Name)
+	if ok {
+		return true
+	}
+
+	if evt.InvolvedObject.Kind == "AdvDeployment" && evt.InvolvedObject.Name == app.Name {
+		return true
+	}
+	return false
 }
