@@ -183,6 +183,10 @@ func isAppendEvt(evt corev1.Event, app *workloadv1beta1.AppSet) bool {
 		return false
 	}
 
+	if app.ObjectMeta.CreationTimestamp.After(evt.LastTimestamp.Time) {
+		return false
+	}
+
 	ok := labels.CheckEventLabel(evt.InvolvedObject.Name)
 	if ok {
 		return true
