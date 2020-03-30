@@ -31,7 +31,7 @@
 10.13.135.250 chartmuseum.dmall.com
 ```
 
-### goland 参数配置
+### 调试 参数配置
 
 ```shell
 # sym-controller 需要配置主集群tcc-bj5-dks-monit-01
@@ -40,6 +40,9 @@ sym-controller controller --enable-master --kubeconfig=./manifests/kubeconfig_TC
 sym-controller controller --enable-worker --kubeconfig=./manifests/kubeconfig_TCC_BJ4_DKS_TEST_01.yaml -v 4
 # sym-api        需要配置主集群tcc-bj5-dks-monit-01
 sym-api api --kubeconfig=./manifests/kubeconfig_TCC_BJ5_DKS_MONIT_01.yaml -v 4
+
+# cluster 控制器调试
+sym-controller controller --enable-cluster --enable-leader=false --kubeconfig=./manifests/kubeconfig_TCC_BJ5_DKS_MONIT_01.yaml -v 4
 ```
 
 ## 其他
