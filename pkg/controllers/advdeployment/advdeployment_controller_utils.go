@@ -51,7 +51,7 @@ func (r *AdvDeploymentReconciler) RemoveFinalizers(ctx context.Context, req ctrl
 
 // CleanAllReleases delete all releases of this advDeployment
 func (r *AdvDeploymentReconciler) CleanAllReleases(advDeploy *workloadv1beta1.AdvDeployment) error {
-	hClient, err := helmv2.NewClientFromConfig(r.Cfg, r.KubeCli, "")
+	hClient, err := helmv2.NewClientFromConfig(r.Cfg, r.KubeCli, "", r.HelmEnv.Helmv2env)
 	if err != nil {
 		klog.Errorf("Initializing a helm client has an error: %+v", err)
 		return err
@@ -81,7 +81,7 @@ func (r *AdvDeploymentReconciler) CleanAllReleases(advDeploy *workloadv1beta1.Ad
 func (r *AdvDeploymentReconciler) ApplyReleases(ctx context.Context, advDeploy *workloadv1beta1.AdvDeployment) (bool, error) {
 	hasModifiedRls := false
 	// Initialize a new helm client
-	hClient, err := helmv2.NewClientFromConfig(r.Cfg, r.KubeCli, "k8s")
+	hClient, err := helmv2.NewClientFromConfig(r.Cfg, r.KubeCli, "k8s", r.HelmEnv.Helmv2env)
 	if err != nil {
 		klog.Errorf("Initializing a new helm clinet has an error: %+v", err)
 		return hasModifiedRls, err
@@ -130,7 +130,7 @@ func (r *AdvDeploymentReconciler) ApplyReleases(ctx context.Context, advDeploy *
 		specChartURLName, specChartURLVersion, specRawChart := getChartInfo(podSet, advDeploy)
 
 		appliedRls, err := helmv2.ApplyRelease(podSet.Name, specChartURLName, specChartURLVersion, specRawChart,
-			hClient, r.HelmEnv.Helmv2env, advDeploy.Namespace, findRunningReleases(podSet.Name, response), []byte(podSet.RawValues))
+			hClient, advDeploy.Namespace, findRunningReleases(podSet.Name, response), []byte(podSet.RawValues))
 		if appliedRls != nil {
 			hasModifiedRls = true
 		}

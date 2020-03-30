@@ -251,8 +251,8 @@ func GetRequestedChart(rlsName, chartName, chartVersion string, chartPackage []b
 }
 
 // UpgradeRelease upgrades a Helm release
-func UpgradeRelease(rlsName, chartName, chartVersion string, chartPackage []byte, hClient *Client, env *helmenv.EnvSettings, overrideValue []byte, reuseValues bool) (*rls.UpdateReleaseResponse, error) {
-	chartRequested, err := GetRequestedChart(rlsName, chartName, chartVersion, chartPackage, env)
+func UpgradeRelease(rlsName, chartName, chartVersion string, chartPackage []byte, hClient *Client, overrideValue []byte, reuseValues bool) (*rls.UpdateReleaseResponse, error) {
+	chartRequested, err := GetRequestedChart(rlsName, chartName, chartVersion, chartPackage, hClient.Env)
 	if err != nil {
 		return nil, fmt.Errorf("loading chart has an error: %v", err)
 	}
@@ -273,13 +273,13 @@ func UpgradeRelease(rlsName, chartName, chartVersion string, chartPackage []byte
 }
 
 func UpgradeReleaseWarp(rlsName string, chartPackage []byte, overrideValue []byte, hClient *Client) (*rls.UpdateReleaseResponse, error) {
-	return UpgradeRelease(rlsName, "", "", chartPackage, hClient, &helmenv.EnvSettings{}, overrideValue, true)
+	return UpgradeRelease(rlsName, "", "", chartPackage, hClient, overrideValue, true)
 }
 
 // CreateRelease creates a Helm release in chosen namespace
 func CreateRelease(rlsName, chartName, chartVersion string, chartPackage []byte,
-	hClient *Client, env *helmenv.EnvSettings, namespace string, overrideOpts ...helm.InstallOption) (*rls.InstallReleaseResponse, error) {
-	chartRequested, err := GetRequestedChart(rlsName, chartName, chartVersion, chartPackage, env)
+	hClient *Client, namespace string, overrideOpts ...helm.InstallOption) (*rls.InstallReleaseResponse, error) {
+	chartRequested, err := GetRequestedChart(rlsName, chartName, chartVersion, chartPackage, hClient.Env)
 	if err != nil {
 		return nil, fmt.Errorf("error loading chart: %v", err)
 	}
@@ -312,7 +312,7 @@ func CreateRelease(rlsName, chartName, chartVersion string, chartPackage []byte,
 }
 
 func CreateReleaseWarp(rlsName string, chartPackage []byte, hClient *Client, namespace string, overrideOpts ...helm.InstallOption) (*rls.InstallReleaseResponse, error) {
-	return CreateRelease(rlsName, "", "", chartPackage, hClient, &helmenv.EnvSettings{}, namespace, overrideOpts...)
+	return CreateRelease(rlsName, "", "", chartPackage, hClient, namespace, overrideOpts...)
 }
 
 // DeleteRelease deletes a Helm release
@@ -328,7 +328,7 @@ func DeleteRelease(rlsName string, hClient *Client) error {
 }
 
 // Create or update a release, creating it if release parameter is nil, otherwise, updating it.
-func ApplyRelease(rlsName, chartUrlName, specChartVersion string, chartPackage []byte, hClient *Client, env *helmenv.EnvSettings,
+func ApplyRelease(rlsName, chartUrlName, specChartVersion string, chartPackage []byte, hClient *Client,
 	namespace string, runningRls *hapirelease.Release, vaByte []byte) (*hapirelease.Release, error) {
 	var (
 		appliedRls *hapirelease.Release
@@ -344,7 +344,7 @@ func ApplyRelease(rlsName, chartUrlName, specChartVersion string, chartPackage [
 
 	// If the release need to apply is nil, we create this release directly.
 	if runningRls == nil {
-		rep, err := CreateRelease(rlsName, chartUrlName, specChartVersion, chartPackage, hClient, env, namespace, helm.ValueOverrides(vaByte))
+		rep, err := CreateRelease(rlsName, chartUrlName, specChartVersion, chartPackage, hClient, namespace, helm.ValueOverrides(vaByte))
 		if err == nil && rep != nil {
 			appliedRls = rep.GetRelease()
 			klog.V(4).Infof("Release[%s] has been installed successfully, current version: %d", rlsName, appliedRls.GetVersion())
@@ -380,7 +380,7 @@ func ApplyRelease(rlsName, chartUrlName, specChartVersion string, chartPackage [
 
 		// if the running release differ with the spec one, we update it with the spec one.
 		if isDifferent > 0 {
-			rep, err := UpgradeRelease(rlsName, chartUrlName, specChartVersion, chartPackage, hClient, env, vaByte, false)
+			rep, err := UpgradeRelease(rlsName, chartUrlName, specChartVersion, chartPackage, hClient, vaByte, false)
 			if err == nil && rep != nil {
 				appliedRls = rep.GetRelease()
 				klog.V(4).Infof("Release[%s] has been upgraded successfully, current version: %d", rlsName, appliedRls.GetVersion())

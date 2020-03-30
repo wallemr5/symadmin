@@ -3,6 +3,7 @@ package controller
 import (
 	"gitlab.dmall.com/arch/sym-admin/pkg/controllers/advdeployment"
 	"gitlab.dmall.com/arch/sym-admin/pkg/controllers/appset"
+	"gitlab.dmall.com/arch/sym-admin/pkg/controllers/cluster"
 	pkgmanager "gitlab.dmall.com/arch/sym-admin/pkg/manager"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 )
@@ -16,37 +17,16 @@ var AddToManagerWithCMFuncs []func(manager.Manager, *pkgmanager.DksManager) erro
 // AddToManager adds all Controllers to the Manager
 func AddToManager(m manager.Manager, dksMgr *pkgmanager.DksManager) error {
 	if dksMgr != nil {
-		// for _, c := range cMgr.Manager.AllWorker() {
-		// 	cMgr.HealthHandler.AddReadinessCheck(fmt.Sprintf("%s_%s", c.Name, "deploy_cache_sync"),
-		// 		func() error {
-		// 			if c.DeploymentInformer.Informer().HasSynced() {
-		// 				return nil
-		// 			}
-		// 			return fmt.Errorf("cluster:%s deploy cache not sync", c.Name)
-		// 		})
-		// 	cMgr.HealthHandler.AddReadinessCheck(fmt.Sprintf("%s_%s", c.Name, "node_cache_sync"),
-		// 		func() error {
-		// 			if c.NodeInformer.Informer().HasSynced() {
-		// 				return nil
-		// 			}
-		// 			return fmt.Errorf("cluster:%s node cache not sync", c.Name)
-		// 		})
-		// }
-		//
-		// cMgr.HealthHandler.AddLivenessCheck("cluster_db_nochanged",
-		// 	func() error {
-		// 		if !cMgr.Manager.ClusterDb.IsChanged() {
-		// 			return nil
-		// 		}
-		// 		return fmt.Errorf("cluster is changed")
-		// 	})
-
 		if dksMgr.Opt.MasterEnabled {
 			AddToManagerWithCMFuncs = append(AddToManagerWithCMFuncs, appset.Add)
 		}
 
 		if dksMgr.Opt.WorkerEnabled {
 			AddToManagerWithCMFuncs = append(AddToManagerWithCMFuncs, advdeployment.Add)
+		}
+
+		if dksMgr.Opt.ClusterEnabled {
+			AddToManagerWithCMFuncs = append(AddToManagerWithCMFuncs, cluster.Add)
 		}
 	}
 

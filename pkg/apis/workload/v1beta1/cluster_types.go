@@ -68,11 +68,11 @@ type MonitoringStatus struct {
 }
 
 type ClusterStatus struct {
-	AppStatus        []AppHelmStatuses        `json:"appStatus,omitempty"`
-	ClusterStatus    []ClusterComponentStatus `json:"clusterStatus,omitempty"`
-	Version          *version.Info            `json:"version,omitempty"`
-	MonitoringStatus *MonitoringStatus        `json:"monitoringStatus,omitempty"`
-	NodeDetail       *NodeDetail              `json:"nodeDetail"`
+	AppStatus        []*AppHelmStatuses        `json:"appStatus,omitempty"`
+	ClusterStatus    []*ClusterComponentStatus `json:"clusterStatus,omitempty"`
+	Version          *version.Info             `json:"version,omitempty"`
+	MonitoringStatus *MonitoringStatus         `json:"monitoringStatus,omitempty"`
+	NodeDetail       *NodeDetail               `json:"nodeDetail"`
 }
 
 type ClusterComponentStatus struct {

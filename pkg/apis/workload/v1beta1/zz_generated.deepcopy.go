@@ -681,14 +681,24 @@ func (in *ClusterStatus) DeepCopyInto(out *ClusterStatus) {
 	*out = *in
 	if in.AppStatus != nil {
 		in, out := &in.AppStatus, &out.AppStatus
-		*out = make([]AppHelmStatuses, len(*in))
-		copy(*out, *in)
+		*out = make([]*AppHelmStatuses, len(*in))
+		for i := range *in {
+			if (*in)[i] != nil {
+				in, out := &(*in)[i], &(*out)[i]
+				*out = new(AppHelmStatuses)
+				**out = **in
+			}
+		}
 	}
 	if in.ClusterStatus != nil {
 		in, out := &in.ClusterStatus, &out.ClusterStatus
-		*out = make([]ClusterComponentStatus, len(*in))
+		*out = make([]*ClusterComponentStatus, len(*in))
 		for i := range *in {
-			(*in)[i].DeepCopyInto(&(*out)[i])
+			if (*in)[i] != nil {
+				in, out := &(*in)[i], &(*out)[i]
+				*out = new(ClusterComponentStatus)
+				(*in).DeepCopyInto(*out)
+			}
 		}
 	}
 	if in.Version != nil {
