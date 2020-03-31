@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"sort"
 	"time"
+	"strconv"
 
 	"github.com/go-logr/logr"
 	"github.com/gofrs/uuid"
@@ -14,6 +15,7 @@ import (
 	"gitlab.dmall.com/arch/sym-admin/pkg/controllers/cluster/monitor"
 	"gitlab.dmall.com/arch/sym-admin/pkg/controllers/cluster/other"
 	"gitlab.dmall.com/arch/sym-admin/pkg/controllers/cluster/traefik"
+	clusterutils "gitlab.dmall.com/arch/sym-admin/pkg/controllers/cluster/utils"
 	helmv2 "gitlab.dmall.com/arch/sym-admin/pkg/helm/v2"
 	"gitlab.dmall.com/arch/sym-admin/pkg/helm/v2repo"
 	k8sclient "gitlab.dmall.com/arch/sym-admin/pkg/k8s/client"
@@ -42,8 +44,8 @@ const (
 	controllerName = "cluster-controller"
 )
 
-// ClusterReconciler reconciles a cluster.workload.dmall.com object
-type ClusterReconciler struct {
+// Reconciler reconciles a cluster.workload.dmall.com object
+type Reconciler struct {
 	Name string
 	client.Client
 	Log      logr.Logger
@@ -57,7 +59,7 @@ type ClusterReconciler struct {
 
 // Add add controller to runtime manager
 func Add(mgr manager.Manager, cMgr *pkgmanager.DksManager) error {
-	r := &ClusterReconciler{
+	r := &Reconciler{
 		Name:   "cluster-controllers",
 		Client: mgr.GetClient(),
 		Mgr:    mgr,
@@ -101,7 +103,8 @@ func Add(mgr manager.Manager, cMgr *pkgmanager.DksManager) error {
 // +kubebuilder:rbac:groups=workload.dmall.com,resources=advdeployments,verbs=get;list;watch;create;update;patch;delete
 // +kubebuilder:rbac:groups=workload.dmall.com,resources=advdeployments/status,verbs=get;update;patch
 
-func (r *ClusterReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error) {
+// Reconcile ...
+func (r *Reconciler) Reconcile(req ctrl.Request) (ctrl.Result, error) {
 	klog.V(3).Infof("##### [%s] start to reconcile.", req.NamespacedName)
 
 	ctx := context.Background()
@@ -134,7 +137,7 @@ func (r *ClusterReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error) {
 	return ctrl.Result{}, nil
 }
 
-func (r *ClusterReconciler) getK8SConfigForMaster(namespace string, name string) ([]byte, error) {
+func (r *Reconciler) getK8SConfigForMaster(namespace string, name string) ([]byte, error) {
 	var configMap corev1.ConfigMap
 	err := r.Client.Get(context.TODO(), client.ObjectKey{
 		Namespace: namespace,
@@ -151,7 +154,8 @@ func (r *ClusterReconciler) getK8SConfigForMaster(namespace string, name string)
 	return nil, fmt.Errorf("could not found kubeconfig name[%s] config from configmap", name)
 }
 
-func (r *ClusterReconciler) EnsureClustes(namespace string, clusterName string) (*k8smanager.Cluster, error) {
+// EnsureClustes ...
+func (r *Reconciler) EnsureClustes(namespace string, clusterName string) (*k8smanager.Cluster, error) {
 	var k *k8smanager.Cluster
 	if clusterName == "" {
 		return nil, errors.New("clusterName is empty")
@@ -159,6 +163,9 @@ func (r *ClusterReconciler) EnsureClustes(namespace string, clusterName string) 
 
 	// find global manager cluster
 	k, err := r.DksMgr.K8sMgr.Get(clusterName)
+	if err != nil {
+		return nil, err
+	}
 	if k != nil {
 		return k, nil
 	}
@@ -188,7 +195,7 @@ func (r *ClusterReconciler) EnsureClustes(namespace string, clusterName string) 
 	return k, nil
 }
 
-func (r *ClusterReconciler) reconcile(ctx context.Context, k *k8smanager.Cluster, obj *workloadv1beta1.Cluster) (int, error) {
+func (r *Reconciler) reconcile(ctx context.Context, k *k8smanager.Cluster, obj *workloadv1beta1.Cluster) (int, error) {
 	var isNeedUpdate int
 
 	if obj.Status.Version == nil {
@@ -214,7 +221,8 @@ func (r *ClusterReconciler) reconcile(ctx context.Context, k *k8smanager.Cluster
 	return isNeedUpdate, nil
 }
 
-func (r *ClusterReconciler) UpdateCluster(ctx context.Context, obj *workloadv1beta1.Cluster) (*workloadv1beta1.Cluster, error) {
+// UpdateCluster ...
+func (r *Reconciler) UpdateCluster(ctx context.Context, obj *workloadv1beta1.Cluster) (*workloadv1beta1.Cluster, error) {
 	nsName := types.NamespacedName{
 		Name:      obj.Name,
 		Namespace: obj.Namespace,
@@ -241,24 +249,80 @@ func (r *ClusterReconciler) UpdateCluster(ctx context.Context, obj *workloadv1be
 	return newobj, err
 }
 
-func (r *ClusterReconciler) reconcileHelmTiller(ctx context.Context, k *k8smanager.Cluster, obj *workloadv1beta1.Cluster) (int, error) {
-	return 0, nil
+func (r *Reconciler) reconcileHelmTiller(ctx context.Context, k *k8smanager.Cluster, obj *workloadv1beta1.Cluster) (int, error) {
+	var isNeedUpdate int
+	var helmSpec workloadv1beta1.HelmSpec
+	var isTillerRunning, isNodeAffinity bool
+
+	if obj.Spec.HelmSpec != nil {
+		tillerDeploy, err := clusterutils.GetTillerDeploy(ctx, k)
+		if err != nil {
+			klog.Errorf("Client get tiller err:%+v", err)
+			return isNeedUpdate, err
+		}
+		if tillerDeploy != nil {
+			klog.V(3).Infof("deploy name: %s, namespace: %s", tillerDeploy.Name, tillerDeploy.Namespace)
+			helmSpec.Namespace = tillerDeploy.Namespace
+			for _, container := range tillerDeploy.Spec.Template.Spec.Containers {
+				if container.Name == clusterutils.TillerContainerName {
+					helmSpec.OverrideImageSpec = container.Image
+					for _, env := range container.Env {
+						if env.Name == clusterutils.TillerHistoryMax {
+							intValue, _ := strconv.Atoi(env.Value)
+							helmSpec.MaxHistory = intValue
+						}
+					}
+				}
+			}
+
+			isNodeAffinity = tillerDeploy.Spec.Template.Spec.Affinity != nil
+			isTillerRunning = tillerDeploy.Status.Replicas > 0 && tillerDeploy.Status.AvailableReplicas == tillerDeploy.Status.Replicas
+		}
+
+		if obj.Spec.HelmSpec.Namespace == "" {
+			obj.Spec.HelmSpec.Namespace = clusterutils.TillerNameSpace
+			isNeedUpdate++
+		}
+
+		if helmSpec.OverrideImageSpec == "" {
+			err := clusterutils.InstallTiller(k, obj)
+			if err != nil {
+				return isNeedUpdate, err
+			}
+		} else {
+			if helmSpec.OverrideImageSpec != obj.Spec.HelmSpec.OverrideImageSpec ||
+				helmSpec.MaxHistory != obj.Spec.HelmSpec.MaxHistory ||
+				isNodeAffinity == false {
+				klog.Infof("cluster:%s starting upgrade deploy tiller, spec:%+v", k.Name, obj.Spec.HelmSpec)
+				err := clusterutils.UpgradeTiller(k, obj)
+				if err != nil {
+					return isNeedUpdate, err
+				}
+			} else {
+				klog.V(3).Infof("cluster:%s tiller spec is same, ignore", k.Name)
+			}
+		}
+	}
+
+	if !isTillerRunning {
+		return isNeedUpdate, errors.New("tiller deploy pod is not available")
+	}
+	return isNeedUpdate, nil
 }
 
-func (r *ClusterReconciler) reconcileComponent(ctx context.Context, k *k8smanager.Cluster, obj *workloadv1beta1.Cluster) (int, error) {
+func (r *Reconciler) reconcileComponent(ctx context.Context, k *k8smanager.Cluster, obj *workloadv1beta1.Cluster) (int, error) {
 	if obj.Spec.SymNodeName == "" {
 		klog.Infof("====> cluster:%s no SymNodeName", obj.Name)
 		return 0, nil
-	} else {
-		err := common.PreLabelsNs(k, obj)
-		if err != nil {
-			return 0, err
-		}
+	}
+	err := common.PreLabelsNs(k, obj)
+	if err != nil {
+		return 0, err
+	}
 
-		err = common.PreLabelsNode(k, obj)
-		if err != nil {
-			return 0, err
-		}
+	err = common.PreLabelsNode(k, obj)
+	if err != nil {
+		return 0, err
 	}
 
 	hClient, err := helmv2.NewClientFromConfig(k.RestConfig, k.KubeCli, k.Name, r.HelmEnv.Helmv2env)

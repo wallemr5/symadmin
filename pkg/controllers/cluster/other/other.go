@@ -19,6 +19,7 @@ type reconciler struct {
 	hClient *helmv2.Client
 }
 
+// New ...
 func New(k *k8smanager.Cluster, obj *workloadv1beta1.Cluster, hClient *helmv2.Client) common.ComponentReconciler {
 	return &reconciler{
 		name:    "other",
@@ -28,10 +29,12 @@ func New(k *k8smanager.Cluster, obj *workloadv1beta1.Cluster, hClient *helmv2.Cl
 	}
 }
 
+// Name ...
 func (r *reconciler) Name() string {
 	return r.name
 }
 
+// Reconcile ...
 func (r *reconciler) Reconcile(log logr.Logger, obj interface{}) (interface{}, error) {
 	app, ok := obj.(*workloadv1beta1.HelmChartSpec)
 	if !ok {

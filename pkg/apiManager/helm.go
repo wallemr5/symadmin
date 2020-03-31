@@ -138,7 +138,7 @@ func (m *APIManager) GetHelmReleaseInfo(c *gin.Context) {
 
 func getHelmRelease(cluster *k8smanager.Cluster, appName, group, releaseName, zone string) (*rls.ListReleasesResponse, error) {
 	klog.V(4).Infof("start get helm release, %s", cluster.Name)
-	hClient, err := helmv2.NewClientFromConfig(cluster.RestConfig, cluster.KubeCli, "")
+	hClient, err := helmv2.NewClientFromConfig(cluster.RestConfig, cluster.KubeCli, "", nil)
 	if err != nil {
 		klog.Errorf("Initializing a new helm clinet has an error: %+v", err)
 		return nil, err
