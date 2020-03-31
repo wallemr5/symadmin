@@ -3,15 +3,15 @@ package cluster
 import (
 	"context"
 	"fmt"
-	"time"
-
 	"sort"
+	"time"
 
 	"github.com/go-logr/logr"
 	"github.com/gofrs/uuid"
 	"github.com/pkg/errors"
 	workloadv1beta1 "gitlab.dmall.com/arch/sym-admin/pkg/apis/workload/v1beta1"
 	"gitlab.dmall.com/arch/sym-admin/pkg/controllers/cluster/common"
+	"gitlab.dmall.com/arch/sym-admin/pkg/controllers/cluster/monitor"
 	"gitlab.dmall.com/arch/sym-admin/pkg/controllers/cluster/other"
 	"gitlab.dmall.com/arch/sym-admin/pkg/controllers/cluster/traefik"
 	helmv2 "gitlab.dmall.com/arch/sym-admin/pkg/helm/v2"
@@ -271,6 +271,7 @@ func (r *ClusterReconciler) reconcileComponent(ctx context.Context, k *k8smanage
 	phases := []common.ComponentReconciler{
 		other.New(k, obj, hClient),
 		traefik.New(k, obj, hClient),
+		monitor.New(r.Mgr, k, obj, hClient),
 	}
 
 	appStatus := make([]*workloadv1beta1.AppHelmStatuses, 0, len(obj.Spec.Apps))
@@ -282,10 +283,13 @@ func (r *ClusterReconciler) reconcileComponent(ctx context.Context, k *k8smanage
 		}
 
 		info, rerr := phase.Reconcile(r.Log, app)
-		if rerr == nil {
-			if st, ok := info.(*workloadv1beta1.AppHelmStatuses); ok {
-				appStatus = append(appStatus, st)
-			}
+		if rerr != nil {
+			klog.Errorf("app: %s Reconcile err: %v", app.Name, rerr)
+			continue
+		}
+
+		if st, ok := info.(*workloadv1beta1.AppHelmStatuses); ok {
+			appStatus = append(appStatus, st)
 		}
 	}
 	sort.Slice(appStatus, func(i, j int) bool {

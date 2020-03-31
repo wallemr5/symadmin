@@ -18,7 +18,7 @@ import (
 // kubernetes.io/hostname=10.13.133.11
 var (
 	LocalStorageName   = "local-storage"
-	PromPvName         = "prometheus-pv"
+	PrometheusPvName   = "prometheus-pv"
 	GrafanaPvName      = "grafana-pv"
 	NodeSelectorKey    = "sym-preserve"
 	NodeSelectorVa     = "monitor"
@@ -26,19 +26,15 @@ var (
 	RepositoryHub      = "registry.cn-hangzhou.aliyuncs.com/dmall/"
 	PromCrdSuffix      = "monitoring.coreos.com"
 	MasterNodeLabelKey = "node-role.kubernetes.io/master"
+
+	ClusterAlert       = "clusterAlert"
+	ClusterType        = "clusterType"
+	ClusterIngressHead = "clusterIngressHead"
 )
 
 type ComponentReconciler interface {
 	Name() string
-	Reconcile(log logr.Logger, app interface{}) (interface{}, error)
-}
-
-func GetHelmChartUrl(repo string, chartName string) string {
-	if repo == "" {
-		repo = "dmall"
-	}
-
-	return fmt.Sprintf("%s/%s", repo, chartName)
+	Reconcile(log logr.Logger, obj interface{}) (interface{}, error)
 }
 
 func MakeNodeAffinity() map[string]interface{} {
@@ -167,4 +163,30 @@ func FindComponentReconciler(name string, cs []ComponentReconciler) (ComponentRe
 	}
 
 	return t, nil
+}
+
+func BuildHelmInfo(app *workloadv1beta1.HelmChartSpec) (rlsName string, ns string, chartUrl string) {
+	var chartName string
+	var repo string
+	if app.ChartName == "" {
+		chartName = app.Name
+	} else {
+		chartName = app.ChartName
+	}
+
+	if app.Namespace == "" {
+		ns = "default"
+	} else {
+		ns = app.Namespace
+	}
+
+	if app.Repo == "" {
+		repo = "dmall"
+	} else {
+		repo = app.Repo
+	}
+
+	rlsName = app.Name
+	chartUrl = fmt.Sprintf("%s/%s", repo, chartName)
+	return
 }

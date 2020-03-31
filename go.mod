@@ -9,7 +9,7 @@ require (
 	github.com/DeanThompson/ginpprof v0.0.0-20190408063150-3be636683586
 	github.com/MakeNowJust/heredoc v1.0.0 // indirect
 	github.com/Masterminds/goutils v1.1.0 // indirect
-	github.com/Masterminds/semver v1.5.0 // indirect
+	github.com/Masterminds/semver v1.5.0
 	github.com/Masterminds/sprig v2.22.0+incompatible
 	github.com/appscode/jsonpatch v0.0.0-00010101000000-000000000000 // indirect
 	github.com/cenkalti/backoff v2.2.1+incompatible // indirect
@@ -86,7 +86,7 @@ require (
 	k8s.io/helm v2.13.1+incompatible
 	k8s.io/klog v0.4.0
 	k8s.io/kube-openapi v0.0.0-20191107075043-30be4d16710a // indirect
-	k8s.io/kubernetes v1.13.5 // indirect
+	k8s.io/kubernetes v1.13.5
 	k8s.io/utils v0.0.0-20191218082557-f07c713de883 // indirect
 	sigs.k8s.io/controller-runtime v0.1.12
 	sigs.k8s.io/testing_frameworks v0.1.2 // indirect
