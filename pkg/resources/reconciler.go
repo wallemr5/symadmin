@@ -10,12 +10,14 @@ import (
 	"reflect"
 
 	"github.com/goph/emperror"
+	"github.com/pkg/errors"
 	"gitlab.dmall.com/arch/sym-admin/pkg/resources/patch"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/klog"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 )
@@ -175,6 +177,86 @@ func Reconcile(log logr.Logger, c client.Client, desired runtime.Object, desired
 				return emperror.WrapWith(err, "deleting resource failed", "kind", desiredType, "name", key.Name)
 			}
 			log.Info("resource deleted")
+		}
+	}
+	return nil
+}
+
+func Reconcile2(ctx context.Context, c client.Client, desired runtime.Object, desiredState DesiredState) error {
+	if desiredState == "" {
+		desiredState = DesiredStatePresent
+	}
+
+	var current = desired.DeepCopyObject()
+	// desiredType := reflect.TypeOf(desired)
+	// var desiredCopy = desired.DeepCopyObject()
+	key, err := client.ObjectKeyFromObject(current)
+	if err != nil {
+		return errors.Wrapf(err, "get key[%s]", key)
+	}
+
+	err = c.Get(ctx, key, current)
+	if err != nil && !apierrors.IsNotFound(err) {
+		return errors.Wrapf(err, "getting resource failed key[%s]", key)
+	}
+	if apierrors.IsNotFound(err) {
+		if desiredState == DesiredStatePresent {
+			if err := patch.DefaultAnnotator.SetLastAppliedAnnotation(desired); err != nil {
+				klog.Errorf("Failed to set last applied annotation key[%s] err: %v", key, err)
+			}
+			if err := c.Create(ctx, desired); err != nil {
+				return errors.Wrapf(err, "creating resource failed key[%s]", key)
+			}
+			klog.Infof("resource key[%s] created", key)
+		}
+	} else {
+		if desiredState == DesiredStatePresent {
+			patchResult, err := patch.DefaultPatchMaker.Calculate(current, desired)
+			if err != nil {
+				klog.Errorf("could not match object key[%s] err: %v", key, err)
+			} else if patchResult.IsEmpty() {
+				klog.V(4).Infof("resource key[%s] unchanged is in sync", key)
+				return nil
+			} else {
+				klog.V(2).Infof("resource key[%s] diffs patch: %s", key, string(patchResult.Patch))
+			}
+
+			// Need to set this before resourceversion is set, as it would constantly change otherwise
+			if err := patch.DefaultAnnotator.SetLastAppliedAnnotation(desired); err != nil {
+				klog.Errorf("Failed to set last applied annotation key[%s] err: %v", key, err)
+			}
+
+			metaAccessor := meta.NewAccessor()
+			currentResourceVersion, err := metaAccessor.ResourceVersion(current)
+			if err != nil {
+				return err
+			}
+
+			metaAccessor.SetResourceVersion(desired, currentResourceVersion)
+			prepareResourceForUpdate(current, desired)
+			if err := c.Update(context.TODO(), desired); err != nil {
+				if apierrors.IsConflict(err) || apierrors.IsInvalid(err) {
+					klog.Infof("resource key:%s needs to be re-created err: %v", key, err)
+					err := c.Delete(ctx, current)
+					if err != nil {
+						return errors.Wrapf(err, "could not delete resource key:%s", key)
+					}
+					klog.Infof("resource key:%s deleted", key)
+					if err := c.Create(ctx, desired); err != nil {
+						return errors.Wrapf(err, "creating resource failed key:%s", key)
+					}
+					klog.Infof("resource key:%s created", key)
+					return nil
+				}
+
+				return errors.Wrapf(err, "updating resource key:%s failed", key)
+			}
+			klog.V(2).Infof("Updating resource key[%s] successfully", key)
+		} else if desiredState == DesiredStateAbsent {
+			if err := c.Delete(ctx, current); err != nil {
+				return errors.Wrapf(err, "deleting resource key[%s] failed", key)
+			}
+			klog.Infof("resource key[%s] deleted", key)
 		}
 	}
 	return nil

@@ -205,7 +205,7 @@ func preInstallMonitoringGetEtcd(k *k8smanager.Cluster) []string {
 	return nodeIps
 }
 
-func preInstallLpv(log logr.Logger, k *k8smanager.Cluster, app *workloadv1beta1.HelmChartSpec) error {
+func preInstallLpv(k *k8smanager.Cluster, app *workloadv1beta1.HelmChartSpec) error {
 	reclaimPolicy := corev1.PersistentVolumeReclaimDelete
 	volumeBindingMode := storagev1.VolumeBindingWaitForFirstConsumer
 	sc := &storagev1.StorageClass{
@@ -219,7 +219,7 @@ func preInstallLpv(log logr.Logger, k *k8smanager.Cluster, app *workloadv1beta1.
 	}
 
 	klog.Infof("start reconcile StorageClasses: %s", sc.Name)
-	err := resources.Reconcile(log, k.Client, sc, resources.DesiredStateAbsent)
+	err := resources.Reconcile2(context.TODO(), k.Client, sc, resources.DesiredStatePresent)
 	if err != nil {
 		return err
 	}
@@ -264,7 +264,7 @@ func preInstallLpv(log logr.Logger, k *k8smanager.Cluster, app *workloadv1beta1.
 	}
 
 	klog.Infof("start reconcile pv: %s", promPv.Name)
-	err = resources.Reconcile(log, k.Client, promPv, resources.DesiredStateAbsent)
+	err = resources.Reconcile2(context.TODO(), k.Client, promPv, resources.DesiredStatePresent)
 	if err != nil {
 		return err
 	}
@@ -309,7 +309,24 @@ func preInstallLpv(log logr.Logger, k *k8smanager.Cluster, app *workloadv1beta1.
 	}
 
 	klog.Infof("start reconcile pv: %s", grafanaPv.Name)
-	err = resources.Reconcile(log, k.Client, grafanaPv, resources.DesiredStateAbsent)
+	err = resources.Reconcile2(context.TODO(), k.Client, grafanaPv, resources.DesiredStatePresent)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func reconcileCrd(mgr manager.Manager, k *k8smanager.Cluster, obj *unstructured.Unstructured) error {
+	crd := &apiextensionsv1beta1.CustomResourceDefinition{}
+	err := mgr.GetScheme().Convert(obj, crd, nil)
+	if err != nil {
+		klog.Warningf("convert crd name:%s err: %#v", obj.GetName(), err)
+		return err
+	}
+
+	klog.Infof("start reconcile crd: %s", crd.Name)
+	err = resources.Reconcile2(context.TODO(), k.Client, crd, resources.DesiredStatePresent)
 	if err != nil {
 		return err
 	}
@@ -429,24 +446,7 @@ func makeAlertManagerConfig(isEnableAlert bool, c *workloadv1beta1.Cluster) map[
 	return ing
 }
 
-func ReconcileCrd(log logr.Logger, mgr manager.Manager, k *k8smanager.Cluster, obj *unstructured.Unstructured) error {
-	crd := &apiextensionsv1beta1.CustomResourceDefinition{}
-	err := mgr.GetScheme().Convert(obj, crd, nil)
-	if err != nil {
-		klog.Warningf("convert crd name:%s err: %#v", obj.GetName(), err)
-		return err
-	}
-
-	klog.Infof("start reconcile crd: %s", crd.Name)
-	err = resources.Reconcile(log, k.Client, crd, resources.DesiredStateAbsent)
-	if err != nil {
-		return err
-	}
-
-	return nil
-}
-
-func (r *reconciler) preInstallMonitoringCheckCrd(log logr.Logger, rlsName string, chartName string, chartVersion string) (bool, error) {
+func (r *reconciler) preInstallMonitoringCheckCrd(rlsName string, chartName string, chartVersion string) (bool, error) {
 	chrt, err := helmv2.GetRequestedChart(rlsName, chartName, chartVersion, nil, r.hClient.Env)
 	if err != nil {
 		return false, fmt.Errorf("loading chart has an error: %v", err)
@@ -464,7 +464,7 @@ func (r *reconciler) preInstallMonitoringCheckCrd(log logr.Logger, rlsName strin
 				return false, errors.Wrapf(err, "Resource name: %s Failed to parse YAML to a k8s object", file.TypeUrl)
 			}
 
-			err = ReconcileCrd(log, r.mgr, r.k, o.UnstructuredObject())
+			err = reconcileCrd(r.mgr, r.k, o.UnstructuredObject())
 			if err != nil {
 				return false, nil
 			}
@@ -474,7 +474,7 @@ func (r *reconciler) preInstallMonitoringCheckCrd(log logr.Logger, rlsName strin
 	return true, nil
 }
 
-func (r *reconciler) buildMonitorValues(log logr.Logger, app *workloadv1beta1.HelmChartSpec, isCreateCrd bool) map[string]interface{} {
+func (r *reconciler) buildMonitorValues(app *workloadv1beta1.HelmChartSpec, isCreateCrd bool) map[string]interface{} {
 	var (
 		env     string
 		etcdips []string
@@ -488,7 +488,7 @@ func (r *reconciler) buildMonitorValues(log logr.Logger, app *workloadv1beta1.He
 		klog.Infof("master etcdips: %+v", etcdips)
 	}
 
-	err := preInstallLpv(log, r.k, app)
+	err := preInstallLpv(r.k, app)
 	if err != nil {
 		return nil
 	}
@@ -734,13 +734,13 @@ func (r *reconciler) Reconcile(log logr.Logger, obj interface{}) (interface{}, e
 	}
 
 	rlsName, _, chartUrl := common.BuildHelmInfo(app)
-	ok, err := r.preInstallMonitoringCheckCrd(log, rlsName, chartUrl, app.ChartVersion)
+	ok, err := r.preInstallMonitoringCheckCrd(rlsName, chartUrl, app.ChartVersion)
 	if err != nil {
 		klog.Errorf("Reconcile crd err: %v", err)
 		return nil, err
 	}
 
-	va := r.buildMonitorValues(log, app, ok)
+	va := r.buildMonitorValues(app, ok)
 	klog.Infof("app[%s] va: \n %v", app.Name, va)
 	return nil, nil
 }
