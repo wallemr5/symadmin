@@ -13,6 +13,7 @@ import (
 	workloadv1beta1 "gitlab.dmall.com/arch/sym-admin/pkg/apis/workload/v1beta1"
 	"gitlab.dmall.com/arch/sym-admin/pkg/controllers/cluster/common"
 	"gitlab.dmall.com/arch/sym-admin/pkg/controllers/cluster/other"
+	"gitlab.dmall.com/arch/sym-admin/pkg/controllers/cluster/traefik"
 	helmv2 "gitlab.dmall.com/arch/sym-admin/pkg/helm/v2"
 	"gitlab.dmall.com/arch/sym-admin/pkg/helm/v2repo"
 	k8sclient "gitlab.dmall.com/arch/sym-admin/pkg/k8s/client"
@@ -268,7 +269,8 @@ func (r *ClusterReconciler) reconcileComponent(ctx context.Context, k *k8smanage
 	defer hClient.Close()
 
 	phases := []common.ComponentReconciler{
-		other.New("other", k, obj, hClient),
+		other.New(k, obj, hClient),
+		traefik.New(k, obj, hClient),
 	}
 
 	appStatus := make([]*workloadv1beta1.AppHelmStatuses, 0, len(obj.Spec.Apps))

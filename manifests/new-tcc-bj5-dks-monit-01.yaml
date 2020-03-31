@@ -9,10 +9,12 @@ metadata:
 spec:
   symNodeName: 10.13.135.252
   pause: false
-  additionals:
+  meta:
     area: beijing
     az: BJ5
     id: "4"
+    clusterType: tke
+    clusterIngressHead: monitor
   helmSpec:
     maxHistory: 5
     namespace: kube-system
@@ -21,6 +23,10 @@ spec:
     - name: metrics-server
       repo: dmall
       namespace: monitoring
+    - name: traefik
+      repo: dmall
+      namespace: kube-system
+      chartVersion: 1.86.1
 #    - name: monitor
 #      repo: dmall
 #      chartVersion: 8.7.0
@@ -39,11 +45,5 @@ spec:
 #        grafana-ing: mg.symphony.dmall.com
 #        prom-ing: mp.symphony.dmall.com
 #        alertmanager-ing: ma.symphony.dmall.com
-#    - name: traefik
-#      repo: dmall
-#      namespace: kube-system
-#      chartVersion: 1.86.1
-#      values:
-#        dashboard-ing: m.traefik.dmall.com
-#        "service.kubernetes.io/qcloud-loadbalancer-internal-subnetid": subnet-qt46ekc7
+
 

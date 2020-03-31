@@ -342,6 +342,26 @@ func ApplyRelease(rlsName, chartUrlName, specChartVersion string, chartPackage [
 		}
 	}
 
+	if runningRls == nil {
+		listRep, err := ListReleases(rlsName, hClient)
+		if err == nil && listRep != nil && len(listRep.Releases) > 0 {
+			if listRep.Releases[0].GetInfo().GetStatus().GetCode() != hapirelease.Status_DEPLOYED {
+				err := DeleteRelease(rlsName, hClient)
+				if err != nil {
+					klog.Errorf("delete not deployed rls: %s err:%v", rlsName, err)
+					return nil, err
+				} else {
+					klog.Infof("====> delete not deployed rls: %s success ", rlsName)
+					listRep = nil
+				}
+			} else {
+				runningRls = listRep.Releases[0]
+				klog.Infof("====> find runningRls name[%s]  version[%d] ", rlsName, runningRls.Version)
+			}
+		}
+
+	}
+
 	// If the release need to apply is nil, we create this release directly.
 	if runningRls == nil {
 		rep, err := CreateRelease(rlsName, chartUrlName, specChartVersion, chartPackage, hClient, namespace, helm.ValueOverrides(vaByte))
@@ -365,13 +385,13 @@ func ApplyRelease(rlsName, chartUrlName, specChartVersion string, chartPackage [
 		if isDifferent <= 0 {
 			runningRaw := runningRls.GetConfig().GetRaw()
 			if len(runningRaw) < 10 && len(vaByte) < 10 {
-				klog.V(4).Infof("Release[%s] the length of running raw and spec raw less than 10.", rlsName)
+				klog.V(4).Infof("Release[%s] the length of running values not enough", rlsName)
 				return nil, nil
 			}
 
 			isEquivalent := equality.Semantic.DeepEqual(string(vaByte), runningRaw)
 			if isEquivalent {
-				klog.V(5).Infof("Release[%s]'s running raw and spec raw not changed, ignore", rlsName)
+				klog.V(5).Infof("Release[%s]'s running values not changed, ignore", rlsName)
 				return nil, nil
 			} else {
 				isDifferent++

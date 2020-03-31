@@ -19,9 +19,9 @@ type reconciler struct {
 	hClient *helmv2.Client
 }
 
-func New(name string, k *k8smanager.Cluster, obj *workloadv1beta1.Cluster, hClient *helmv2.Client) common.ComponentReconciler {
+func New(k *k8smanager.Cluster, obj *workloadv1beta1.Cluster, hClient *helmv2.Client) common.ComponentReconciler {
 	return &reconciler{
-		name:    name,
+		name:    "other",
 		k:       k,
 		hClient: hClient,
 		obj:     obj,
@@ -32,38 +32,23 @@ func (r *reconciler) Name() string {
 	return r.name
 }
 
-func (r *reconciler) Reconcile(log logr.Logger, app interface{}) (interface{}, error) {
-	obj, ok := app.(*workloadv1beta1.HelmChartSpec)
+func (r *reconciler) Reconcile(log logr.Logger, obj interface{}) (interface{}, error) {
+	app, ok := obj.(*workloadv1beta1.HelmChartSpec)
 	if !ok {
 		return nil, fmt.Errorf("can't convert to HelmChartSpec")
 	}
 
-	log.Info("enter Reconcile", "name", obj.Name)
-	if obj.Name == "" {
-		return nil, fmt.Errorf("app name is empty")
-	}
-
-	rlsName := obj.Name
-	var chartName string
-	var namespace string
-	if obj.ChartName == "" {
-		chartName = rlsName
-	} else {
-		chartName = obj.ChartName
-	}
-
-	if obj.Namespace == "" {
-		namespace = r.obj.Namespace
-	} else {
-		namespace = obj.Namespace
+	log.Info("enter Reconcile", "name", app.Name)
+	if app.Name == "" || app.Namespace == "" {
+		return nil, fmt.Errorf("app name or namespace is empty")
 	}
 
 	var vaByte []byte
 	var err error
-	if obj.OverrideValue != "" {
-		vaByte = []byte(obj.OverrideValue)
+	if app.OverrideValue != "" {
+		vaByte = []byte(app.OverrideValue)
 	} else {
-		if _, ok := obj.Values["sym-affinity"]; ok {
+		if _, ok := app.Values["sym-affinity"]; ok {
 			valueMap := map[string]interface{}{
 				"affinity":    common.MakeNodeAffinity(),
 				"tolerations": common.MakeNodeTolerations(),
@@ -71,20 +56,20 @@ func (r *reconciler) Reconcile(log logr.Logger, app interface{}) (interface{}, e
 
 			vaByte, err = yaml.Marshal(valueMap)
 			if err != nil {
-				klog.Errorf("Marshal overrideValueMap err:%+v", err)
+				klog.Errorf("app[%s] Marshal overrideValueMap err:%+v", app.Name, err)
 				return nil, err
 			}
 		}
 	}
 
-	chartUrl := common.GetHelmChartUrl(obj.Repo, chartName)
-	rls, err := helmv2.ApplyRelease(rlsName, chartUrl, obj.ChartVersion, nil, r.hClient, namespace, nil, vaByte)
+	rlsName, ns, chartUrl := common.BuildHelmInfo(app)
+	rls, err := helmv2.ApplyRelease(rlsName, chartUrl, app.ChartVersion, nil, r.hClient, ns, nil, vaByte)
 	if err != nil || rls == nil {
 		return nil, err
 	}
 
 	return &workloadv1beta1.AppHelmStatuses{
-		Name:         obj.Name,
+		Name:         app.Name,
 		ChartVersion: rls.GetChart().GetMetadata().GetVersion(),
 		RlsName:      rls.Name,
 		RlsVersion:   rls.GetVersion(),
