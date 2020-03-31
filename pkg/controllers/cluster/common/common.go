@@ -28,12 +28,14 @@ var (
 	MasterNodeLabelKey = "node-role.kubernetes.io/master"
 )
 
+// ComponentReconciler ...
 type ComponentReconciler interface {
 	Name() string
 	Reconcile(log logr.Logger, app interface{}) (interface{}, error)
 }
 
-func GetHelmChartUrl(repo string, chartName string) string {
+// GetHelmChartURL ...
+func GetHelmChartURL(repo string, chartName string) string {
 	if repo == "" {
 		repo = "dmall"
 	}
@@ -41,6 +43,7 @@ func GetHelmChartUrl(repo string, chartName string) string {
 	return fmt.Sprintf("%s/%s", repo, chartName)
 }
 
+// MakeNodeAffinity ...
 func MakeNodeAffinity() map[string]interface{} {
 	affinity := map[string]interface{}{
 		"nodeAffinity": map[string]interface{}{
@@ -64,6 +67,7 @@ func MakeNodeAffinity() map[string]interface{} {
 	return affinity
 }
 
+// MakeNodeTolerations ...
 func MakeNodeTolerations() []map[string]interface{} {
 	tolerations := []map[string]interface{}{
 		{
@@ -75,6 +79,7 @@ func MakeNodeTolerations() []map[string]interface{} {
 	return tolerations
 }
 
+// PreLabelsNs ...
 func PreLabelsNs(k *k8smanager.Cluster, obj *workloadv1beta1.Cluster) error {
 	nss := &corev1.NamespaceList{}
 	err := k.Client.List(context.TODO(), &client.ListOptions{}, nss)
@@ -84,7 +89,7 @@ func PreLabelsNs(k *k8smanager.Cluster, obj *workloadv1beta1.Cluster) error {
 	}
 
 	var isUpdate bool
-	for i, _ := range nss.Items {
+	for i := range nss.Items {
 		isUpdate = false
 		ns := &nss.Items[i]
 		if va, ok := ns.Labels["name"]; !ok {
@@ -113,6 +118,7 @@ func PreLabelsNs(k *k8smanager.Cluster, obj *workloadv1beta1.Cluster) error {
 	return nil
 }
 
+// PreLabelsNode ...
 func PreLabelsNode(k *k8smanager.Cluster, obj *workloadv1beta1.Cluster) error {
 	node := &corev1.Node{}
 	err := k.Client.Get(context.TODO(), types.NamespacedName{
@@ -149,6 +155,7 @@ func PreLabelsNode(k *k8smanager.Cluster, obj *workloadv1beta1.Cluster) error {
 	return nil
 }
 
+// FindComponentReconciler ...
 func FindComponentReconciler(name string, cs []ComponentReconciler) (ComponentReconciler, error) {
 	var t ComponentReconciler
 
