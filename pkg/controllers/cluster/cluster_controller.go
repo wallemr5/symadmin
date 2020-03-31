@@ -14,6 +14,7 @@ import (
 	"gitlab.dmall.com/arch/sym-admin/pkg/controllers/cluster/common"
 	"gitlab.dmall.com/arch/sym-admin/pkg/controllers/cluster/monitor"
 	"gitlab.dmall.com/arch/sym-admin/pkg/controllers/cluster/other"
+	"gitlab.dmall.com/arch/sym-admin/pkg/controllers/cluster/swift"
 	"gitlab.dmall.com/arch/sym-admin/pkg/controllers/cluster/traefik"
 	clusterutils "gitlab.dmall.com/arch/sym-admin/pkg/controllers/cluster/utils"
 	helmv2 "gitlab.dmall.com/arch/sym-admin/pkg/helm/v2"
@@ -336,6 +337,7 @@ func (r *Reconciler) reconcileComponent(ctx context.Context, k *k8smanager.Clust
 		other.New(k, obj, hClient),
 		traefik.New(k, obj, hClient),
 		monitor.New(r.Mgr, k, obj, hClient),
+		swift.New(k, obj, hClient),
 	}
 
 	appStatus := make([]*workloadv1beta1.AppHelmStatuses, 0, len(obj.Spec.Apps))
