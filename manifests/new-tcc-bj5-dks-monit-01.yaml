@@ -31,7 +31,7 @@ spec:
       repo: dmall
       namespace: monitoring
       chartName: prometheus-operator
-      chartVersion: 8.7.0
+      chartVersion: 8.7.1
       values:
         custom-resources-config: disable
         selector-only-system: enable

@@ -46,6 +46,7 @@ func (r *reconciler) Reconcile(log logr.Logger, obj interface{}) (interface{}, e
 		return nil, fmt.Errorf("app name or namespace is empty")
 	}
 
+	rlsName, ns, chartUrl := common.BuildHelmInfo(app)
 	var vaByte []byte
 	var err error
 	if app.OverrideValue != "" {
@@ -62,10 +63,10 @@ func (r *reconciler) Reconcile(log logr.Logger, obj interface{}) (interface{}, e
 				klog.Errorf("app[%s] Marshal overrideValueMap err:%+v", app.Name, err)
 				return nil, err
 			}
+			klog.Infof("rlsName:%s OverrideValue:\n%s", rlsName, string(vaByte))
 		}
 	}
 
-	rlsName, ns, chartUrl := common.BuildHelmInfo(app)
 	rls, err := helmv2.ApplyRelease(rlsName, chartUrl, app.ChartVersion, nil, r.hClient, ns, nil, vaByte)
 	if err != nil || rls == nil {
 		return nil, err

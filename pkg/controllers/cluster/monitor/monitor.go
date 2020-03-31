@@ -9,6 +9,7 @@ import (
 	"github.com/Masterminds/semver"
 	"github.com/go-logr/logr"
 
+	"github.com/ghodss/yaml"
 	"github.com/pkg/errors"
 	workloadv1beta1 "gitlab.dmall.com/arch/sym-admin/pkg/apis/workload/v1beta1"
 	"gitlab.dmall.com/arch/sym-admin/pkg/controllers/cluster/common"
@@ -446,35 +447,35 @@ func makeAlertManagerConfig(isEnableAlert bool, c *workloadv1beta1.Cluster) map[
 	return ing
 }
 
-func (r *reconciler) preInstallMonitoringCheckCrd(rlsName string, chartName string, chartVersion string) (bool, error) {
+func (r *reconciler) preInstallMonitoringCheckCrd(rlsName string, chartName string, chartVersion string) error {
 	chrt, err := helmv2.GetRequestedChart(rlsName, chartName, chartVersion, nil, r.hClient.Env)
 	if err != nil {
-		return false, fmt.Errorf("loading chart has an error: %v", err)
+		return fmt.Errorf("loading chart has an error: %v", err)
 	}
 
 	for _, file := range chrt.Files {
 		if strings.HasPrefix(file.TypeUrl, "crds") {
-			yaml := object.RemoveNonYAMLLines(string(file.Value))
-			if yaml == "" {
+			orgYaml := object.RemoveNonYAMLLines(string(file.Value))
+			if orgYaml == "" {
 				continue
 			}
 			klog.V(4).Infof("start ation name: %s ... ", file.TypeUrl)
-			o, err := object.ParseYAMLToK8sObject([]byte(yaml))
+			o, err := object.ParseYAMLToK8sObject([]byte(orgYaml))
 			if err != nil {
-				return false, errors.Wrapf(err, "Resource name: %s Failed to parse YAML to a k8s object", file.TypeUrl)
+				return errors.Wrapf(err, "Resource name: %s Failed to parse YAML to a k8s object", file.TypeUrl)
 			}
 
 			err = reconcileCrd(r.mgr, r.k, o.UnstructuredObject())
 			if err != nil {
-				return false, nil
+				return err
 			}
 		}
 	}
 
-	return true, nil
+	return nil
 }
 
-func (r *reconciler) buildMonitorValues(app *workloadv1beta1.HelmChartSpec, isCreateCrd bool) map[string]interface{} {
+func (r *reconciler) buildMonitorValues(app *workloadv1beta1.HelmChartSpec) map[string]interface{} {
 	var (
 		env     string
 		etcdips []string
@@ -625,7 +626,7 @@ func (r *reconciler) buildMonitorValues(app *workloadv1beta1.HelmChartSpec, isCr
 
 	if _va, ok := app.Values["custom-resources-config"]; ok && _va == "enable" {
 		overrideValueMap["prometheusOperator"] = map[string]interface{}{
-			"createCustomResource": isCreateCrd,
+			"createCustomResource": false,
 			"affinity":             affinity,
 			"tolerations":          tolerations,
 			"configReloaderCpu":    "500m",
@@ -643,7 +644,7 @@ func (r *reconciler) buildMonitorValues(app *workloadv1beta1.HelmChartSpec, isCr
 		}
 	} else {
 		overrideValueMap["prometheusOperator"] = map[string]interface{}{
-			"createCustomResource": isCreateCrd,
+			"createCustomResource": false,
 			"tolerations":          tolerations,
 			"affinity":             affinity,
 			"admissionWebhooks": map[string]interface{}{
@@ -729,18 +730,39 @@ func (r *reconciler) Reconcile(log logr.Logger, obj interface{}) (interface{}, e
 		return nil, fmt.Errorf("app name or namespace is empty")
 	}
 
+	// modify
 	if app.ChartName == "" {
 		app.ChartName = "prometheus-operator"
 	}
 
-	rlsName, _, chartUrl := common.BuildHelmInfo(app)
-	ok, err := r.preInstallMonitoringCheckCrd(rlsName, chartUrl, app.ChartVersion)
+	_, ns, chartUrl := common.BuildHelmInfo(app)
+	// monitor rls name need add cluster name
+	rlsName := "monitor-" + r.obj.Name
+	err := r.preInstallMonitoringCheckCrd(rlsName, chartUrl, app.ChartVersion)
 	if err != nil {
 		klog.Errorf("Reconcile crd err: %v", err)
 		return nil, err
 	}
 
-	va := r.buildMonitorValues(app, ok)
-	klog.Infof("app[%s] va: \n %v", app.Name, va)
-	return nil, nil
+	va := r.buildMonitorValues(app)
+	vaByte, err := yaml.Marshal(va)
+	if err != nil {
+		klog.Errorf("app[%s] Marshal overrideValueMap err:%+v", app.Name, err)
+		return nil, err
+	}
+	klog.Infof("rlsName:%s OverrideValue:\n%s", rlsName, string(vaByte))
+
+	rls, err := helmv2.ApplyRelease(rlsName, chartUrl, app.ChartVersion, nil, r.hClient, ns, nil, vaByte)
+	if err != nil || rls == nil {
+		return nil, err
+	}
+
+	return &workloadv1beta1.AppHelmStatuses{
+		Name:         app.Name,
+		ChartVersion: rls.GetChart().GetMetadata().GetVersion(),
+		RlsName:      rls.Name,
+		RlsVersion:   rls.GetVersion(),
+		RlsStatus:    rls.GetInfo().GetStatus().Code.String(),
+		OverrideVa:   rls.GetConfig().GetRaw(),
+	}, nil
 }

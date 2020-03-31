@@ -53,12 +53,13 @@ func (r *reconciler) Reconcile(log logr.Logger, obj interface{}) (interface{}, e
 		vaByte = []byte(app.OverrideValue)
 	} else {
 		valueMap := makeOverrideSwift(app)
-		klog.Infof("rlsName:%s OverrideValue:%v", rlsName, valueMap)
+
 		vaByte, err = yaml.Marshal(valueMap)
 		if err != nil {
 			klog.Errorf("Marshal overrideValueMap err:%+v", err)
 			return nil, err
 		}
+		klog.Infof("rlsName:%s OverrideValue:\n%s", rlsName, string(vaByte))
 	}
 
 	rls, err := helmv2.ApplyRelease(rlsName, chartURL, app.ChartVersion, nil, r.hClient, ns, nil, vaByte)
