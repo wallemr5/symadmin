@@ -151,7 +151,7 @@ func (r *AppSetReconciler) applyStatus(ctx context.Context, req customctrl.Custo
 		return false, nil
 	}
 
-	if as.AggrStatus.Status == workloadv1beta1.AppStatusRuning {
+	if as.AggrStatus.Status == workloadv1beta1.AppStatusRuning && app.Status.AggrStatus.Status != workloadv1beta1.AppStatusRuning {
 		r.recorder.Event(app, corev1.EventTypeNormal, "Running", "Status is Running.")
 	}
 
