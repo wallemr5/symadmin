@@ -348,15 +348,15 @@ func ApplyRelease(rlsName, chartUrlName, specChartVersion string, chartPackage [
 			if listRep.Releases[0].GetInfo().GetStatus().GetCode() != hapirelease.Status_DEPLOYED {
 				err := DeleteRelease(rlsName, hClient)
 				if err != nil {
-					klog.Errorf("delete not deployed rls: %s err:%v", rlsName, err)
+					klog.Errorf("delete not deployed rls name: %s err:%v", rlsName, err)
 					return nil, err
 				} else {
-					klog.Infof("====> delete not deployed rls: %s success ", rlsName)
+					klog.Infof("====> delete not deployed rls name: %s successfully", rlsName)
 					listRep = nil
 				}
 			} else {
 				runningRls = listRep.Releases[0]
-				klog.Infof("====> find runningRls name[%s]  version[%d] ", rlsName, runningRls.Version)
+				klog.Infof("====> find runningRls name: %s  version: %d ", rlsName, runningRls.Version)
 			}
 		}
 

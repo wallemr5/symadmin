@@ -8,32 +8,23 @@ import (
 	workloadv1beta1 "gitlab.dmall.com/arch/sym-admin/pkg/apis/workload/v1beta1"
 	"gitlab.dmall.com/arch/sym-admin/pkg/helm/object"
 	helmv2 "gitlab.dmall.com/arch/sym-admin/pkg/helm/v2"
-	"gitlab.dmall.com/arch/sym-admin/pkg/resources/patch"
+	"gitlab.dmall.com/arch/sym-admin/pkg/resources"
 	"gitlab.dmall.com/arch/sym-admin/pkg/utils"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
-	apierrors "k8s.io/apimachinery/pkg/api/errors"
-	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime"
-	"k8s.io/client-go/util/retry"
 	"k8s.io/helm/pkg/chartutil"
 	helmenv "k8s.io/helm/pkg/helm/environment"
 	"k8s.io/helm/pkg/proto/hapi/chart"
 	"k8s.io/helm/pkg/renderutil"
 	"k8s.io/helm/pkg/timeconv"
 	"k8s.io/klog"
-	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 )
 
-type DesiredState string
-
 const (
-	DesiredStatePresent DesiredState = "present"
-	DesiredStateAbsent  DesiredState = "absent"
-
 	StatefulSetKind = "StatefulSet"
 	DeploymentKind  = "Deployment"
 	ServiceKind     = "Service"
@@ -85,7 +76,6 @@ func TemplateK8sObject(rlsName, chartName, chartVersion string, chartPackage []b
 		klog.V(4).Infof("start ation name: %s ... \n %s", name, yaml)
 		o, err := object.ParseYAMLToK8sObject([]byte(yaml))
 		if err != nil {
-			klog.Errorf("name: %s Failed to parse YAML to a k8s object: %v", name, err.Error())
 			return nil, errors.Wrapf(err, "Resource name: %s Failed to parse YAML to a k8s object", name)
 		}
 
@@ -210,7 +200,7 @@ func (r *AdvDeploymentReconciler) ApplyResources(ctx context.Context, advDeploy 
 			}
 
 			ownerRes = append(ownerRes, GetFormattedName(ServiceKind, svc))
-			err = Reconcile(ctx, r, svc, advDeploy, DesiredStatePresent)
+			err = resources.Reconcile(ctx, r.Client, svc, resources.DesiredStatePresent, r.Opt.Debug)
 			if err != nil {
 				klog.Errorf("svc name: %s err: %v", svc.Name, err)
 				return ownerRes, err
@@ -221,7 +211,7 @@ func (r *AdvDeploymentReconciler) ApplyResources(ctx context.Context, advDeploy 
 				return nil, fmt.Errorf("Convert Failed kind: %s Name: %s/%s ", obj.Kind, obj.Namespace, obj.Name)
 			}
 			ownerRes = append(ownerRes, GetFormattedName(DeploymentKind, deploy))
-			err = Reconcile(ctx, r, deploy, advDeploy, DesiredStatePresent)
+			err = resources.Reconcile(ctx, r.Client, deploy, resources.DesiredStatePresent, r.Opt.Debug)
 			if err != nil {
 				klog.Errorf("deploy name: %s err: %v", deploy.Name, err)
 				return ownerRes, err
@@ -232,7 +222,7 @@ func (r *AdvDeploymentReconciler) ApplyResources(ctx context.Context, advDeploy 
 				return nil, fmt.Errorf("Convert Failed kind: %s Name: %s/%s ", obj.Kind, obj.Namespace, obj.Name)
 			}
 			ownerRes = append(ownerRes, GetFormattedName(ServiceKind, sta))
-			err = Reconcile(ctx, r, sta, advDeploy, DesiredStatePresent)
+			err = resources.Reconcile(ctx, r.Client, sta, resources.DesiredStatePresent, r.Opt.Debug)
 			if err != nil {
 				klog.Errorf("statefulset name: %s err: %v", sta.Name, err)
 				return ownerRes, err
@@ -264,112 +254,4 @@ func GetAffinity(advDeploy *workloadv1beta1.AdvDeployment) *corev1.Affinity {
 			},
 		},
 	}
-}
-
-func prepareResourceForUpdate(current, desired runtime.Object) {
-	switch desired.(type) {
-	case *corev1.Service:
-		svc := desired.(*corev1.Service)
-		svc.Spec.ClusterIP = current.(*corev1.Service).Spec.ClusterIP
-	}
-}
-
-func Reconcile(ctx context.Context, r *AdvDeploymentReconciler, desired Object, owner Object, desiredState DesiredState) error {
-	if desiredState == "" {
-		desiredState = DesiredStatePresent
-	}
-
-	c := r.Client
-	var current = desired.DeepCopyObject()
-	// desiredType := reflect.TypeOf(desired)
-	// var desiredCopy = desired.DeepCopyObject()
-	key, err := client.ObjectKeyFromObject(current)
-	if err != nil {
-		return errors.Wrapf(err, "get key[%s]", key)
-	}
-
-	err = c.Get(ctx, key, current)
-	if err != nil && !apierrors.IsNotFound(err) {
-		return errors.Wrapf(err, "getting resource failed key[%s]", key)
-	}
-	if apierrors.IsNotFound(err) {
-		if desiredState == DesiredStatePresent {
-			if err := patch.DefaultAnnotator.SetLastAppliedAnnotation(desired); err != nil {
-				klog.Errorf("Failed to set last applied annotation key[%s] err: %v", key, err)
-			}
-			if err := c.Create(ctx, desired); err != nil {
-				return errors.Wrapf(err, "creating resource failed key[%s]", key)
-			}
-			klog.Infof("resource created")
-		}
-	} else {
-		if desiredState == DesiredStatePresent {
-			patchResult, err := patch.DefaultPatchMaker.Calculate(current, desired)
-			if err != nil {
-				klog.Errorf("could not match object key[%s] err: %v", key, err)
-			} else if patchResult.IsEmpty() {
-				klog.V(4).Infof("resource key[%s] unchanged is in sync", key)
-				return nil
-			} else {
-				klog.V(2).Infof("resource key[%s] diffs patch: %s", key, string(patchResult.Patch))
-			}
-
-			// Need to set this before resourceversion is set, as it would constantly change otherwise
-			if err := patch.DefaultAnnotator.SetLastAppliedAnnotation(desired); err != nil {
-				klog.Errorf("Failed to set last applied annotation key[%s] err: %v", key, err)
-			}
-
-			if r.Opt.Debug {
-				if err := c.Update(ctx, desired); err != nil {
-					if apierrors.IsConflict(err) || apierrors.IsInvalid(err) {
-						klog.Infof("resource key:%s needs to be re-created err: %v", key, err)
-						err := c.Delete(ctx, current)
-						if err != nil {
-							return errors.Wrapf(err, "could not delete resource key:%s", key)
-						}
-						klog.Infof("resource key:%s deleted", key)
-						if err := c.Create(ctx, desired); err != nil {
-							return errors.Wrapf(err, "creating resource failed key:%s", key)
-						}
-						klog.Infof("resource key:%s created", key)
-						return nil
-					}
-					return errors.Wrapf(err, "updating resource key:%s failed", key)
-				}
-				klog.Infof("resource key:%s updated", key)
-			} else {
-				metaAccessor := meta.NewAccessor()
-				err = retry.RetryOnConflict(retry.DefaultRetry, func() error {
-					currentResourceVersion, err := metaAccessor.ResourceVersion(current)
-					if err != nil {
-						return err
-					}
-
-					metaAccessor.SetResourceVersion(desired, currentResourceVersion)
-					prepareResourceForUpdate(current, desired)
-
-					updateErr := r.Client.Update(ctx, desired)
-					if updateErr == nil {
-						klog.V(2).Infof("Updating resource key[%s] successfully", key)
-						return nil
-					}
-
-					// Get the advdeploy again when updating is failed.
-					getErr := r.Client.Get(ctx, key, current)
-					if getErr != nil {
-						return errors.Wrapf(err, "updated get resource key[%s] err: %v", key, err)
-					}
-
-					return updateErr
-				})
-			}
-			return err
-		} else if desiredState == DesiredStateAbsent {
-			if err := c.Delete(ctx, current); err != nil {
-				return errors.Wrapf(err, "deleting resource key[%s] failed", key)
-			}
-			klog.Infof("resource key[%s] deleted", key)
-		}
-	}
-	return nil
 }

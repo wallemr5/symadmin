@@ -220,7 +220,7 @@ func preInstallLpv(k *k8smanager.Cluster, app *workloadv1beta1.HelmChartSpec) er
 	}
 
 	klog.Infof("start reconcile StorageClasses: %s", sc.Name)
-	err := resources.Reconcile2(context.TODO(), k.Client, sc, resources.DesiredStatePresent)
+	err := resources.Reconcile(context.TODO(), k.Client, sc, resources.DesiredStatePresent, false)
 	if err != nil {
 		return err
 	}
@@ -265,7 +265,7 @@ func preInstallLpv(k *k8smanager.Cluster, app *workloadv1beta1.HelmChartSpec) er
 	}
 
 	klog.Infof("start reconcile pv: %s", promPv.Name)
-	err = resources.Reconcile2(context.TODO(), k.Client, promPv, resources.DesiredStatePresent)
+	err = resources.Reconcile(context.TODO(), k.Client, promPv, resources.DesiredStatePresent, false)
 	if err != nil {
 		return err
 	}
@@ -310,7 +310,7 @@ func preInstallLpv(k *k8smanager.Cluster, app *workloadv1beta1.HelmChartSpec) er
 	}
 
 	klog.Infof("start reconcile pv: %s", grafanaPv.Name)
-	err = resources.Reconcile2(context.TODO(), k.Client, grafanaPv, resources.DesiredStatePresent)
+	err = resources.Reconcile(context.TODO(), k.Client, grafanaPv, resources.DesiredStatePresent, false)
 	if err != nil {
 		return err
 	}
@@ -327,7 +327,7 @@ func reconcileCrd(mgr manager.Manager, k *k8smanager.Cluster, obj *unstructured.
 	}
 
 	klog.Infof("start reconcile crd: %s", crd.Name)
-	err = resources.Reconcile2(context.TODO(), k.Client, crd, resources.DesiredStatePresent)
+	err = resources.Reconcile(context.TODO(), k.Client, crd, resources.DesiredStatePresent, false)
 	if err != nil {
 		return err
 	}
