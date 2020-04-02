@@ -9,10 +9,10 @@ master:
   resources:
     limits:
       cpu: 1
-      memory: 1024Mi
+      memory: 2048Mi
     requests:
       cpu: 1
-      memory: 1024Mi
+      memory: 2048Mi
   database:
     storageclass: local-storage
   alarms:
@@ -26,3 +26,15 @@ slave:
     requests:
       cpu: 0.5
       memory: 512Mi
+  tolerations:
+    - operator: Exists
+      effect: NoSchedule
+  affinity:
+    nodeAffinity:
+      requiredDuringSchedulingIgnoredDuringExecution:
+        nodeSelectorTerms:
+          - matchExpressions:
+              - key: kubernetes.io/hostname
+                operator: In
+                values:
+                  - 10.28.27.242
