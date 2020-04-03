@@ -33,7 +33,6 @@ import (
 	"k8s.io/client-go/util/retry"
 	"k8s.io/klog"
 	ctrl "sigs.k8s.io/controller-runtime"
-	"sigs.k8s.io/controller-runtime/pkg/builder"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
 	"sigs.k8s.io/controller-runtime/pkg/handler"
@@ -91,15 +90,15 @@ func Add(mgr manager.Manager, cMgr *pkgmanager.DksManager) error {
 		return err
 	}
 
-	err = builder.
-		ControllerManagedBy(mgr).
-		For(&workloadv1beta1.Cluster{}).
-		WithEventFilter(utils.GetWatchPredicateForClusterSpec()).
-		Complete(r)
-	if err != nil {
-		r.Log.Error(err, "could not create controller")
-		return err
-	}
+	// err = builder.
+	// 	ControllerManagedBy(mgr).
+	// 	For(&workloadv1beta1.Cluster{}).
+	// 	WithEventFilter(utils.GetWatchPredicateForClusterSpec()).
+	// 	Complete(r)
+	// if err != nil {
+	// 	r.Log.Error(err, "could not create controller")
+	// 	return err
+	// }
 
 	helmv2env, err := helmv2.InitHelmRepoEnv("dmall", cMgr.Opt.Repos)
 	if err != nil {
