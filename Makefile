@@ -1,4 +1,4 @@
-VERSION ?= v0.1.20
+VERSION ?= v0.1.0
 # Image URL to use all building/pushing image targets
 IMG_REG ?= registry.cn-hangzhou.aliyuncs.com/r2d2
 # IMG_REG ?= registry.cn-shanghai.aliyuncs.com/zhd173
@@ -10,7 +10,7 @@ CRD_OPTIONS ?= "crd:trivialVersions=true"
 # This repo's root import path (under GOPATH).
 ROOT := gitlab.dmall.com/arch/sym-admin
 
-GO_VERSION := 1.14
+GO_VERSION := 1.14.1
 ARCH     ?= $(shell go env GOARCH)
 BUILD_DATE = $(shell date +'%Y-%m-%dT%H:%M:%SZ')
 COMMIT    = $(shell git rev-parse --short HEAD)
@@ -81,8 +81,8 @@ docker-build:
 build:
 	$(GO) -v -o bin/sym-admin-controller -ldflags "-s -w -X $(ROOT)/pkg/version.Release=$(VERSION) -X  $(ROOT)/pkg/version.Commit=$(COMMIT)   \
 	-X  $(ROOT)/pkg/version.BuildDate=$(BUILD_DATE)" cmd/controller/main.go
-	$(GO) -v -o bin/sym-admin-api -ldflags "-s -w -X  $(ROOT)/pkg/version.Release=$(VERSION) -X  $(ROOT)/pkg/version.Commit=$(COMMIT)   \
-	-X  $(ROOT)/pkg/version.BuildDate=$(BUILD_DATE)" cmd/sym-api/main.go
+#	$(GO) -v -o bin/sym-admin-api -ldflags "-s -w -X  $(ROOT)/pkg/version.Release=$(VERSION) -X  $(ROOT)/pkg/version.Commit=$(COMMIT)   \
+#	-X  $(ROOT)/pkg/version.BuildDate=$(BUILD_DATE)" cmd/sym-api/main.go
 
 docker-push: docker-push-controller docker-push-api
 

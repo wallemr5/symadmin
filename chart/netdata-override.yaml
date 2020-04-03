@@ -2,8 +2,10 @@ ingress:
   annotations:
     kubernetes.io/ingress.class: traefik
   hosts:
-    - monitor.netdata.dmall.com
+    - idc.netdata.dmall.com
 
+image:
+  repository: registry.cn-hangzhou.aliyuncs.com/dmall/netdata
 
 master:
   resources:
@@ -13,10 +15,15 @@ master:
     requests:
       cpu: 1
       memory: 2048Mi
+  tolerations:
+    - operator: Exists
+      effect: NoSchedule
   database:
     storageclass: local-storage
+    volumesize: 10Gi
   alarms:
     storageclass: local-storage
+    volumesize: 1Gi
 
 slave:
   resources:
@@ -38,3 +45,4 @@ slave:
                 operator: In
                 values:
                   - 10.28.27.242
+                  - 10.28.39.248

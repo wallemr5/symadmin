@@ -33,6 +33,7 @@ import (
 	"k8s.io/client-go/util/retry"
 	"k8s.io/klog"
 	ctrl "sigs.k8s.io/controller-runtime"
+	"sigs.k8s.io/controller-runtime/pkg/builder"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
 	"sigs.k8s.io/controller-runtime/pkg/handler"
@@ -79,14 +80,24 @@ func Add(mgr manager.Manager, cMgr *pkgmanager.DksManager) error {
 	// Create a new runtime controller for advDeployment
 	ctl, err := controller.New(controllerName, mgr, controller.Options{Reconciler: r, MaxConcurrentReconciles: cMgr.Opt.Threadiness})
 	if err != nil {
-		r.Log.Error(err, "Creating a new AdvDeployment controller has an error")
+		r.Log.Error(err, "Creating a new cluster controller has an error")
 		return err
 	}
 
 	// We set the objects which would to be watched by this controller.
 	err = ctl.Watch(&source.Kind{Type: &workloadv1beta1.Cluster{}}, &handler.EnqueueRequestForObject{}, utils.GetWatchPredicateForClusterSpec())
 	if err != nil {
-		r.Log.Error(err, "Watching AdvDeployment has an error")
+		r.Log.Error(err, "Watching cluster has an error")
+		return err
+	}
+
+	err = builder.
+		ControllerManagedBy(mgr).
+		For(&workloadv1beta1.Cluster{}).
+		WithEventFilter(utils.GetWatchPredicateForClusterSpec()).
+		Complete(r)
+	if err != nil {
+		r.Log.Error(err, "could not create controller")
 		return err
 	}
 
@@ -108,6 +119,21 @@ func Add(mgr manager.Manager, cMgr *pkgmanager.DksManager) error {
 func (r *Reconciler) Reconcile(req ctrl.Request) (ctrl.Result, error) {
 	klog.V(3).Infof("##### [%s] start to reconcile.", req.NamespacedName)
 
+	// Calculating how long did the reconciling process take
+	startTime := time.Now()
+	defer func() {
+		diffTime := time.Since(startTime)
+		var logLevel klog.Level
+		if diffTime > 2*time.Second {
+			logLevel = 2
+		} else if diffTime > 1*time.Second {
+			logLevel = 3
+		} else {
+			logLevel = 4
+		}
+		klog.V(logLevel).Infof("##### [%s] reconciling is finished. time taken: %v. ", req.NamespacedName, diffTime)
+	}()
+
 	ctx := context.Background()
 	logger := r.Log.WithValues("key", req.NamespacedName, "id", uuid.Must(uuid.NewV4()).String())
 
@@ -121,6 +147,10 @@ func (r *Reconciler) Reconcile(req ctrl.Request) (ctrl.Result, error) {
 
 		logger.Error(err, "failed to get cluster")
 		return reconcile.Result{}, err
+	}
+
+	if cluster.Spec.Pause {
+		return reconcile.Result{}, nil
 	}
 
 	k, err := r.EnsureClustes(cluster.Namespace, cluster.Name)

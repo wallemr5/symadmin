@@ -9,7 +9,7 @@ image:
   tag: v0.1.0
   pullPolicy: Always
   logLevel: 4
-  master: false
+  master: true
   worker: true
   debug: true
   leader: false
@@ -58,23 +58,15 @@ tolerations: []
 
 affinity: {}
 
-# dev
-# hostAliases:
-#   - ip: "10.13.133.9"
-#     hostnames:
-#       - "cls-nkp08j5d.ccs.tencent-cloud.com"
-#   - ip: "10.13.135.12"
-#     hostnames:
-#       - "cls-7xq1bq9f.ccs.tencent-cloud.com"
-#   - ip: "10.13.135.251"
-#     hostnames:
-#       - "cls-89a4hpb3.ccs.tencent-cloud.com"
-#   - ip: "10.13.135.250"
-#     hostnames:
-#       - "chartmuseum.dmall.com"
 
 # dev-test
 hostAliases:
+  - ip: "10.13.135.251"
+    hostnames:
+      - "cls-89a4hpb3.ccs.tencent-cloud.com"
+  - ip: "10.13.135.12"
+    hostnames:
+      - "cls-7xq1bq9f.ccs.tencent-cloud.com"
   - ip: "10.16.247.78"
     hostnames:
       - "cls-otdyiqyb.ccs.tencent-cloud.com"
@@ -87,6 +79,12 @@ hostAliases:
   - ip: "10.13.133.9"
     hostnames:
       - "cls-0snem5sv.ccs.tencent-cloud.com"
+  - ip: "10.16.247.131"
+    hostnames:
+      - "cls-278pwqet.ccs.tencent-cloud.com"
+  - ip: "10.16.113.81"
+    hostnames:
+      - "cls-97rlivuj.ccs.tencent-cloud.com"
   - ip: "10.13.135.250"
     hostnames:
       - "chartmuseum.dmall.com"
