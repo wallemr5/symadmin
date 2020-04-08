@@ -106,16 +106,16 @@ docker-push-api:
 
 # Install operator with helm
 helm-master:
-	helm upgrade --install sym-ctl --namespace sym-admin --set image.tag=${VERSION},image.worker=false,image.master=true ./chart/controller
+	helm upgrade --install sym-ctl --namespace sym-admin --set image.tag=${VERSION},image.worker=false,image.master=true ./chart/sym-controller
 
 helm-master-worker:
-	helm upgrade --install sym-ctl --namespace sym-admin --set image.tag=${VERSION},image.worker=true,image.master=true ./chart/controller
+	helm upgrade --install sym-ctl --namespace sym-admin --set image.tag=${VERSION},image.worker=true,image.master=true ./chart/sym-controller
 
 helm-worker:
-	helm upgrade --install sym-ctl --namespace sym-admin --set image.tag=${VERSION},image.worker=true,image.master=false ./chart/controller
+	helm upgrade --install sym-ctl --namespace sym-admin --set image.tag=${VERSION},image.worker=true,image.master=false ./chart/sym-controller
 
 helm-api:
-	helm upgrade --install sym-api --namespace sym-admin --set image.tag=${VERSION} ./chart/api
+	helm upgrade --install sym-api --namespace sym-admin --set image.tag=${VERSION} ./chart/sym-api
 
 # find or download controller-gen
 # download controller-gen if necessary
