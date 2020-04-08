@@ -2,12 +2,12 @@
 # This is a YAML-formatted file.
 # Declare variables to be passed into your templates.
 
-replicaCount: 2
+replicaCount: 3
 
 image:
-  repository: registry.cn-shanghai.aliyuncs.com/zhd173/sym-admin-api
-  tag: v0.1.8
-  pullPolicy: Always
+  repository: dmall-bj.tencentcloudcr.com/symcn/sym-admin-api
+  tag: v1.0.1
+  pullPolicy: IfNotPresent
 
 nameOverride: ""
 fullnameOverride: ""
@@ -22,7 +22,7 @@ ingress:
     kubernetes.io/ingress.class: traefik
     # kubernetes.io/tls-acme: "true"
   hosts:
-    - host: testapi.bus.sym.dmall.com
+    - host: api.sym.dmall.com
     # - host: devapi.sym.dmall.com
       paths: ["/"]
 
@@ -57,10 +57,10 @@ resources:
   # resources, such as Minikube. If you do want to specify resources, uncomment the following
   # lines, adjust them as necessary, and remove the curly braces after 'resources:'.
   limits:
-    cpu: 1
-    memory: 512Mi
+    cpu: 500m
+    memory: 256Mi
   requests:
-    cpu: 100m
+    cpu: 200m
     memory: 128Mi
 
 nodeSelector: {}
@@ -69,44 +69,33 @@ tolerations: []
 
 affinity: {}
 
-# 开发环境
-# hostAliases:
-#   - ip: "10.13.133.9"
-#     hostnames:
-#       - "cls-nkp08j5d.ccs.tencent-cloud.com"
-#   - ip: "10.13.135.12"
-#     hostnames:
-#       - "cls-7xq1bq9f.ccs.tencent-cloud.com"
-#   - ip: "10.13.135.251"
-#     hostnames:
-#       - "cls-89a4hpb3.ccs.tencent-cloud.com"
-#   - ip: "10.13.135.250"
-#     hostnames:
-#       - "chartmuseum.dmall.com"
 
-# 测试组 测试环境
-# hostAliases:
-#   - ip: "10.16.247.78"
-#     hostnames:
-#       - "cls-otdyiqyb.ccs.tencent-cloud.com"
-#   - ip: "10.16.247.11"
-#     hostnames:
-#       - "cls-h5f02nmb.ccs.tencent-cloud.com"
-#   - ip: "10.16.113.12"
-#     hostnames:
-#       - "cls-3yclxq8t.ccs.tencent-cloud.com"
-#   - ip: "10.13.133.9"
-#     hostnames:
-#       - "cls-0snem5sv.ccs.tencent-cloud.com"
-#   - ip: "10.13.135.250"
-#     hostnames:
-#       - "chartmuseum.dmall.com"
-
-# 业务组 测试环境
+# dev-test
 hostAliases:
+  - ip: "10.13.135.251"
+    hostnames:
+      - "cls-89a4hpb3.ccs.tencent-cloud.com"
+  - ip: "10.13.135.12"
+    hostnames:
+      - "cls-7xq1bq9f.ccs.tencent-cloud.com"
+  - ip: "10.16.247.78"
+    hostnames:
+      - "cls-otdyiqyb.ccs.tencent-cloud.com"
+  - ip: "10.16.247.11"
+    hostnames:
+      - "cls-h5f02nmb.ccs.tencent-cloud.com"
+  - ip: "10.16.113.12"
+    hostnames:
+      - "cls-3yclxq8t.ccs.tencent-cloud.com"
+  - ip: "10.13.133.9"
+    hostnames:
+      - "cls-0snem5sv.ccs.tencent-cloud.com"
   - ip: "10.16.247.131"
     hostnames:
       - "cls-278pwqet.ccs.tencent-cloud.com"
   - ip: "10.16.113.81"
     hostnames:
       - "cls-97rlivuj.ccs.tencent-cloud.com"
+  - ip: "10.13.135.250"
+    hostnames:
+      - "chartmuseum.dmall.com"
