@@ -81,21 +81,33 @@ _注：通过 UI 界面进行 `git` 操作的话会被隐藏至后台，无法�
 
 ### 编译`linux平台`二进制, 输出到*bin*目录
 
+*生产环境二进制程序编译必须基于 `master` 分支。*
+
 ```shell
-# 单独编译api
+# 单独编译 api
 make manager-api
 
-# 单独编译controller
+# 单独编译 controller
 make manager-controller
 
 # api controller一起编译
 make manager
+
+# 使用 Docker 单独编译 api
+make docker-build-api
+
+# 使用 Docker 单独编译 controller
+make docker-build-controller
+
+# 使用 Docker 统一编译
+make docker-build
 ```
 
 ### 打包 docker 镜像并推送
 
-- `Dockerfile` 文件位于 `install` 目录下，通过后缀区分
-- 镜像地址修改[Makefile](./Makefile)里面`IMG_REG`配置修改
+- `Dockerfile` 文件位于 `docker` 目录下，通过后缀区分
+- 镜像地址修改 [Makefile](./Makefile) 中 `IMG_REG` 的值。
+- 镜像打包必须基于 `master` 分支
 
 ```shell
 # api
@@ -110,8 +122,95 @@ make docker-push
 
 ## 发布
 
-通过 `helm` 安装，`chart` 路径 `install/kubernetes/helm`
+通过 `helm` 安装，`chart` 路径 `./chart/`
 
 ```shell
-helm install --name sym-ctl --namespace sym install/kubernetes/helm/controller
+# controller master
+make helm-master
+
+# controller worker
+make helm-worker
+
+# controller master & worker
+make helm-master-worker
+
+# api
+make helm-api
+```
+
+## Git 开发流程
+
+项目维护两个一直延续的分支：
+
+- master
+- dev
+
+其中 `master` 分支为主分支，随时处于预备生产状态。`dev` 为开发分支，用于合并其他辅助性分支（`feature`、`bugfix`、`doc` 等）。这两个分支都处于保护状态，禁止强推（`git push -f`），禁止 `Maintainer` 以下角色 `push` 和 `merge`。
+
+### 发版流程
+
+`release` 分支为发布做准备，用于修改版本号等元数据。发布期间 (还未上线) 的 Bug 修复可以提交到该分支上，但不允许新的 `feature` 提交（`feature` 须提交至 `dev` 分支，等待下次发布）。
+
+基于 `dev` 创建 `release` 分支：
+
+```shell
+git checkout -b release-v* origin/dev
+```
+
+该分支测试无误后预备发布，将其合并到 `master` 和 `dev` 中:
+
+```shell
+# master
+git checkout master
+git merge origin/release-v*
+
+# dev
+git checkout dev
+git merge origin/release-v*
+```
+
+基于 `master` 分支打 Tag 并同步至远程仓库 `origin`:
+```shell
+git tag -a v* -m "bumpversion v*"
+git push origin v*
+```
+
+`release`分支在生产环境上线后不再维护，上线后修复问题须基于 `master` 分支创建 `hotfix` 分支进行修复，参见线上问题修复说明。
+
+### 其他辅助分支约定
+
+本地开发前，不同的修改最好基于 `dev`分支创建新的分支，尽量遵循以下命名规范:
+
+- 新功能：`{姓名}/feature-{功能描述}`，如：`haidong/feature-add-pod-api`
+- 问题修复：`{姓名}/bugfix-{问题描述}`，如：`haidong/bugfix-pod-api-return-error`
+- 文档更新：`{姓名}/docs-{文档描述}`，如：`haidong/doc-update-readme`
+
+其他如重构(`refactor`)、测试（`test`） 分支同理。
+
+### 线上问题修复说明（Hotfix)
+
+若生产环境出现问题需要修复，必须基于 `master` 分支创建 `hotfix` 分支进行修改：
+```shell
+git checkout -b haidong/hotfix-pod-api-error origin/master
+```
+
+完成修改后须推送至 GitLab 远程仓库并同时提交两个 PR 至 `master` 和 `dev` 分支，提醒管理员合并。
+
+`Maintainer` 及以上角色可在本地进行合并（尽量在 GitLab 操作，PR 审核页面可以实时查看 CI 状态避免大部分错误）：
+```shell
+# 合并至 master
+git checkout master
+git merge origin/haidong/hotfix-***
+git push origin master
+
+# 合并至 dev
+git checkout dev
+git merge origin/haidong/hotfix-***
+git push origin dev
+```
+
+合并后发布前需要在 `master` 分支打 Tag:
+```shell
+git tag -a v* -m "bumpversion v*"
+git push origin v*
 ```
