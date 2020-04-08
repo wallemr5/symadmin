@@ -1,7 +1,6 @@
-VERSION ?= v0.1.9
+VERSION ?= v1.0.1
 # Image URL to use all building/pushing image targets
-IMG_REG ?= registry.cn-hangzhou.aliyuncs.com/r2d2
-# IMG_REG ?= registry.cn-shanghai.aliyuncs.com/zhd173
+IMG_REG ?= dmall-bj.tencentcloudcr.com/symcn
 IMG_CTL := $(IMG_REG)/sym-admin-controller
 IMG_API := $(IMG_REG)/sym-admin-api
 # Produce CRDs that work back to Kubernetes 1.11 (no version conversion)
@@ -10,11 +9,11 @@ CRD_OPTIONS ?= "crd:trivialVersions=true"
 # This repo's root import path (under GOPATH).
 ROOT := gitlab.dmall.com/arch/sym-admin
 
-GO_VERSION := 1.13.6
+GO_VERSION := 1.14.1
 ARCH     ?= $(shell go env GOARCH)
 BUILD_DATE = $(shell date +'%Y-%m-%dT%H:%M:%SZ')
 COMMIT    = $(shell git rev-parse --short HEAD)
-GOENV    := CGO_ENABLED=0 GOOS=$(shell uname -s | tr A-Z a-z) GOARCH=$(ARCH) GOPROXY=https://goproxy.cn,direct
+GOENV    := CGO_ENABLED=0 GOOS=$(shell uname -s | tr A-Z a-z) GOARCH=$(ARCH) GOPROXY=https://goproxy.io,direct
 #GO       := $(GOENV) go build -mod=vendor
 GO       := $(GOENV) go build
 
@@ -76,40 +75,47 @@ generate: controller-gen
 
 # Build the docker image
 docker-build:
-	docker run --rm -v "$$PWD":/go/src/${ROOT} -w /go/src/${ROOT} golang:${GO_VERSION} make build
+	docker run --rm -v "$$PWD":/go/src/${ROOT} -v ${GOPATH}/pkg/mod:/go/pkg/mod -w /go/src/${ROOT} golang:${GO_VERSION} make build
 
-build:
+docker-build-controller:
+	docker run --rm -v "$$PWD":/go/src/${ROOT} -v ${GOPATH}/pkg/mod:/go/pkg/mod -w /go/src/${ROOT} golang:${GO_VERSION} make build-controller
+
+docker-build-api:
+	docker run --rm -v "$$PWD":/go/src/${ROOT} -v ${GOPATH}/pkg/mod:/go/pkg/mod -w /go/src/${ROOT} golang:${GO_VERSION} make build-api
+
+build: build-controller build-api
+
+build-controller:
 	$(GO) -v -o bin/sym-admin-controller -ldflags "-s -w -X $(ROOT)/pkg/version.Release=$(VERSION) -X  $(ROOT)/pkg/version.Commit=$(COMMIT)   \
 	-X  $(ROOT)/pkg/version.BuildDate=$(BUILD_DATE)" cmd/controller/main.go
+
+build-api:
 	$(GO) -v -o bin/sym-admin-api -ldflags "-s -w -X  $(ROOT)/pkg/version.Release=$(VERSION) -X  $(ROOT)/pkg/version.Commit=$(COMMIT)   \
 	-X  $(ROOT)/pkg/version.BuildDate=$(BUILD_DATE)" cmd/sym-api/main.go
 
 docker-push: docker-push-controller docker-push-api
 
 # Push the docker image
-docker-push-controller: manager-controller
-	docker build -t ${IMG_CTL}:${VERSION} -f ./install/Dockerfile-ctl .
+docker-push-controller:
+	docker build -t ${IMG_CTL}:${VERSION} -f ./docker/Dockerfile-ctl .
 	docker push ${IMG_CTL}:${VERSION}
 
-docker-push-api: docker-build
-	docker build -t ${IMG_API}:${VERSION} -f ./install/Dockerfile-api .
+docker-push-api:
+	docker build -t ${IMG_API}:${VERSION} -f ./docker/Dockerfile-api .
 	docker push ${IMG_API}:${VERSION}
 
-docker-push-release: docker-build
-	docker build -t ${IMG_CTL}:${VERSION} -f ./install/Dockerfile-ctl .
-	docker push ${IMG_CTL}:${VERSION}
-
+# Install operator with helm
 helm-master:
-	helm upgrade --install sym-ctl --namespace sym-admin --set image.tag=${VERSION},image.worker=false,image.master=true ./install/Kubernetes/helm/controller
+	helm upgrade --install sym-ctl --namespace sym-admin --set image.tag=${VERSION},image.worker=false,image.master=true ./chart/controller
 
 helm-master-worker:
-	helm upgrade --install sym-ctl --namespace sym-admin --set image.tag=${VERSION},image.worker=true,image.master=true ./install/Kubernetes/helm/controller
+	helm upgrade --install sym-ctl --namespace sym-admin --set image.tag=${VERSION},image.worker=true,image.master=true ./chart/controller
 
 helm-worker:
-	helm upgrade --install sym-ctl --namespace sym-admin --set image.tag=${VERSION},image.worker=true,image.master=false ./install/Kubernetes/helm/controller
+	helm upgrade --install sym-ctl --namespace sym-admin --set image.tag=${VERSION},image.worker=true,image.master=false ./chart/controller
 
 helm-api:
-	helm upgrade --install sym-api --namespace sym-admin --set image.tag=${VERSION} ./install/Kubernetes/helm/api
+	helm upgrade --install sym-api --namespace sym-admin --set image.tag=${VERSION} ./chart/api
 
 # find or download controller-gen
 # download controller-gen if necessary

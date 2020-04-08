@@ -1,6 +1,0 @@
-FROM registry.cn-hangzhou.aliyuncs.com/dmall/alpine-base:v3.10
-LABEL maintainer=<kui.xue@dmall.com>
-
-COPY bin/sym-admin-api .
-
-ENTRYPOINT ["/sym-admin-api"]

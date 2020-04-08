@@ -9,6 +9,7 @@ import (
 	workloadv1beta1 "gitlab.dmall.com/arch/sym-admin/pkg/apis/workload/v1beta1"
 	"gitlab.dmall.com/arch/sym-admin/pkg/customctrl"
 	k8smanager "gitlab.dmall.com/arch/sym-admin/pkg/k8s/manager"
+	"gitlab.dmall.com/arch/sym-admin/pkg/labels"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/equality"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
@@ -31,11 +32,8 @@ func (r *AppSetReconciler) ModifyStatus(ctx context.Context, req customctrl.Cust
 		klog.Errorf("%s: aggregate AppSet.Status failed: %+v", req.NamespacedName, err)
 		return "", false, err
 	}
-	if as.AggrStatus.Status == workloadv1beta1.AppStatusRuning {
-		r.recorder.Event(app, corev1.EventTypeNormal, "Running", "Status is Running.")
-	}
 
-	isChange, err = applyStatus(ctx, r.Client, req, app, as)
+	isChange, err = r.applyStatus(ctx, req, app, as)
 	return as.AggrStatus.Status, isChange, err
 }
 
@@ -99,7 +97,7 @@ func buildAppSetStatus(ctx context.Context, dksManger *k8smanager.ClusterManager
 		// aggregate events
 		evts := []*workloadv1beta1.Event{}
 		for _, evt := range events.Items {
-			if strings.HasPrefix(evt.InvolvedObject.Name, req.Name) && evt.Type == corev1.EventTypeWarning {
+			if isAppendEvt(evt, app) {
 				evts = append(evts, &workloadv1beta1.Event{
 					Message:         evt.Message,
 					SourceComponent: evt.Source.Component,
@@ -122,6 +120,7 @@ func buildAppSetStatus(ctx context.Context, dksManger *k8smanager.ClusterManager
 	// final status aggregate
 	if finalStatus == workloadv1beta1.AppStatusRuning && as.AggrStatus.Available == *app.Spec.Replicas {
 		as.AggrStatus.Status = workloadv1beta1.AppStatusRuning
+		as.AggrStatus.WarnEvents = nil
 	} else {
 		as.AggrStatus.Status = workloadv1beta1.AppStatusInstalling
 	}
@@ -139,7 +138,7 @@ func buildAppSetStatus(ctx context.Context, dksManger *k8smanager.ClusterManager
 	return as, nil
 }
 
-func applyStatus(ctx context.Context, client client.Client, req customctrl.CustomRequest, app *workloadv1beta1.AppSet, as *workloadv1beta1.AppSetStatus) (isChange bool, err error) {
+func (r *AppSetReconciler) applyStatus(ctx context.Context, req customctrl.CustomRequest, app *workloadv1beta1.AppSet, as *workloadv1beta1.AppSetStatus) (isChange bool, err error) {
 
 	var change bool
 	if app.Status.ObservedGeneration != as.ObservedGeneration {
@@ -152,19 +151,23 @@ func applyStatus(ctx context.Context, client client.Client, req customctrl.Custo
 		return false, nil
 	}
 
+	if as.AggrStatus.Status == workloadv1beta1.AppStatusRuning && app.Status.AggrStatus.Status != workloadv1beta1.AppStatusRuning {
+		r.recorder.Event(app, corev1.EventTypeNormal, "Running", "Status is Running.")
+	}
+
 	err = retry.RetryOnConflict(retry.DefaultRetry, func() error {
 
 		as.AggrStatus.DeepCopyInto(&app.Status.AggrStatus)
 		t := metav1.Now()
 		app.Status.LastUpdateTime = &t
 
-		updateErr := client.Status().Update(ctx, app)
+		updateErr := r.Client.Status().Update(ctx, app)
 		if updateErr == nil {
 			klog.V(4).Infof("%s: applyStatus update AppSet.Status.AggrStatus.Status success: %s", req.NamespacedName, app.Status.AggrStatus.Status)
 			return nil
 		}
 
-		getErr := client.Get(ctx, req.NamespacedName, app)
+		getErr := r.Client.Get(ctx, req.NamespacedName, app)
 		if getErr != nil {
 			klog.Errorf("%s: applyStatus get AppSet again info fail: %+v", req.NamespacedName, getErr)
 			return getErr
@@ -173,4 +176,24 @@ func applyStatus(ctx context.Context, client client.Client, req customctrl.Custo
 		return updateErr
 	})
 	return true, err
+}
+
+func isAppendEvt(evt corev1.Event, app *workloadv1beta1.AppSet) bool {
+	if evt.Type == corev1.EventTypeNormal {
+		return false
+	}
+
+	if app.ObjectMeta.CreationTimestamp.After(evt.LastTimestamp.Time) {
+		return false
+	}
+
+	ok := labels.CheckEventLabel(evt.InvolvedObject.Name)
+	if ok {
+		return true
+	}
+
+	if evt.InvolvedObject.Kind == "AdvDeployment" && evt.InvolvedObject.Name == app.Name {
+		return true
+	}
+	return false
 }

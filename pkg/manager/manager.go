@@ -45,6 +45,7 @@ type ManagerOption struct {
 	PprofEnabled            bool
 	MasterEnabled           bool
 	WorkerEnabled           bool
+	ClusterEnabled          bool
 	Debug                   bool
 	Recover                 bool
 }
@@ -70,6 +71,7 @@ func DefaultManagerOption() *ManagerOption {
 		PprofEnabled:            true,
 		MasterEnabled:           false,
 		WorkerEnabled:           false,
+		ClusterEnabled:          false,
 		Repos: map[string]string{
 			"dmall": "http://chartmuseum.dmall.com",
 		},
@@ -101,7 +103,7 @@ func NewDksManager(cli k8smanager.MasterClient, opt *ManagerOption, componentNam
 		Router:        rt,
 		HealthHandler: healthHandler,
 	}
-	if opt.MasterEnabled {
+	if opt.MasterEnabled || opt.ClusterEnabled {
 		klog.Info("start init multi cluster manager ... ")
 		kMgr, err := k8smanager.NewManager(cli, k8smanager.DefaultClusterManagerOption(false, labels.GetClusterLs()))
 		if err != nil {

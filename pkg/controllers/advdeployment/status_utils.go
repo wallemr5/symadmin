@@ -5,6 +5,10 @@ import (
 	"fmt"
 	"sort"
 
+	"strings"
+
+	"time"
+
 	"github.com/pkg/errors"
 	workloadv1beta1 "gitlab.dmall.com/arch/sym-admin/pkg/apis/workload/v1beta1"
 	"gitlab.dmall.com/arch/sym-admin/pkg/utils"
@@ -18,6 +22,7 @@ import (
 	"k8s.io/client-go/util/retry"
 	"k8s.io/klog"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 )
 
 // GetStatefulSetByLabels Finding all statefuls with a label
@@ -95,13 +100,36 @@ func (r *AdvDeploymentReconciler) GetServiceByByLabels(ctx context.Context, advD
 	}
 }
 
+func IsUnUseObject(kind string, obj Object, ownerRes []string) bool {
+	name := GetFormattedName(kind, obj)
+	for i := range ownerRes {
+		if name == ownerRes[i] {
+			return false
+		}
+	}
+
+	return true
+}
+
 // RecalculateStatus According to the status of running deployments, calculate the advDeployment's status
-func (r *AdvDeploymentReconciler) RecalculateStatus(ctx context.Context, advDeploy *workloadv1beta1.AdvDeployment) (*workloadv1beta1.AdvDeploymentAggrStatus, error) {
+func (r *AdvDeploymentReconciler) RecalculateStatus(ctx context.Context, advDeploy *workloadv1beta1.AdvDeployment, ownerRes []string) (*workloadv1beta1.AdvDeploymentAggrStatus, error) {
 	deploys, err := r.GetDeployListByByLabels(ctx, advDeploy)
 	if err != nil {
 		return nil, errors.Wrapf(err, "Find all relative deployments with application name [%s] has an error", advDeploy.Name)
 	}
 
+	svc, err := r.GetServiceByByLabels(ctx, advDeploy)
+	if err == nil {
+		if !metav1.IsControlledBy(svc, advDeploy) {
+			err = controllerutil.SetControllerReference(advDeploy, svc, r.Mgr.GetScheme())
+			if err == nil {
+				err := r.Client.Update(ctx, svc)
+				if err != nil {
+					klog.Errorf("name: %s Update svc err: %#v", advDeploy.Name, err)
+				}
+			}
+		}
+	}
 	var statefulSets []*appsv1.StatefulSet
 	if len(deploys) == 0 {
 		statefulSets, err = r.GetStatefulSetByLabels(ctx, advDeploy)
@@ -110,10 +138,25 @@ func (r *AdvDeploymentReconciler) RecalculateStatus(ctx context.Context, advDepl
 		}
 	}
 
+	unUseObject := make([]Object, 0)
 	status := &workloadv1beta1.AdvDeploymentAggrStatus{}
 	for _, deploy := range deploys {
-		podSetStatus := &workloadv1beta1.PodSetStatusInfo{}
+		if !metav1.IsControlledBy(deploy, advDeploy) {
+			err = controllerutil.SetControllerReference(advDeploy, deploy, r.Mgr.GetScheme())
+			if err == nil {
+				err := r.Client.Update(ctx, deploy)
+				if err != nil {
+					klog.Errorf("name: %s Update deploy: %s err: %#v", advDeploy.Name, deploy.Name, err)
+				}
+			}
+		}
 
+		if IsUnUseObject(DeploymentKind, deploy, ownerRes) {
+			unUseObject = append(unUseObject, deploy)
+			continue
+		}
+
+		podSetStatus := &workloadv1beta1.PodSetStatusInfo{}
 		podSetStatus.Name = deploy.Name
 		podSetStatus.Version = utils.FillImageVersion(advDeploy.Name, &deploy.Spec.Template.Spec)
 		podSetStatus.Available = deploy.Status.AvailableReplicas
@@ -131,8 +174,22 @@ func (r *AdvDeploymentReconciler) RecalculateStatus(ctx context.Context, advDepl
 	}
 
 	for _, set := range statefulSets {
-		podSetStatus := &workloadv1beta1.PodSetStatusInfo{}
+		if !metav1.IsControlledBy(set, advDeploy) {
+			err = controllerutil.SetControllerReference(advDeploy, set, r.Mgr.GetScheme())
+			if err == nil {
+				err := r.Client.Update(ctx, set)
+				if err != nil {
+					klog.Errorf("name: %s Update set: %s err: %#v", advDeploy.Name, set.Name, err)
+				}
+			}
+		}
 
+		if IsUnUseObject(StatefulSetKind, set, ownerRes) {
+			unUseObject = append(unUseObject, set)
+			continue
+		}
+
+		podSetStatus := &workloadv1beta1.PodSetStatusInfo{}
 		podSetStatus.Name = set.Name
 		podSetStatus.Version = utils.FillImageVersion(advDeploy.Name, &set.Spec.Template.Spec)
 		podSetStatus.Available = set.Status.ReadyReplicas
@@ -156,6 +213,42 @@ func (r *AdvDeploymentReconciler) RecalculateStatus(ctx context.Context, advDepl
 	if status.Desired == status.Available {
 		status.Status = "Running"
 	}
+
+	if status.Desired <= status.Available {
+		for _, unobj := range unUseObject {
+			klog.Infof("start delete unuse obj: %s/%s", unobj.GetNamespace(), unobj.GetName())
+			err := r.Client.Delete(ctx, unobj)
+			if err != nil {
+				klog.Errorf("unuse obj[%s/%s] delete err:%v", unobj.GetNamespace(), unobj.GetName(), err)
+			} else {
+				klog.Infof("unuse obj[%s/%s] delete successfully", unobj.GetNamespace(), unobj.GetName())
+			}
+		}
+
+		if r.Opt.Recover {
+			cms := &corev1.ConfigMapList{}
+			listOptions := &client.ListOptions{Namespace: "kube-system"}
+			err := r.Client.List(ctx, listOptions, cms)
+			if err == nil {
+				for i := range cms.Items {
+					cm := &cms.Items[i]
+					if strings.HasPrefix(cm.Name, advDeploy.Name) {
+						err := r.Client.Delete(ctx, cm)
+						if err == nil {
+							klog.Infof("start delete unuse helm configmap name: %s successfully", cm.Name)
+						} else {
+							klog.Errorf("delete unuse helm configmap name: %s err:%v", cm.Name, err)
+						}
+
+						// Throttling request
+						time.Sleep(time.Millisecond * 100)
+					}
+				}
+			}
+		}
+	}
+
+	status.OwnerResource = ownerRes
 	return status, nil
 }
 
@@ -178,13 +271,13 @@ func (r *AdvDeploymentReconciler) updateStatus(ctx context.Context, advDeploy *w
 	}
 
 	if obj.Status.ObservedGeneration == obj.ObjectMeta.Generation && equality.Semantic.DeepEqual(&obj.Status.AggrStatus, recalStatus) {
-		klog.V(4).Infof("advDeploy[%s]'s status is equivalent with recalculated status, so no need to update it again", advDeploy.Name)
+		klog.V(4).Infof("advDeploy[%s]'s status is equal", advDeploy.Name)
 		return nil
 	}
 
 	err = retry.RetryOnConflict(retry.DefaultRetry, func() error {
-		time := metav1.Now()
-		obj.Status.LastUpdateTime = &time
+		now := metav1.Now()
+		obj.Status.LastUpdateTime = &now
 		recalStatus.DeepCopyInto(&obj.Status.AggrStatus)
 		// It is very useful for controller that support this field
 		// without this, you might trigger a sync as a result of updating your own status.

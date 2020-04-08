@@ -257,7 +257,7 @@ func (m *ClusterManager) GetHelmRelease(opts map[string]string, clusterNames ...
 	for _, cluster := range clusters {
 		wg.Add(1)
 		go func(wg *sync.WaitGroup, cluster *Cluster, result []*rlsv2.Release) {
-			hClient, err := helmv2.NewClientFromConfig(cluster.RestConfig, cluster.KubeCli, "")
+			hClient, err := helmv2.NewClientFromConfig(cluster.RestConfig, cluster.KubeCli, "", nil)
 			if err != nil {
 				klog.Errorf("Initializing a new helm clinet has an error: %+v", err)
 				return

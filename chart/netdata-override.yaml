@@ -1,0 +1,48 @@
+ingress:
+  annotations:
+    kubernetes.io/ingress.class: traefik
+  hosts:
+    - idc.netdata.dmall.com
+
+image:
+  repository: registry.cn-hangzhou.aliyuncs.com/dmall/netdata
+
+master:
+  resources:
+    limits:
+      cpu: 1
+      memory: 2048Mi
+    requests:
+      cpu: 1
+      memory: 2048Mi
+  tolerations:
+    - operator: Exists
+      effect: NoSchedule
+  database:
+    storageclass: local-storage
+    volumesize: 10Gi
+  alarms:
+    storageclass: local-storage
+    volumesize: 1Gi
+
+slave:
+  resources:
+    limits:
+      cpu: 0.5
+      memory: 512Mi
+    requests:
+      cpu: 0.5
+      memory: 512Mi
+  tolerations:
+    - operator: Exists
+      effect: NoSchedule
+  affinity:
+    nodeAffinity:
+      requiredDuringSchedulingIgnoredDuringExecution:
+        nodeSelectorTerms:
+          - matchExpressions:
+              - key: kubernetes.io/hostname
+                operator: In
+                values:
+                  - 10.28.27.242
+                  - 10.28.39.248

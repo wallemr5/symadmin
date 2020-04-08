@@ -1,23 +1,17 @@
 package resources
 
 import (
-	"github.com/go-logr/logr"
-	workloadv1beta1 "gitlab.dmall.com/arch/sym-admin/pkg/apis/workload/v1beta1"
-	"gitlab.dmall.com/arch/sym-admin/pkg/utils"
-
-	// metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"context"
-	"reflect"
 
-	"github.com/goph/emperror"
+	"github.com/pkg/errors"
 	"gitlab.dmall.com/arch/sym-admin/pkg/resources/patch"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/meta"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/client-go/util/retry"
+	"k8s.io/klog"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-	"sigs.k8s.io/controller-runtime/pkg/manager"
 )
 
 type DesiredState string
@@ -27,65 +21,6 @@ const (
 	DesiredStateAbsent  DesiredState = "absent"
 )
 
-type Reconciler struct {
-	Mgr    manager.Manager
-	Config *workloadv1beta1.AdvDeployment
-}
-
-type ComponentReconciler interface {
-	Reconcile(log logr.Logger) error
-}
-
-type Resource func() runtime.Object
-
-// func (r *Reconciler) GetSvcLabels() map[string]string {
-// 	var domain string
-// 	if r.Config.Spec.Domain != nil {
-// 		domain = *r.Config.Spec.Domain
-// 	} else {
-// 		domain = fmt.Sprintf("%s.dmalll.com", r.Config.Name)
-// 	}
-// 	labels := map[string]string{
-// 		utils.ObserveMustLabelAppName:          r.Config.Name,
-// 		utils.ObserveMustLabelLightningDomain0: domain,
-// 	}
-// 	return utils.MergeLabels(labels, r.Config.Spec.Strategy.Meta)
-// }
-
-// func (r *Reconciler) GetDeployLabels(name string) map[string]string {
-// 	ldcName, groupName, _ := utils.SplitMetaLdcGroupKey(name)
-//
-// 	labels := map[string]string{
-// 		utils.ObserveMustLabelAppName:     r.Config.Name,
-// 		utils.ObserveMustLabelReleaseName: r.Config.Name + "-" + name,
-// 		utils.ObserveMustLabelLdcName:     ldcName,
-// 		utils.ObserveMustLabelGroupName:   groupName,
-// 	}
-//
-// 	return utils.MergeLabels(labels, r.Config.Spec.Strategy.Meta)
-// }
-
-func (r *Reconciler) GetAffinity() *corev1.Affinity {
-	return &corev1.Affinity{
-		PodAntiAffinity: &corev1.PodAntiAffinity{
-			PreferredDuringSchedulingIgnoredDuringExecution: []corev1.WeightedPodAffinityTerm{
-				{
-					Weight: 1,
-					PodAffinityTerm: corev1.PodAffinityTerm{
-						LabelSelector: &metav1.LabelSelector{
-							MatchLabels: map[string]string{
-								utils.ObserveMustLabelAppName: r.Config.Name,
-							},
-						},
-						Namespaces:  []string{r.Config.Namespace},
-						TopologyKey: "kubernetes.io/hostname",
-					},
-				},
-			},
-		},
-	}
-}
-
 func prepareResourceForUpdate(current, desired runtime.Object) {
 	switch desired.(type) {
 	case *corev1.Service:
@@ -94,87 +29,100 @@ func prepareResourceForUpdate(current, desired runtime.Object) {
 	}
 }
 
-func Reconcile(log logr.Logger, c client.Client, desired runtime.Object, desiredState DesiredState) error {
+func Reconcile(ctx context.Context, c client.Client, desired runtime.Object, desiredState DesiredState, isRecreate bool) error {
 	if desiredState == "" {
 		desiredState = DesiredStatePresent
 	}
 
-	desiredType := reflect.TypeOf(desired)
 	var current = desired.DeepCopyObject()
-	var desiredCopy = desired.DeepCopyObject()
+	// desiredType := reflect.TypeOf(desired)
+	// var desiredCopy = desired.DeepCopyObject()
 	key, err := client.ObjectKeyFromObject(current)
 	if err != nil {
-		return emperror.With(err, "kind", desiredType)
+		return errors.Wrapf(err, "copy key[%s]", key)
 	}
-	log = log.WithValues("kind", desiredType, "name", key.Name)
 
-	err = c.Get(context.TODO(), key, current)
+	err = c.Get(ctx, key, current)
 	if err != nil && !apierrors.IsNotFound(err) {
-		return emperror.WrapWith(err, "getting resource failed", "kind", desiredType, "name", key.Name)
+		return errors.Wrapf(err, "getting resource key[%s]", key)
 	}
 	if apierrors.IsNotFound(err) {
 		if desiredState == DesiredStatePresent {
 			if err := patch.DefaultAnnotator.SetLastAppliedAnnotation(desired); err != nil {
-				log.Error(err, "Failed to set last applied annotation", "desired", desired)
+				klog.Errorf("Failed to set last applied annotation key[%s] err: %v", key, err)
 			}
-			if err := c.Create(context.TODO(), desired); err != nil {
-				return emperror.WrapWith(err, "creating resource failed", "kind", desiredType, "name", key.Name)
+			if err := c.Create(ctx, desired); err != nil {
+				return errors.Wrapf(err, "creating resource failed key[%s]", key)
 			}
-			log.Info("resource created")
+			klog.Infof("resource key[%s] created", key)
 		}
 	} else {
 		if desiredState == DesiredStatePresent {
 			patchResult, err := patch.DefaultPatchMaker.Calculate(current, desired)
 			if err != nil {
-				log.Error(err, "could not match objects", "kind", desiredType, "name", key.Name)
+				klog.Errorf("could not match object key[%s] err: %v", key, err)
 			} else if patchResult.IsEmpty() {
-				log.V(1).Info("resource is in sync")
+				klog.V(4).Infof("resource key[%s] unchanged is in sync", key)
 				return nil
 			} else {
-				log.V(1).Info("resource diffs",
-					"patch", string(patchResult.Patch),
-					"current", string(patchResult.Current),
-					"modified", string(patchResult.Modified),
-					"original", string(patchResult.Original))
+				klog.V(2).Infof("resource key[%s] diffs patch: %s", key, string(patchResult.Patch))
 			}
 
 			// Need to set this before resourceversion is set, as it would constantly change otherwise
 			if err := patch.DefaultAnnotator.SetLastAppliedAnnotation(desired); err != nil {
-				log.Error(err, "Failed to set last applied annotation", "desired", desired)
+				klog.Errorf("Failed to set last applied annotation key[%s] err: %v", key, err)
 			}
 
-			metaAccessor := meta.NewAccessor()
-			currentResourceVersion, err := metaAccessor.ResourceVersion(current)
-			if err != nil {
-				return err
-			}
-
-			metaAccessor.SetResourceVersion(desired, currentResourceVersion)
-			prepareResourceForUpdate(current, desired)
-
-			if err := c.Update(context.TODO(), desired); err != nil {
-				if apierrors.IsConflict(err) || apierrors.IsInvalid(err) {
-					log.Info("resource needs to be re-created", "error", err)
-					err := c.Delete(context.TODO(), current)
-					if err != nil {
-						return emperror.WrapWith(err, "could not delete resource", "kind", desiredType, "name", key.Name)
+			if isRecreate {
+				if err := c.Update(ctx, desired); err != nil {
+					if apierrors.IsConflict(err) || apierrors.IsInvalid(err) {
+						klog.Infof("resource key[%s] needs to be re-created err: %v", key, err)
+						err := c.Delete(ctx, current)
+						if err != nil {
+							return errors.Wrapf(err, "could not delete resource key[%s]", key)
+						}
+						klog.Infof("resource key[%s] deleted", key)
+						if err := c.Create(ctx, desired); err != nil {
+							return errors.Wrapf(err, "creating resource key[%s]", key)
+						}
+						klog.Infof("resource key[%s] created", key)
+						return nil
 					}
-					log.Info("resource deleted")
-					if err := c.Create(context.TODO(), desiredCopy); err != nil {
-						return emperror.WrapWith(err, "creating resource failed", "kind", desiredType, "name", key.Name)
-					}
-					log.Info("resource created")
-					return nil
+					return errors.Wrapf(err, "updating resource key[%s]", key)
 				}
+				klog.Infof("resource key:%s updated", key)
+			} else {
+				metaAccessor := meta.NewAccessor()
+				err = retry.RetryOnConflict(retry.DefaultRetry, func() error {
+					currentResourceVersion, err := metaAccessor.ResourceVersion(current)
+					if err != nil {
+						return err
+					}
 
-				return emperror.WrapWith(err, "updating resource failed", "kind", desiredType, "name", key.Name)
+					metaAccessor.SetResourceVersion(desired, currentResourceVersion)
+					prepareResourceForUpdate(current, desired)
+
+					updateErr := c.Update(ctx, desired)
+					if updateErr == nil {
+						klog.V(2).Infof("Updating resource key[%s] successfully", key)
+						return nil
+					}
+
+					// Get the advdeploy again when updating is failed.
+					getErr := c.Get(ctx, key, current)
+					if getErr != nil {
+						return errors.Wrapf(err, "updated get resource key[%s]", key)
+					}
+
+					return updateErr
+				})
 			}
-			log.Info("resource updated")
+
 		} else if desiredState == DesiredStateAbsent {
-			if err := c.Delete(context.TODO(), current); err != nil {
-				return emperror.WrapWith(err, "deleting resource failed", "kind", desiredType, "name", key.Name)
+			if err := c.Delete(ctx, current); err != nil {
+				return errors.Wrapf(err, "deleting resource key[%s]", key)
 			}
-			log.Info("resource deleted")
+			klog.Infof("resource key[%s] deleted successfully", key)
 		}
 	}
 	return nil

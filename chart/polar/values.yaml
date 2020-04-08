@@ -10,24 +10,25 @@ hostNetwork: true
 
 resources:
   limits:
-    cpu: 1
-    memory: 1Gi
-  requests:
     cpu: 500m
     memory: 512Mi
+  requests:
+    cpu: 200m
+    memory: 256Mi
 
 nodeSelector: {}
 
-tolerations:
-- key: sym-preserve
-  operator: Exists
+tolerations: []
+#- key: sym-preserve
+#  operator: Exists
 
 affinity:
   nodeAffinity:
     requiredDuringSchedulingIgnoredDuringExecution:
       nodeSelectorTerms:
         - matchExpressions:
-            - key: sym-preserve
+            - key: kubernetes.io/hostname
               operator: In
               values:
-                - monitor
+                - aks-v16c128g-16534360-vmss000007
+                - aks-v16c128g-16534360-vmss000008

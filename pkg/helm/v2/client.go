@@ -11,6 +11,7 @@ import (
 	"k8s.io/client-go/rest"
 	"k8s.io/helm/pkg/chartutil"
 	"k8s.io/helm/pkg/helm"
+	helmenv "k8s.io/helm/pkg/helm/environment"
 	"k8s.io/helm/pkg/helm/portforwarder"
 	"k8s.io/helm/pkg/kube"
 	"k8s.io/helm/pkg/proto/hapi/chart"
@@ -22,6 +23,7 @@ type Client struct {
 	Name string
 	*kube.Tunnel
 	*helm.Client
+	Env *helmenv.EnvSettings
 }
 
 // NewClient
@@ -36,11 +38,11 @@ func NewClient(kubeConfig []byte) (*Client, error) {
 		return nil, errors.WithMessage(err, "failed to create kubernetes client for helm client")
 	}
 
-	return NewClientFromConfig(config, client, "")
+	return NewClientFromConfig(config, client, "", nil)
 }
 
 // NewClientFromConfig
-func NewClientFromConfig(config *rest.Config, client kubernetes.Interface, name string) (*Client, error) {
+func NewClientFromConfig(config *rest.Config, client kubernetes.Interface, name string, env *helmenv.EnvSettings) (*Client, error) {
 	klog.V(4).Infof("create kubernetes tunnel name: %s", name)
 	tillerTunnel, err := portforwarder.New("kube-system", client, config)
 	if err != nil {
@@ -52,7 +54,16 @@ func NewClientFromConfig(config *rest.Config, client kubernetes.Interface, name 
 
 	hClient := helm.NewClient(helm.Host(tillerTunnelAddress))
 
-	return &Client{Tunnel: tillerTunnel, Client: hClient, Name: name}, nil
+	if name == "" {
+		name = "k8s"
+	}
+
+	return &Client{
+		Tunnel: tillerTunnel,
+		Client: hClient,
+		Name:   name,
+		Env:    env,
+	}, nil
 }
 
 // SaveChartByte save a struct chart to []byte

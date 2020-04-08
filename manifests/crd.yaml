@@ -4656,6 +4656,10 @@ spec:
                 desired:
                   format: int32
                   type: integer
+                ownerResource:
+                  items:
+                    type: string
+                  type: array
                 podSets:
                   items:
                     description: PodSetStatusInfo
