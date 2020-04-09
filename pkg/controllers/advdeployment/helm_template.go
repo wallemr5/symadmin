@@ -185,7 +185,7 @@ func (r *AdvDeploymentReconciler) ApplyResources(ctx context.Context, advDeploy 
 			r.HelmEnv.Helmv2env, advDeploy.Namespace, podSet.RawValues)
 		if err != nil {
 			klog.Errorf("Template podSet Name: %s err: %v", podSet.Name, err)
-			return nil, errors.Wrapf(err, "podSet Name: %s", podSet.Name)
+			return nil, fmt.Errorf("podSet: %s parse k8s object failed", podSet.Name)
 		}
 		objects = append(objects, obj...)
 	}
@@ -203,7 +203,7 @@ func (r *AdvDeploymentReconciler) ApplyResources(ctx context.Context, advDeploy 
 			err = resources.Reconcile(ctx, r.Client, svc, resources.DesiredStatePresent, r.Opt.Debug)
 			if err != nil {
 				klog.Errorf("svc name: %s err: %v", svc.Name, err)
-				return ownerRes, err
+				return nil, fmt.Errorf("advDeploy: %s svc object: %s reconcile failed", advDeploy.Name, obj.Name)
 			}
 		case DeploymentKind:
 			deploy, ok := ConvertToDeployment(r.Mgr, advDeploy, obj.UnstructuredObject())
@@ -213,8 +213,8 @@ func (r *AdvDeploymentReconciler) ApplyResources(ctx context.Context, advDeploy 
 			ownerRes = append(ownerRes, GetFormattedName(DeploymentKind, deploy))
 			err = resources.Reconcile(ctx, r.Client, deploy, resources.DesiredStatePresent, r.Opt.Debug)
 			if err != nil {
-				klog.Errorf("deploy name: %s err: %v", deploy.Name, err)
-				return ownerRes, err
+				klog.Errorf("deployment name: %s err: %v", deploy.Name, err)
+				return nil, fmt.Errorf("advDeploy: %s deployment object: %s reconcile failed", advDeploy.Name, obj.Name)
 			}
 		case StatefulSetKind:
 			sta, ok := ConvertToStatefulSet(r.Mgr, advDeploy, obj.UnstructuredObject())
@@ -225,7 +225,7 @@ func (r *AdvDeploymentReconciler) ApplyResources(ctx context.Context, advDeploy 
 			err = resources.Reconcile(ctx, r.Client, sta, resources.DesiredStatePresent, r.Opt.Debug)
 			if err != nil {
 				klog.Errorf("statefulset name: %s err: %v", sta.Name, err)
-				return ownerRes, err
+				return nil, fmt.Errorf("advDeploy: %s statefulset object: %s reconcile failed", advDeploy.Name, obj.Name)
 			}
 		default:
 			return nil, fmt.Errorf("unknown kind: %s Name: %s/%s ", obj.Kind, obj.Namespace, obj.Name)
