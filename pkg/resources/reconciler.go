@@ -93,9 +93,10 @@ func Reconcile(ctx context.Context, c client.Client, desired runtime.Object, des
 				klog.Infof("resource key:%s updated", key)
 			} else {
 				metaAccessor := meta.NewAccessor()
-				err = retry.RetryOnConflict(retry.DefaultRetry, func() error {
+				retryErr := retry.RetryOnConflict(retry.DefaultRetry, func() error {
 					currentResourceVersion, err := metaAccessor.ResourceVersion(current)
 					if err != nil {
+						klog.Errorf("key[%s] metaAccessor err: %v", key, err)
 						return err
 					}
 
@@ -108,7 +109,7 @@ func Reconcile(ctx context.Context, c client.Client, desired runtime.Object, des
 						return nil
 					}
 
-					// Get the advdeploy again when updating is failed.
+					// Get object again when updating is failed.
 					getErr := c.Get(ctx, key, current)
 					if getErr != nil {
 						return errors.Wrapf(err, "updated get resource key[%s]", key)
@@ -116,8 +117,12 @@ func Reconcile(ctx context.Context, c client.Client, desired runtime.Object, des
 
 					return updateErr
 				})
-			}
 
+				if retryErr != nil {
+					klog.Errorf("key[%s] retryErr: %v", key, retryErr)
+					return errors.Errorf("key[%s] only update err, please check", key)
+				}
+			}
 		} else if desiredState == DesiredStateAbsent {
 			if err := c.Delete(ctx, current); err != nil {
 				return errors.Wrapf(err, "deleting resource key[%s]", key)

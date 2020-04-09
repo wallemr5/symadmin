@@ -193,7 +193,7 @@ func (r *AdvDeploymentReconciler) Reconcile(req ctrl.Request) (ctrl.Result, erro
 
 	if err := r.DeployTypeCheck(advDeploy); err != nil {
 		klog.Errorf("check err: %v", err)
-		r.recorder.Event(advDeploy, corev1.EventTypeWarning, "deploy type check err", err.Error())
+		r.recorder.Event(advDeploy, corev1.EventTypeWarning, "deploy type check failed", err.Error())
 		return reconcile.Result{}, err
 	}
 
@@ -205,8 +205,8 @@ func (r *AdvDeploymentReconciler) Reconcile(req ctrl.Request) (ctrl.Result, erro
 
 	ownerRes, err := r.ApplyResources(ctx, advDeploy)
 	if err != nil {
-		r.recorder.Event(advDeploy, corev1.EventTypeWarning, "Apply releases failed", err.Error())
-		logger.Error(err, "failed to apply releases")
+		r.recorder.Event(advDeploy, corev1.EventTypeWarning, "apply resources failed", err.Error())
+		logger.Error(err, "failed to apply resources")
 		return reconcile.Result{}, err
 	}
 
@@ -214,13 +214,13 @@ func (r *AdvDeploymentReconciler) Reconcile(req ctrl.Request) (ctrl.Result, erro
 	aggregatedStatus, err := r.RecalculateStatus(ctx, advDeploy, ownerRes)
 	if err != nil {
 		klog.Errorf("failed to recalculate the status of advDeploy [%s]: %v", advDeploy.Name, err)
-		r.recorder.Event(advDeploy, corev1.EventTypeWarning, "Aggregate status failed", err.Error())
+		r.recorder.Event(advDeploy, corev1.EventTypeWarning, "aggregate status failed", err.Error())
 		return reconcile.Result{}, err
 	}
 
 	if err = r.updateStatus(ctx, advDeploy, aggregatedStatus); err != nil {
 		klog.Errorf("failed to update tthe status of advDeploy [%s]: %v", advDeploy.Name, err)
-		r.recorder.Event(advDeploy, corev1.EventTypeWarning, "Update newest status failed", err.Error())
+		r.recorder.Event(advDeploy, corev1.EventTypeWarning, "update status failed", err.Error())
 		return reconcile.Result{}, err
 	}
 
