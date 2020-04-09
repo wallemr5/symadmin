@@ -214,3 +214,14 @@ git push origin dev
 git tag -a v* -m "bumpversion v*"
 git push origin v*
 ```
+
+### 自动生成 CHANGELOG
+
+*尽量规范 Commit 信息*
+
+```shell
+npm install -g conventional-changelog-cli
+conventional-changelog -p angular -i CHANGELOG.md -s -p
+```
+
+详情参见：[conventional-changelog](https://github.com/conventional-changelog/conventional-changelog)
