@@ -61,11 +61,12 @@ type Reconciler struct {
 // Add add controller to runtime manager
 func Add(mgr manager.Manager, cMgr *pkgmanager.DksManager) error {
 	r := &Reconciler{
-		Name:   "cluster-controllers",
-		Client: mgr.GetClient(),
-		Mgr:    mgr,
-		DksMgr: cMgr,
-		Log:    ctrl.Log.WithName("controllers").WithName("cluster"),
+		Name:     "cluster-controllers",
+		Client:   mgr.GetClient(),
+		Mgr:      mgr,
+		DksMgr:   cMgr,
+		Log:      ctrl.Log.WithName("controllers").WithName("cluster"),
+		Clusters: make(map[string]*k8smanager.Cluster),
 	}
 
 	r.Cfg = mgr.GetConfig()
@@ -193,10 +194,7 @@ func (r *Reconciler) EnsureClustes(namespace string, clusterName string) (*k8sma
 
 	// find global manager cluster
 	k, err := r.DksMgr.K8sMgr.Get(clusterName)
-	if err != nil {
-		return nil, err
-	}
-	if k != nil {
+	if err == nil && k != nil {
 		return k, nil
 	}
 
@@ -210,7 +208,7 @@ func (r *Reconciler) EnsureClustes(namespace string, clusterName string) (*k8sma
 		return nil, err
 	}
 
-	nc, err := k8smanager.NewCluster(clusterName, kubeconfig, nil)
+	nc, err := k8smanager.NewCluster(clusterName, kubeconfig, r.Log)
 	if err != nil {
 		klog.Errorf("cluster: %s new client err: %v", clusterName, err)
 		return nil, err
@@ -222,7 +220,7 @@ func (r *Reconciler) EnsureClustes(namespace string, clusterName string) (*k8sma
 	r.Clusters[clusterName] = nc
 
 	klog.Infof("start custom cluster[%s] cache success", clusterName)
-	return k, nil
+	return nc, nil
 }
 
 func (r *Reconciler) reconcile(ctx context.Context, k *k8smanager.Cluster, obj *workloadv1beta1.Cluster) (int, error) {

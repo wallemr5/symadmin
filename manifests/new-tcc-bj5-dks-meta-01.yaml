@@ -7,7 +7,7 @@ metadata:
   name: tcc-bj5-dks-meta-01
   namespace: default
 spec:
-  symNodeName: 10.13.133.9
+  symNodeName: 10.13.133.11
   pause: false
   meta:
     area: beijing
