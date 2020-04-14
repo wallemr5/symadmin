@@ -64,6 +64,12 @@ hostAliases:
   - ip: "10.13.135.251"
     hostnames:
       - "cls-89a4hpb3.ccs.tencent-cloud.com"
+  - ip: "10.13.134.9"
+    hostnames:
+      - "cls-cm580t93.ccs.tencent-cloud.com"
+  - ip: "10.13.133.7"
+    hostnames:
+      - "cls-0snem5sv.ccs.tencent-cloud.com"
   - ip: "10.13.135.12"
     hostnames:
       - "cls-7xq1bq9f.ccs.tencent-cloud.com"

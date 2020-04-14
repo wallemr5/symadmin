@@ -2,11 +2,11 @@
 # This is a YAML-formatted file.
 # Declare variables to be passed into your templates.
 
-replicaCount: 3
+replicaCount: 4
 
 image:
   repository: dmall-bj.tencentcloudcr.com/symcn/sym-admin-api
-  tag: v1.0.1
+  tag: v1.0.2
   pullPolicy: IfNotPresent
 
 nameOverride: ""
@@ -69,14 +69,30 @@ nodeSelector: {}
 
 tolerations: []
 
-affinity: {}
-
+affinity:
+  podAntiAffinity:
+      preferredDuringSchedulingIgnoredDuringExecution:
+      - weight: 100
+        podAffinityTerm:
+          labelSelector:
+            matchExpressions:
+            - key: app.kubernetes.io/name
+              operator: In
+              values:
+              - sym-api
+          topologyKey: kubernetes.io/hostname
 
 # dev-test
 hostAliases:
   - ip: "10.13.135.251"
     hostnames:
       - "cls-89a4hpb3.ccs.tencent-cloud.com"
+  - ip: "10.13.134.9"
+    hostnames:
+      - "cls-cm580t93.ccs.tencent-cloud.com"
+  - ip: "10.13.133.7"
+    hostnames:
+      - "cls-0snem5sv.ccs.tencent-cloud.com"
   - ip: "10.13.135.12"
     hostnames:
       - "cls-7xq1bq9f.ccs.tencent-cloud.com"
