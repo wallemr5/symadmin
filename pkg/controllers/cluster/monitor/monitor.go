@@ -6,7 +6,6 @@ import (
 
 	"context"
 
-	"github.com/Masterminds/semver"
 	"github.com/go-logr/logr"
 
 	"github.com/ghodss/yaml"
@@ -40,6 +39,7 @@ type reconciler struct {
 	isEnableAlert bool
 }
 
+// New ...
 func New(mgr manager.Manager, k *k8smanager.Cluster, obj *workloadv1beta1.Cluster, hClient *helmv2.Client) common.ComponentReconciler {
 	r := &reconciler{
 		name:    "monitor",
@@ -67,18 +67,18 @@ func (r *reconciler) Name() string {
 	return r.name
 }
 
-func getPromSwitch(clusterType string) (isSysEnable bool, isAlertManagerEnable bool, isGrafanaEnable bool, isIngress bool, isKubeletHttps bool) {
+func getPromSwitch(clusterType string) (isSysEnable bool, isAlertManagerEnable bool, isGrafanaEnable bool, isIngress bool, isKubeletHTTPS bool) {
 	isSysEnable = false
 	isAlertManagerEnable = true
 	isIngress = true
 	isGrafanaEnable = true
-	isKubeletHttps = true
+	isKubeletHTTPS = true
 	if strings.Contains(clusterType, "idc") {
 		isSysEnable = true
 		return
 	}
 	if strings.Contains(clusterType, "aks") {
-		isKubeletHttps = false
+		isKubeletHTTPS = false
 		return
 	}
 
@@ -88,65 +88,57 @@ func getPromSwitch(clusterType string) (isSysEnable bool, isAlertManagerEnable b
 func getPromStorageSize(app *workloadv1beta1.HelmChartSpec) string {
 	if va, ok := app.Values["lpv-size"]; ok {
 		return va
-	} else {
-		return "30Gi"
 	}
+	return "30Gi"
 }
 
 func getPromPvPath(app *workloadv1beta1.HelmChartSpec) string {
 	if va, ok := app.Values["lpv-path"]; ok {
 		return va
-	} else {
-		return "/root/prometheus-data"
 	}
+	return "/root/prometheus-data"
 }
 
 func getGrafanaStorageSize(app *workloadv1beta1.HelmChartSpec) string {
 	if va, ok := app.Values["lpv-grafana-size"]; ok {
 		return va
-	} else {
-		return "1Gi"
 	}
+	return "1Gi"
 }
 
 func getGrafanaPvPath(app *workloadv1beta1.HelmChartSpec) string {
 	if va, ok := app.Values["lpv-grafana-path"]; ok {
 		return va
-	} else {
-		return "/root/grafana-data"
 	}
+	return "/root/grafana-data"
 }
 
-func getPromLimitsCpu(app *workloadv1beta1.HelmChartSpec) string {
+func getPromLimitsCPU(app *workloadv1beta1.HelmChartSpec) string {
 	if va, ok := app.Values["prom-limit-cpu"]; ok {
 		return va
-	} else {
-		return "1"
 	}
+	return "1"
 }
 
 func getPromLimitsMemory(app *workloadv1beta1.HelmChartSpec) string {
 	if va, ok := app.Values["prom-limit-memory"]; ok {
 		return va
-	} else {
-		return "1Gi"
 	}
+	return "1Gi"
 }
 
-func getPromReqCpu(app *workloadv1beta1.HelmChartSpec) string {
+func getPromReqCPU(app *workloadv1beta1.HelmChartSpec) string {
 	if va, ok := app.Values["prom-req-cpu"]; ok {
 		return va
-	} else {
-		return "0.5"
 	}
+	return "0.5"
 }
 
 func getPromReqMemory(app *workloadv1beta1.HelmChartSpec) string {
 	if va, ok := app.Values["prom-req-memory"]; ok {
 		return va
-	} else {
-		return "500Mi"
 	}
+	return "500Mi"
 }
 
 func getClusterEnv(c *workloadv1beta1.Cluster) string {
@@ -179,9 +171,8 @@ func getPromSelector(app *workloadv1beta1.HelmChartSpec) map[string]interface{} 
 func getPromRetention(app *workloadv1beta1.HelmChartSpec) string {
 	if va, ok := app.Values["prom-retention"]; ok {
 		return va
-	} else {
-		return "2d"
 	}
+	return "2d"
 }
 
 func preInstallMonitoringGetEtcd(k *k8smanager.Cluster) []string {
@@ -408,11 +399,11 @@ func makeAlertManagerConfig(isEnableAlert bool, c *workloadv1beta1.Cluster) map[
 		return ing
 	}
 
-	var webhookUrl string
+	var webhookURL string
 	if strings.Contains(c.Name, "az-hk") {
-		webhookUrl = "http://api.symphony.inner-dmall.com.hk/operator/promAlert"
+		webhookURL = "http://api.symphony.inner-dmall.com.hk/operator/promAlert"
 	} else {
-		webhookUrl = "http://api.symphony.dmall.com/operator/promAlert"
+		webhookURL = "http://api.symphony.dmall.com/operator/promAlert"
 	}
 
 	ing["global"] = map[string]interface{}{
@@ -439,7 +430,7 @@ func makeAlertManagerConfig(isEnableAlert bool, c *workloadv1beta1.Cluster) map[
 			"name": "sym-webhook",
 			"webhook_configs": []map[string]interface{}{
 				{
-					"url": webhookUrl,
+					"url": webhookURL,
 				},
 			},
 		},
@@ -482,7 +473,7 @@ func (r *reconciler) buildMonitorValues(app *workloadv1beta1.HelmChartSpec) map[
 	)
 
 	env = getClusterEnv(r.obj)
-	isSysEnable, isAlertManagerEnable, isGrafanaEnable, isIngress, isKubeletHttps := getPromSwitch(r.clusterType)
+	isSysEnable, isAlertManagerEnable, isGrafanaEnable, isIngress, isKubeletHTTPS := getPromSwitch(r.clusterType)
 
 	if isSysEnable {
 		etcdips = preInstallMonitoringGetEtcd(r.k)
@@ -521,11 +512,11 @@ func (r *reconciler) buildMonitorValues(app *workloadv1beta1.HelmChartSpec) map[
 				"tolerations":                      tolerations,
 				"resources": map[string]interface{}{
 					"limits": map[string]interface{}{
-						"cpu":    getPromLimitsCpu(app),
+						"cpu":    getPromLimitsCPU(app),
 						"memory": getPromLimitsMemory(app),
 					},
 					"requests": map[string]interface{}{
-						"cpu":    getPromReqCpu(app),
+						"cpu":    getPromReqCPU(app),
 						"memory": getPromReqMemory(app),
 					},
 				},
@@ -657,34 +648,34 @@ func (r *reconciler) buildMonitorValues(app *workloadv1beta1.HelmChartSpec) map[
 	}
 
 	// default is coredns
-	isCoreDns := true
-	c, err := semver.NewConstraint(">= 1.12.0")
-	if err == nil {
-		v, err := semver.NewVersion(r.obj.Status.Version.GitVersion)
-		if err == nil {
-			if ok := c.Check(v); !ok {
-				isCoreDns = false
-			}
-		}
-	}
+	// isCoreDns := true
+	// c, err := semver.NewConstraint(">= 1.12.0")
+	// if err == nil {
+	// 	v, err := semver.NewVersion(r.obj.Status.Version.GitVersion)
+	// 	if err == nil {
+	// 		if ok := c.Check(v); !ok {
+	// 			isCoreDns = false
+	// 		}
+	// 	}
+	// }
 
-	if isCoreDns {
-		overrideValueMap["coreDns"] = map[string]interface{}{
-			"enabled": true,
-		}
-		overrideValueMap["kubeDns"] = map[string]interface{}{
-			"enabled": false,
-		}
-	} else {
-		overrideValueMap["coreDns"] = map[string]interface{}{
-			"enabled": false,
-		}
-		overrideValueMap["kubeDns"] = map[string]interface{}{
-			"enabled": true,
-		}
+	// if isCoreDns {
+	overrideValueMap["coreDns"] = map[string]interface{}{
+		"enabled": true,
 	}
+	overrideValueMap["kubeDns"] = map[string]interface{}{
+		"enabled": false,
+	}
+	// } else {
+	// 	overrideValueMap["coreDns"] = map[string]interface{}{
+	// 		"enabled": false,
+	// 	}
+	// 	overrideValueMap["kubeDns"] = map[string]interface{}{
+	// 		"enabled": true,
+	// 	}
+	// }
 
-	if isKubeletHttps {
+	if isKubeletHTTPS {
 		overrideValueMap["kubelet"] = map[string]interface{}{
 			"enabled": true,
 		}
@@ -735,10 +726,10 @@ func (r *reconciler) Reconcile(log logr.Logger, obj interface{}) (interface{}, e
 		app.ChartName = "prometheus-operator"
 	}
 
-	_, ns, chartUrl := common.BuildHelmInfo(app)
+	_, ns, chartURL := common.BuildHelmInfo(app)
 	// monitor rls name need add cluster name
 	rlsName := "monitor-" + r.obj.Name
-	err := r.preInstallMonitoringCheckCrd(rlsName, chartUrl, app.ChartVersion)
+	err := r.preInstallMonitoringCheckCrd(rlsName, chartURL, app.ChartVersion)
 	if err != nil {
 		klog.Errorf("Reconcile crd err: %v", err)
 		return nil, err
@@ -752,7 +743,7 @@ func (r *reconciler) Reconcile(log logr.Logger, obj interface{}) (interface{}, e
 	}
 	klog.Infof("rlsName:%s OverrideValue:\n%s", rlsName, string(vaByte))
 
-	rls, err := helmv2.ApplyRelease(rlsName, chartUrl, app.ChartVersion, nil, r.hClient, ns, nil, vaByte)
+	rls, err := helmv2.ApplyRelease(rlsName, chartURL, app.ChartVersion, nil, r.hClient, ns, nil, vaByte)
 	if err != nil || rls == nil {
 		return nil, err
 	}
