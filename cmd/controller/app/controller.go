@@ -99,7 +99,7 @@ func NewControllerCmd(cli *DksCli) *cobra.Command {
 	}
 
 	cmd.PersistentFlags().IntVar(&opt.GoroutineThreshold, "goroutine-threshold", opt.GoroutineThreshold, "the max Goroutine Threshold")
-	cmd.PersistentFlags().IntVar(&opt.Threadiness, "t", opt.Threadiness, "the max Goroutine for controller")
+	cmd.PersistentFlags().IntVar(&opt.Threadiness, "threadiness", opt.Threadiness, "the max Goroutine for controller")
 	cmd.PersistentFlags().DurationVar(&opt.ResyncPeriod, "resync-period", opt.ResyncPeriod, "the max resync period to informer")
 	cmd.PersistentFlags().StringVar(&opt.HTTPAddr, "http-addr", opt.HTTPAddr, "HTTPAddr for some info")
 	cmd.PersistentFlags().BoolVar(&opt.EnableLeaderElection, "enable-leader", opt.EnableLeaderElection,
