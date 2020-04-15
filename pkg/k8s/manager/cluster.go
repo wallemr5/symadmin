@@ -27,6 +27,10 @@ const (
 	ClusterMaintain ClusterStatusType = "Maintaining"
 )
 
+var (
+	SyncPeriodTime = 1 * time.Hour
+)
+
 type Cluster struct {
 	Name          string
 	AliasName     string
@@ -84,10 +88,9 @@ func (c *Cluster) initK8SClients() error {
 
 	klog.V(5).Infof("##### cluster [%s] NewClientCli. time taken: %v. ", c.Name, time.Since(startTime))
 	c.KubeCli = kubecli
-	rp := time.Minute * 5
 	o := manager.Options{
 		Scheme:     k8sclient.GetScheme(),
-		SyncPeriod: &rp,
+		SyncPeriod: &SyncPeriodTime,
 	}
 
 	mgr, err := manager.New(c.RestConfig, o)
