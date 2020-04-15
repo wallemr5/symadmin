@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"gitlab.dmall.com/arch/sym-admin/pkg/healthcheck"
+	"gitlab.dmall.com/arch/sym-admin/pkg/utils"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -167,7 +168,7 @@ func (m *ClusterManager) GetAll(name ...string) []*Cluster {
 	var ObserveName string
 	if len(name) > 0 {
 		if name[0] != "all" {
-			ObserveName = name[0]
+			ObserveName = utils.ToClusterCrName(name[0])
 			isAll = false
 		}
 	}
@@ -248,6 +249,7 @@ func (m *ClusterManager) Delete(name string) error {
 func (m *ClusterManager) Get(name string) (*Cluster, error) {
 	m.mu.Lock()
 	defer m.mu.Unlock()
+	name = utils.ToClusterCrName(name)
 
 	if name == "" || name == "all" {
 		return nil, fmt.Errorf("single query not support: %s ", name)
