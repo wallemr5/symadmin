@@ -33,7 +33,7 @@ spec:
           {{- if .Values.image.worker }}
           - "--enable-worker"
           {{- end }}
-          {{- if .Values.image.debug }}
+          {{- if .Values.image.reCreate | default false }}
           - "--debug"
           {{- end }}
           {{- if .Values.image.leader }}
