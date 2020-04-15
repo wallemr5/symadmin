@@ -39,6 +39,8 @@ spec:
           {{- if .Values.image.leader }}
           - "--enable-leader"
           {{- end }}
+          - "--threadiness"
+          - "4"
 
           ports:
             - name: http

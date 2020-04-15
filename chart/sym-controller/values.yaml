@@ -13,6 +13,7 @@ image:
   worker: true
   reCreate: false
   leader: true
+  threadiness: 2
 
 nameOverride: ""
 fullnameOverride: ""
