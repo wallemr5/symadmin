@@ -115,9 +115,9 @@ func CheckAndGetAppInfo(name string) (info AppInfo, check bool) {
 }
 
 // CheckEventLabel checkeventlabel
-func CheckEventLabel(name string) bool {
+func CheckEventLabel(name string, appName string) bool {
 	// name dmall-container-api-gz01a-blue-7488db8644-8zmfh
-	rep, _ := regexp.Compile(`^(.*?)-(gz|rz)(.*?)-(blue|green|canary|svc).*?$`)
+	rep, _ := regexp.Compile(fmt.Sprintf(`^(%s)-(gz|rz)(.*?)-(blue|green|canary|svc).*?$`, appName))
 	return rep.Match([]byte(name))
 }
 

@@ -187,8 +187,7 @@ func isAppendEvt(evt corev1.Event, app *workloadv1beta1.AppSet) bool {
 		return false
 	}
 
-	ok := labels.CheckEventLabel(evt.InvolvedObject.Name)
-	if ok {
+	if labels.CheckEventLabel(evt.InvolvedObject.Name, app.Name) {
 		return true
 	}
 

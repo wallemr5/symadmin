@@ -1,6 +1,9 @@
 package labels
 
-import "testing"
+import (
+	"fmt"
+	"testing"
+)
 
 type testAppInfo struct {
 	Check bool
@@ -51,4 +54,9 @@ func TestCheckAndGetAppInfo(t *testing.T) {
 			t.Errorf("get app info failed, input:%s, expect:%+v, result:%+v", input, expect.Data, result)
 		}
 	}
+}
+
+func TestCheckEventLabel(t *testing.T) {
+	name := "unidata-admin-gz01a-blue-f89757ff-n5x2l.160237aed586b459"
+	fmt.Println(CheckEventLabel(name, "unidata-admin-web"))
 }
