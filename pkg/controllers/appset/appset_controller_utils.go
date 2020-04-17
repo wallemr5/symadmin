@@ -19,6 +19,7 @@ package appset
 import (
 	"fmt"
 	"sort"
+	"strconv"
 	"strings"
 
 	"github.com/ghodss/yaml"
@@ -232,11 +233,17 @@ func mergeVersion(v1, v2 string) string {
 		m[v] = struct{}{}
 	}
 
-	s := make([]string, 0, len(m))
+	s := make([]int, 0, len(m))
 	for k := range m {
-		s = append(s, k)
+		i, _ := strconv.Atoi(strings.TrimLeft(k, "v"))
+		s = append(s, i)
 	}
-	sort.Strings(s)
+	sort.Ints(s)
 
-	return strings.Join(s, "/")
+	r := ""
+	for _, k := range s {
+		r = fmt.Sprintf("%s/v%d", r, k)
+	}
+
+	return strings.Trim(r, "/")
 }

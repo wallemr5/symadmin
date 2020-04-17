@@ -18,6 +18,7 @@ func TestMergeVersion(t *testing.T) {
 		"v1":          version{"v1", "v1"},
 		"v3/v4":       version{"", "/v4/v3"},
 		"v11/v12":     version{"/v12/v11", " "},
+		"v7/v10":      version{"v10", "v7"},
 	}
 
 	for expect, input := range r {
