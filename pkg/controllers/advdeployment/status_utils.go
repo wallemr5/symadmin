@@ -249,6 +249,7 @@ func (r *AdvDeploymentReconciler) updateStatus(ctx context.Context, advDeploy *w
 		return nil
 	}
 
+	var updateErr error
 	err = retry.RetryOnConflict(retry.DefaultRetry, func() error {
 		now := metav1.Now()
 		obj.Status.LastUpdateTime = &now
@@ -256,11 +257,19 @@ func (r *AdvDeploymentReconciler) updateStatus(ctx context.Context, advDeploy *w
 		// It is very useful for controller that support this field
 		// without this, you might trigger a sync as a result of updating your own status.
 		obj.Status.ObservedGeneration = obj.ObjectMeta.Generation
-		updateErr := r.Client.Status().Update(ctx, obj)
+
+		if r.Opt.OldCluster {
+			updateErr = r.Client.Update(ctx, obj)
+		} else {
+			updateErr = r.Client.Status().Update(ctx, obj)
+		}
+
 		if updateErr == nil {
 			klog.V(3).Infof("Updating the status of advDeploy[%s] successfully", advDeploy.Name)
 			return nil
 		}
+
+		klog.Warningf("Update advDeploy[%s] status err: %v", advDeploy.Name, updateErr)
 
 		// Get the advdeploy again when updating is failed.
 		getErr := r.Client.Get(ctx, nsName, obj)

@@ -46,6 +46,7 @@ type ManagerOption struct {
 	MasterEnabled           bool
 	WorkerEnabled           bool
 	ClusterEnabled          bool
+	OldCluster              bool
 	Debug                   bool
 	Recover                 bool
 }
@@ -72,6 +73,9 @@ func DefaultManagerOption() *ManagerOption {
 		MasterEnabled:           false,
 		WorkerEnabled:           false,
 		ClusterEnabled:          false,
+		OldCluster:              false,
+		Debug:                   false,
+		Recover:                 false,
 		Repos: map[string]string{
 			"dmall": "http://chartmuseum.dmall.com",
 		},

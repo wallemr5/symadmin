@@ -111,6 +111,7 @@ func NewControllerCmd(cli *DksCli) *cobra.Command {
 	cmd.PersistentFlags().BoolVar(&opt.MasterEnabled, "enable-master", opt.MasterEnabled, "Enable master controller")
 	cmd.PersistentFlags().BoolVar(&opt.WorkerEnabled, "enable-worker", opt.WorkerEnabled, "Enable worker controller")
 	cmd.PersistentFlags().BoolVar(&opt.ClusterEnabled, "enable-cluster", opt.ClusterEnabled, "Enable cluster controller")
+	cmd.PersistentFlags().BoolVar(&opt.OldCluster, "enable-oldCluster", opt.OldCluster, "compatibility old cluster process")
 	cmd.PersistentFlags().BoolVar(&opt.Recover, "recover", opt.Recover, "Enable recover function")
 	cmd.PersistentFlags().BoolVar(&opt.Debug, "debug", opt.Debug, "Debug mode")
 	return cmd
