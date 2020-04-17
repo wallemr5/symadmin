@@ -62,7 +62,6 @@ type AppSetReconciler struct {
 	Mx                sync.RWMutex
 	Log               logr.Logger
 	CustomImpl        *customctrl.Impl
-	Namespace         string
 }
 
 func Add(mgr manager.Manager, cMgr *pkgmanager.DksManager) error {
@@ -105,11 +104,10 @@ func (p *PolicyTrigger) Start(stop <-chan struct{}) error {
 
 func NewAppSetController(mgr manager.Manager, cMgr *pkgmanager.DksManager) (*AppSetReconciler, *customctrl.Impl) {
 	c := &AppSetReconciler{
-		DksMgr:    cMgr,
-		Manager:   mgr,
-		Log:       logf.KBLog.WithName(controllerName),
-		Namespace: "default",
-		recorder:  mgr.GetRecorder(controllerName),
+		DksMgr:   cMgr,
+		Manager:  mgr,
+		Log:      logf.KBLog.WithName(controllerName),
+		recorder: mgr.GetRecorder(controllerName),
 	}
 
 	// Create a new custom controller
@@ -224,7 +222,6 @@ func (r *AppSetReconciler) CustomReconcile(ctx context.Context, req customctrl.C
 			app.ObjectMeta.Finalizers = []string{}
 		}
 		app.ObjectMeta.Finalizers = append(app.ObjectMeta.Finalizers, labels.ControllerFinalizersName)
-
 		return reconcile.Result{}, r.Client.Update(ctx, app)
 	}
 
@@ -239,7 +236,7 @@ func (r *AppSetReconciler) CustomReconcile(ctx context.Context, req customctrl.C
 	}
 
 	// update status
-	klog.V(4).Infof("%s: aggregate status", req.NamespacedName)
+	klog.V(4).Infof("%s/%s start aggregate status ... ", req.NamespacedName.Namespace, req.NamespacedName.Name)
 	status, _, err := r.ModifyStatus(ctx, req)
 	if err != nil {
 		logger.Error(err, "update AppSet.Status fail")

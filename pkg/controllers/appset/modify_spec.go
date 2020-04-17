@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/pkg/errors"
 	workloadv1beta1 "gitlab.dmall.com/arch/sym-admin/pkg/apis/workload/v1beta1"
 	"gitlab.dmall.com/arch/sym-admin/pkg/customctrl"
 	k8smanager "gitlab.dmall.com/arch/sym-admin/pkg/k8s/manager"
@@ -31,7 +30,7 @@ func (r *AppSetReconciler) ModifySpec(ctx context.Context, req customctrl.Custom
 	for _, v := range app.Spec.ClusterTopology.Clusters {
 		cluster, err := r.DksMgr.K8sMgr.Get(v.Name)
 		if err != nil {
-			r.recorder.Eventf(app.DeepCopy(), corev1.EventTypeWarning, "ClusterOffline", "Get cluster[%s] err:%+v.", v.Name, err)
+			r.recorder.Eventf(app, corev1.EventTypeWarning, "ClusterOffline", "Get cluster[%s] err:%+v.", v.Name, err)
 			return false, err
 		}
 
@@ -90,9 +89,12 @@ func applyAdvDeployment(ctx context.Context, cluster *k8smanager.Cluster, req cu
 			advDeploy.Status.AggrStatus.Status = workloadv1beta1.AppStatusInstalling
 			err = cluster.Client.Create(ctx, advDeploy)
 			if err != nil {
-				return nil, false, errors.Wrapf(err, "cluster:%s create advDeploy", cluster.GetName())
+				klog.Errorf("%s/%s create AdvDeployment by cluster[%s] fail, err: %v",
+					req.NamespacedName.Namespace, req.NamespacedName.Name, cluster.GetName(), err)
+				return nil, false, fmt.Errorf("create advDeploy by cluster[%s] fail", cluster.GetName())
 			}
-			klog.V(4).Infof("%s: cluster[%s] create AdvDeployment spec info", req.NamespacedName, cluster.GetName())
+			klog.V(4).Infof("%s/%s create AdvDeployment by cluster[%s] successfully",
+				req.NamespacedName.Namespace, req.NamespacedName.Name, cluster.GetName())
 			return advDeploy, true, nil
 		}
 		return nil, false, err
@@ -100,7 +102,6 @@ func applyAdvDeployment(ctx context.Context, cluster *k8smanager.Cluster, req cu
 
 	if compare(obj, advDeploy) {
 		err := retry.RetryOnConflict(retry.DefaultRetry, func() error {
-
 			time := metav1.Now()
 			advDeploy.Spec.DeepCopyInto(&obj.Spec)
 			obj.Labels = advDeploy.ObjectMeta.Labels
@@ -108,17 +109,17 @@ func applyAdvDeployment(ctx context.Context, cluster *k8smanager.Cluster, req cu
 
 			updateErr := cluster.Client.Update(ctx, obj)
 			if updateErr == nil {
-				klog.V(4).Infof("%s: cluster[%s] AdvDeployment update successfully", req.NamespacedName, cluster.GetName())
+				klog.V(4).Infof("%s/%s update AdvDeployment by cluster[%s] successfully",
+					req.NamespacedName.Namespace, req.NamespacedName.Name, cluster.GetName())
 				return nil
 			}
 
-			getErr := cluster.Client.Get(ctx, types.NamespacedName{
-				Name:      app.Name,
-				Namespace: app.Namespace,
-			}, obj)
-
+			klog.Warningf("Update advDeploy[%s] status fail, err: %v", advDeploy.Name, updateErr)
+			getErr := cluster.Client.Get(ctx, req.NamespacedName, obj)
 			if getErr != nil {
-				utilruntime.HandleError(fmt.Errorf("getting updated advDeploy: [%s/%s] err: %v", cluster.Name, advDeploy.Name, err))
+				klog.Errorf("cluster[%s] update get advDeploy[%s] fail, err: %v", cluster.Name, advDeploy.Name, getErr)
+				utilruntime.HandleError(fmt.Errorf("cluster[%s] update get advDeploy[%s] fail, err: %v",
+					cluster.Name, advDeploy.Name, getErr))
 			}
 			return updateErr
 		})
