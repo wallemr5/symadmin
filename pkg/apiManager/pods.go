@@ -101,7 +101,7 @@ func (m *APIManager) GetPodEvent(c *gin.Context) {
 	sort.Slice(result, func(i, j int) bool {
 		t1, _ := time.Parse("2006-01-02 15:04:05", result[i].LastTime)
 		t2, _ := time.Parse("2006-01-02 15:04:05", result[j].LastTime)
-		return t1.After(t2)
+		return t1.Before(t2)
 	})
 
 	c.IndentedJSON(http.StatusOK, gin.H{
