@@ -47,11 +47,11 @@ func deleteByCluster(ctx context.Context, cluster *k8smanager.Cluster, req custo
 		},
 	})
 	if err == nil {
-		klog.V(4).Infof("%s: delete cluster[%s] Advdeployment event success", req.NamespacedName, cluster.GetName())
+		klog.V(4).Infof("%s: delete cluster[%s] Advdeployment success", req.NamespacedName, cluster.GetName())
 		return true, nil
 	}
 	if apierrors.IsNotFound(err) {
-		klog.Errorf("%s: delete cluster[%s] Advdeployment event fail, not found", req.NamespacedName, cluster.GetName())
+		klog.Errorf("%s: delete cluster[%s] Advdeployment fail, not found", req.NamespacedName, cluster.GetName())
 		return false, nil
 	}
 

@@ -120,7 +120,11 @@ func buildAppSetStatus(ctx context.Context, dksManger *k8smanager.ClusterManager
 	}
 
 	// final status aggregate
-	if finalStatus == workloadv1beta1.AppStatusRuning && as.AggrStatus.Available == *app.Spec.Replicas {
+	if finalStatus == workloadv1beta1.AppStatusRuning &&
+		as.AggrStatus.Available == *app.Spec.Replicas &&
+		as.AggrStatus.Available == as.AggrStatus.Desired &&
+		as.AggrStatus.UnAvailable == 0 {
+
 		as.AggrStatus.Status = workloadv1beta1.AppStatusRuning
 		as.AggrStatus.WarnEvents = nil
 	} else {
@@ -129,7 +133,7 @@ func buildAppSetStatus(ctx context.Context, dksManger *k8smanager.ClusterManager
 	if app.Spec.Replicas != nil {
 		as.AggrStatus.Desired = *app.Spec.Replicas
 	}
-	klog.V(4).Infof("%s: build status judgeStatus:%s available:%d replicas:%d, finalStatus:%s", req.NamespacedName, finalStatus, as.AggrStatus.Available, *app.Spec.Replicas, as.AggrStatus.Status)
+	klog.V(4).Infof("%s: build status judgeStatus:%s, desired:%d, available:%d, replicas:%d, finalStatus:%s", req.NamespacedName, finalStatus, as.AggrStatus.Desired, as.AggrStatus.Available, *app.Spec.Replicas, as.AggrStatus.Status)
 
 	if changeObserved {
 		as.ObservedGeneration = app.ObjectMeta.Generation

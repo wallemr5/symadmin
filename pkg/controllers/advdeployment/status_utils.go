@@ -206,8 +206,10 @@ func (r *AdvDeploymentReconciler) RecalculateStatus(ctx context.Context, advDepl
 
 	status.Version = utils.FillDuplicatedVersion(status.PodSets)
 
-	if status.Desired == status.Available {
-		status.Status = "Running"
+	if status.Desired == status.Available && status.UnAvailable == 0 {
+		status.Status = workloadv1beta1.AppStatusRuning
+	} else {
+		status.Status = workloadv1beta1.AppStatusInstalling
 	}
 
 	if status.Desired <= status.Available {
