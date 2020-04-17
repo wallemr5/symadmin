@@ -273,7 +273,7 @@ func (m *APIManager) GetFiles(c *gin.Context) {
 	}
 	files = strings.Split(string(result), "\n")
 	for _, fileName := range files {
-		if strings.HasPrefix(fileName, podIP+"_"+containerID[9:12]) {
+		if strings.HasPrefix(fileName, podIP+"_"+containerID[9:12]) || strings.HasPrefix(fileName, podIP+"_docker-"+containerID[9:12]) {
 			logDirectory = fileName
 			break
 		}
