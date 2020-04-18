@@ -6,7 +6,7 @@ replicaCount: 4
 
 image:
   repository: dmall-bj.tencentcloudcr.com/symcn/sym-admin-api
-  tag: v1.0.3
+  tag: v1.0.4
   pullPolicy: IfNotPresent
 
 nameOverride: ""
@@ -60,7 +60,7 @@ resources:
   # lines, adjust them as necessary, and remove the curly braces after 'resources:'.
   limits:
     cpu: 1
-    memory: 512Mi
+    memory: 1Gi
   requests:
     cpu: 500m
     memory: 256Mi
