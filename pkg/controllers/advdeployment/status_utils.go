@@ -136,6 +136,8 @@ func (r *AdvDeploymentReconciler) RecalculateStatus(ctx context.Context, advDepl
 
 	unUseObject := make([]Object, 0)
 	status := &workloadv1beta1.AdvDeploymentAggrStatus{}
+	isGenerationEqual := true
+	var updatedReplicas int32 = 0
 	for _, deploy := range deploys {
 		if !metav1.IsControlledBy(deploy, advDeploy) {
 			err = controllerutil.SetControllerReference(advDeploy, deploy, r.Mgr.GetScheme())
@@ -165,8 +167,12 @@ func (r *AdvDeploymentReconciler) RecalculateStatus(ctx context.Context, advDepl
 		status.Available += podSetStatus.Available
 		status.Desired += podSetStatus.Desired
 		status.UnAvailable += podSetStatus.UnAvailable
+		updatedReplicas += deploy.Status.UpdatedReplicas
 
 		status.PodSets = append(status.PodSets, podSetStatus)
+		if deploy.Status.ObservedGeneration != deploy.ObjectMeta.Generation {
+			isGenerationEqual = false
+		}
 	}
 
 	for _, set := range statefulSets {
@@ -196,8 +202,13 @@ func (r *AdvDeploymentReconciler) RecalculateStatus(ctx context.Context, advDepl
 
 		status.Available += podSetStatus.Available
 		status.Desired += podSetStatus.Desired
+		updatedReplicas += set.Status.UpdatedReplicas
 
 		status.PodSets = append(status.PodSets, podSetStatus)
+
+		if set.Status.ObservedGeneration != set.ObjectMeta.Generation {
+			isGenerationEqual = false
+		}
 	}
 
 	sort.Slice(status.PodSets, func(i, j int) bool {
@@ -206,7 +217,7 @@ func (r *AdvDeploymentReconciler) RecalculateStatus(ctx context.Context, advDepl
 
 	status.Version = utils.FillDuplicatedVersion(status.PodSets)
 
-	if status.Desired == status.Available && status.UnAvailable == 0 {
+	if status.Desired == status.Available && status.UnAvailable == 0 && isGenerationEqual && status.Desired == updatedReplicas {
 		status.Status = workloadv1beta1.AppStatusRuning
 	} else {
 		status.Status = workloadv1beta1.AppStatusInstalling
