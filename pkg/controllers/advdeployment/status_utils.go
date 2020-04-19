@@ -236,6 +236,7 @@ func (r *AdvDeploymentReconciler) RecalculateStatus(ctx context.Context, advDepl
 	}
 
 	status.OwnerResource = ownerRes
+	status.GenerationEqual = isGenerationEqual
 	return status, nil
 }
 
@@ -269,7 +270,9 @@ func (r *AdvDeploymentReconciler) updateStatus(ctx context.Context, advDeploy *w
 		recalStatus.DeepCopyInto(&obj.Status.AggrStatus)
 		// It is very useful for controller that support this field
 		// without this, you might trigger a sync as a result of updating your own status.
-		obj.Status.ObservedGeneration = obj.ObjectMeta.Generation
+		if obj.Status.AggrStatus.GenerationEqual {
+			obj.Status.ObservedGeneration = obj.ObjectMeta.Generation
+		}
 
 		if r.Opt.OldCluster {
 			updateErr = r.Client.Update(ctx, obj)
