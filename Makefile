@@ -1,4 +1,4 @@
-VERSION ?= v1.0.4
+VERSION ?= v1.0.5
 # Image URL to use all building/pushing image targets
 IMG_REG ?= dmall-bj.tencentcloudcr.com/symcn
 IMG_CTL := $(IMG_REG)/sym-admin-controller
