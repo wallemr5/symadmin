@@ -108,10 +108,10 @@ func IsUnUseObject(kind string, obj Object, ownerRes []string) bool {
 }
 
 // RecalculateStatus According to the status of running deployments, calculate the advDeployment's status
-func (r *AdvDeploymentReconciler) RecalculateStatus(ctx context.Context, advDeploy *workloadv1beta1.AdvDeployment, ownerRes []string) (*workloadv1beta1.AdvDeploymentAggrStatus, error) {
+func (r *AdvDeploymentReconciler) RecalculateStatus(ctx context.Context, advDeploy *workloadv1beta1.AdvDeployment, ownerRes []string) (*workloadv1beta1.AdvDeploymentAggrStatus, bool, error) {
 	deploys, err := r.GetDeployListByByLabels(ctx, advDeploy)
 	if err != nil {
-		return nil, errors.Wrapf(err, "Find all relative deployments with application name [%s] has an error", advDeploy.Name)
+		return nil, false, errors.Wrapf(err, "Find all relative deployments with application name [%s] has an error", advDeploy.Name)
 	}
 
 	svc, err := r.GetServiceByByLabels(ctx, advDeploy)
@@ -130,7 +130,7 @@ func (r *AdvDeploymentReconciler) RecalculateStatus(ctx context.Context, advDepl
 	if len(deploys) == 0 {
 		statefulSets, err = r.GetStatefulSetByLabels(ctx, advDeploy)
 		if err != nil {
-			return nil, errors.Wrapf(err, "Find all relative statefulSet with application name [%s] has an error", advDeploy.Name)
+			return nil, false, errors.Wrapf(err, "Find all relative statefulSet with application name [%s] has an error", advDeploy.Name)
 		}
 	}
 
@@ -236,12 +236,11 @@ func (r *AdvDeploymentReconciler) RecalculateStatus(ctx context.Context, advDepl
 	}
 
 	status.OwnerResource = ownerRes
-	status.GenerationEqual = isGenerationEqual
-	return status, nil
+	return status, isGenerationEqual, nil
 }
 
 //updateStatus Update the calculated status into CRD's status so that the controller which is watching for it can be noticed
-func (r *AdvDeploymentReconciler) updateStatus(ctx context.Context, advDeploy *workloadv1beta1.AdvDeployment, recalStatus *workloadv1beta1.AdvDeploymentAggrStatus) error {
+func (r *AdvDeploymentReconciler) updateStatus(ctx context.Context, advDeploy *workloadv1beta1.AdvDeployment, recalStatus *workloadv1beta1.AdvDeploymentAggrStatus, isGenerationEqual bool) error {
 	obj := &workloadv1beta1.AdvDeployment{}
 
 	nsName := types.NamespacedName{
@@ -270,7 +269,7 @@ func (r *AdvDeploymentReconciler) updateStatus(ctx context.Context, advDeploy *w
 		recalStatus.DeepCopyInto(&obj.Status.AggrStatus)
 		// It is very useful for controller that support this field
 		// without this, you might trigger a sync as a result of updating your own status.
-		if obj.Status.AggrStatus.GenerationEqual {
+		if isGenerationEqual {
 			obj.Status.ObservedGeneration = obj.ObjectMeta.Generation
 		}
 
