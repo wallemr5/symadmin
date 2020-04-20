@@ -211,14 +211,14 @@ func (r *AdvDeploymentReconciler) Reconcile(req ctrl.Request) (ctrl.Result, erro
 	}
 
 	// We can update the status for the advDeployment without modification for any release.
-	aggregatedStatus, err := r.RecalculateStatus(ctx, advDeploy, ownerRes)
+	aggregatedStatus, isGenerationEqual, err := r.RecalculateStatus(ctx, advDeploy, ownerRes)
 	if err != nil {
 		klog.Errorf("failed to recalculate the status of advDeploy [%s]: %v", advDeploy.Name, err)
 		r.recorder.Event(advDeploy, corev1.EventTypeWarning, "aggregate status failed", err.Error())
 		return reconcile.Result{}, err
 	}
 
-	if err = r.updateStatus(ctx, advDeploy, aggregatedStatus); err != nil {
+	if err = r.updateStatus(ctx, advDeploy, aggregatedStatus, isGenerationEqual); err != nil {
 		klog.Errorf("failed to update tthe status of advDeploy [%s]: %v", advDeploy.Name, err)
 		r.recorder.Event(advDeploy, corev1.EventTypeWarning, "update status failed", err.Error())
 		return reconcile.Result{}, err

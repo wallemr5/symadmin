@@ -108,10 +108,10 @@ func IsUnUseObject(kind string, obj Object, ownerRes []string) bool {
 }
 
 // RecalculateStatus According to the status of running deployments, calculate the advDeployment's status
-func (r *AdvDeploymentReconciler) RecalculateStatus(ctx context.Context, advDeploy *workloadv1beta1.AdvDeployment, ownerRes []string) (*workloadv1beta1.AdvDeploymentAggrStatus, error) {
+func (r *AdvDeploymentReconciler) RecalculateStatus(ctx context.Context, advDeploy *workloadv1beta1.AdvDeployment, ownerRes []string) (*workloadv1beta1.AdvDeploymentAggrStatus, bool, error) {
 	deploys, err := r.GetDeployListByByLabels(ctx, advDeploy)
 	if err != nil {
-		return nil, errors.Wrapf(err, "Find all relative deployments with application name [%s] has an error", advDeploy.Name)
+		return nil, false, errors.Wrapf(err, "Find all relative deployments with application name [%s] has an error", advDeploy.Name)
 	}
 
 	svc, err := r.GetServiceByByLabels(ctx, advDeploy)
@@ -130,12 +130,14 @@ func (r *AdvDeploymentReconciler) RecalculateStatus(ctx context.Context, advDepl
 	if len(deploys) == 0 {
 		statefulSets, err = r.GetStatefulSetByLabels(ctx, advDeploy)
 		if err != nil {
-			return nil, errors.Wrapf(err, "Find all relative statefulSet with application name [%s] has an error", advDeploy.Name)
+			return nil, false, errors.Wrapf(err, "Find all relative statefulSet with application name [%s] has an error", advDeploy.Name)
 		}
 	}
 
 	unUseObject := make([]Object, 0)
 	status := &workloadv1beta1.AdvDeploymentAggrStatus{}
+	isGenerationEqual := true
+	var updatedReplicas int32 = 0
 	for _, deploy := range deploys {
 		if !metav1.IsControlledBy(deploy, advDeploy) {
 			err = controllerutil.SetControllerReference(advDeploy, deploy, r.Mgr.GetScheme())
@@ -165,8 +167,12 @@ func (r *AdvDeploymentReconciler) RecalculateStatus(ctx context.Context, advDepl
 		status.Available += podSetStatus.Available
 		status.Desired += podSetStatus.Desired
 		status.UnAvailable += podSetStatus.UnAvailable
+		updatedReplicas += deploy.Status.UpdatedReplicas
 
 		status.PodSets = append(status.PodSets, podSetStatus)
+		if deploy.Status.ObservedGeneration != deploy.ObjectMeta.Generation {
+			isGenerationEqual = false
+		}
 	}
 
 	for _, set := range statefulSets {
@@ -196,8 +202,13 @@ func (r *AdvDeploymentReconciler) RecalculateStatus(ctx context.Context, advDepl
 
 		status.Available += podSetStatus.Available
 		status.Desired += podSetStatus.Desired
+		updatedReplicas += set.Status.UpdatedReplicas
 
 		status.PodSets = append(status.PodSets, podSetStatus)
+
+		if set.Status.ObservedGeneration != set.ObjectMeta.Generation {
+			isGenerationEqual = false
+		}
 	}
 
 	sort.Slice(status.PodSets, func(i, j int) bool {
@@ -206,7 +217,7 @@ func (r *AdvDeploymentReconciler) RecalculateStatus(ctx context.Context, advDepl
 
 	status.Version = utils.FillDuplicatedVersion(status.PodSets)
 
-	if status.Desired == status.Available && status.UnAvailable == 0 {
+	if status.Desired == status.Available && status.UnAvailable == 0 && isGenerationEqual && status.Desired == updatedReplicas {
 		status.Status = workloadv1beta1.AppStatusRuning
 	} else {
 		status.Status = workloadv1beta1.AppStatusInstalling
@@ -225,11 +236,11 @@ func (r *AdvDeploymentReconciler) RecalculateStatus(ctx context.Context, advDepl
 	}
 
 	status.OwnerResource = ownerRes
-	return status, nil
+	return status, isGenerationEqual, nil
 }
 
 //updateStatus Update the calculated status into CRD's status so that the controller which is watching for it can be noticed
-func (r *AdvDeploymentReconciler) updateStatus(ctx context.Context, advDeploy *workloadv1beta1.AdvDeployment, recalStatus *workloadv1beta1.AdvDeploymentAggrStatus) error {
+func (r *AdvDeploymentReconciler) updateStatus(ctx context.Context, advDeploy *workloadv1beta1.AdvDeployment, recalStatus *workloadv1beta1.AdvDeploymentAggrStatus, isGenerationEqual bool) error {
 	obj := &workloadv1beta1.AdvDeployment{}
 
 	nsName := types.NamespacedName{
@@ -258,7 +269,9 @@ func (r *AdvDeploymentReconciler) updateStatus(ctx context.Context, advDeploy *w
 		recalStatus.DeepCopyInto(&obj.Status.AggrStatus)
 		// It is very useful for controller that support this field
 		// without this, you might trigger a sync as a result of updating your own status.
-		obj.Status.ObservedGeneration = obj.ObjectMeta.Generation
+		if isGenerationEqual {
+			obj.Status.ObservedGeneration = obj.ObjectMeta.Generation
+		}
 
 		if r.Opt.OldCluster {
 			updateErr = r.Client.Update(ctx, obj)

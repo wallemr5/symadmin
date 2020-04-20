@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 	"sort"
-	"strings"
 
 	workloadv1beta1 "gitlab.dmall.com/arch/sym-admin/pkg/apis/workload/v1beta1"
 	"gitlab.dmall.com/arch/sym-admin/pkg/customctrl"
@@ -76,9 +75,7 @@ func buildAppSetStatus(ctx context.Context, dksManger *k8smanager.ClusterManager
 			klog.V(4).Infof("%s: cluster[%s] status is %s, meta generation:%d, observedGeneration:%d", req.NamespacedName, cluster.Name, obj.Status.AggrStatus.Status, obj.ObjectMeta.Generation, obj.Status.ObservedGeneration)
 			finalStatus = workloadv1beta1.AppStatusInstalling
 		}
-		if !strings.Contains(as.AggrStatus.Version, obj.Status.AggrStatus.Version) {
-			as.AggrStatus.Version = mergeVersion(as.AggrStatus.Version, obj.Status.AggrStatus.Version)
-		}
+		as.AggrStatus.Version = mergeVersion(as.AggrStatus.Version, obj.Status.AggrStatus.Version)
 		as.AggrStatus.Clusters = append(as.AggrStatus.Clusters, &workloadv1beta1.ClusterAppActual{
 			Name:        cluster.Name,
 			Desired:     obj.Status.AggrStatus.Desired,
