@@ -43,6 +43,8 @@ func NewControllerCmd(cli *DksCli) *cobra.Command {
 		Aliases: []string{"ctl"},
 		Short:   "Manage controller Component",
 		Run: func(cmd *cobra.Command, args []string) {
+			PrintFlags(cmd.Flags())
+
 			cfg, err := cli.GetK8sConfig()
 			if err != nil {
 				klog.Fatalf("unable to get kubeconfig err: %v", err)

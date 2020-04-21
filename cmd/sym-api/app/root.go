@@ -32,6 +32,13 @@ func AddFlags(cmd *cobra.Command) {
 	cmd.PersistentFlags().AddGoFlagSet(flag.CommandLine)
 }
 
+// PrintFlags logs the flags in the flagset
+func PrintFlags(flags *pflag.FlagSet) {
+	flags.VisitAll(func(flag *pflag.Flag) {
+		klog.Infof("FLAG: --%s=%q", flag.Name, flag.Value)
+	})
+}
+
 func runHelp(cmd *cobra.Command, args []string) {
 	cmd.Help()
 }
@@ -66,9 +73,6 @@ func GetRootCmd(args []string) *cobra.Command {
 	AddFlags(rootCmd)
 	cli := NewDksCli(opt)
 
-	pflag.VisitAll(func(flag *pflag.Flag) {
-		klog.V(2).Infof("FLAG: --%s=%q", flag.Name, flag.Value)
-	})
 	rootCmd.AddCommand(NewAPICmd(cli))
 	rootCmd.AddCommand(NewCmdVersion(cli))
 	return rootCmd

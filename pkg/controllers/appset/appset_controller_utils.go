@@ -22,10 +22,17 @@ import (
 	"strconv"
 	"strings"
 
+	"context"
+
 	"github.com/ghodss/yaml"
 	workloadv1beta1 "gitlab.dmall.com/arch/sym-admin/pkg/apis/workload/v1beta1"
+	k8smanager "gitlab.dmall.com/arch/sym-admin/pkg/k8s/manager"
 	"gitlab.dmall.com/arch/sym-admin/pkg/labels"
+	corev1 "k8s.io/api/core/v1"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
+	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/klog"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 func makeHelmOverrideValus(name string, clusterSpec *workloadv1beta1.TargetCluster, app *workloadv1beta1.AppSet) string {
@@ -246,4 +253,112 @@ func mergeVersion(v1, v2 string) string {
 	}
 
 	return strings.Trim(r, "/")
+}
+
+// Removes duplicate strings from the slice
+func removeDuplicates(slice []*corev1.Event) []*corev1.Event {
+	visited := make(map[string]bool, 0)
+	result := make([]*corev1.Event, 0)
+
+	for _, elem := range slice {
+		if !visited[elem.Reason] {
+			visited[elem.Reason] = true
+			result = append(result, elem)
+		}
+	}
+
+	return result
+}
+
+func GetAllClustersEventByApp(mgr *k8smanager.ClusterManager, req types.NamespacedName, app *workloadv1beta1.AppSet) ([]*workloadv1beta1.Event, error) {
+	events := make([]*corev1.Event, 0)
+	evts := make([]*workloadv1beta1.Event, 0)
+
+	eventOption := &client.ListOptions{Namespace: req.Namespace}
+	eventOption.MatchingField("type", corev1.EventTypeWarning)
+	for _, cluster := range app.Spec.ClusterTopology.Clusters {
+		c, err := mgr.Get(cluster.Name)
+		if err != nil {
+			klog.Errorf("cluster[%s] can't find in cluster manager by get event err: %+v", cluster.Name, err)
+			continue
+		}
+
+		eventList := &corev1.EventList{}
+		if err := c.Client.List(context.TODO(), eventOption, eventList); err != nil {
+			if apierrors.IsNotFound(err) {
+				continue
+			}
+			return nil, fmt.Errorf("cluster[%s] list event fail, err:%+v", c.Name, err)
+		}
+
+		for i := range eventList.Items {
+			e := &eventList.Items[i]
+			if e.InvolvedObject.Kind == "AdvDeployment" && e.InvolvedObject.Name == req.Name {
+				events = append(events, e)
+			} else {
+				if e.InvolvedObject.Kind != "Deployment" &&
+					e.InvolvedObject.Kind != "StatefulSet" &&
+					e.InvolvedObject.Kind != "Pod" {
+					continue
+				}
+
+				if !labels.CheckEventLabel(e.InvolvedObject.Name, req.Name) {
+					continue
+				}
+				events = append(events, e)
+			}
+		}
+	}
+
+	if len(events) == 0 {
+		return evts, nil
+	}
+	events = removeDuplicates(events)
+
+	for _, event := range events {
+		evts = append(evts, &workloadv1beta1.Event{
+			Message:         event.Message,
+			Reason:          event.Reason,
+			Type:            event.Type,
+			FirstSeen:       event.FirstTimestamp,
+			LastSeen:        event.LastTimestamp,
+			Count:           event.Count,
+			SourceComponent: event.Source.Component,
+			Name:            event.InvolvedObject.Name,
+		})
+	}
+
+	sort.Slice(evts, func(i int, j int) bool {
+		return evts[i].Name > evts[j].Name
+	})
+
+	return evts, nil
+}
+
+func GetAllClustersAdvDeploymentByApp(mgr *k8smanager.ClusterManager, req types.NamespacedName, app *workloadv1beta1.AppSet) ([]*workloadv1beta1.AdvDeployment, error) {
+	advs := make([]*workloadv1beta1.AdvDeployment, 0)
+
+	for _, cluster := range app.Spec.ClusterTopology.Clusters {
+		c, err := mgr.Get(cluster.Name)
+		if err != nil {
+			klog.Errorf("cluster[%s] can't find in cluster manager by get AdvDeployment err: %+v", cluster.Name, err)
+			continue
+		}
+
+		obj := &workloadv1beta1.AdvDeployment{}
+		if err = c.Client.Get(context.TODO(), req, obj); err != nil {
+			if apierrors.IsNotFound(err) {
+				klog.Warningf("cluster[%s] can't find AdvDeployment ???", cluster.Name)
+				continue
+			}
+			return nil, fmt.Errorf("cluster[%s] get AdvDeployment fail, err:%+v", cluster.Name, err)
+		}
+
+		advs = append(advs, obj)
+	}
+
+	sort.Slice(advs, func(i int, j int) bool {
+		return advs[i].Name > advs[j].Name
+	})
+	return advs, nil
 }

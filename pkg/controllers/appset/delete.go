@@ -65,7 +65,7 @@ func (r *AppSetReconciler) DeleteUnExpectInfo(ctx context.Context, req customctr
 
 	app := &workloadv1beta1.AppSet{}
 	if err := r.Client.Get(ctx, req.NamespacedName, app); err != nil {
-		klog.Errorf("%s: applyStatus get AppSet info fail: %+v", req.NamespacedName, err)
+		klog.Errorf("%s: get AppSet info faild, err: %+v", req.NamespacedName, err)
 		return false, err
 	}
 

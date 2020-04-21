@@ -40,9 +40,10 @@ type Cluster struct {
 	Client        client.Client
 	KubeCli       kubernetes.Interface
 
-	log             logr.Logger
+	Log             logr.Logger
 	Mgr             manager.Manager
 	Cache           cache.Cache
+	SyncPeriod      time.Duration
 	internalStopper chan struct{}
 
 	Status ClusterStatusType
@@ -54,7 +55,8 @@ func NewCluster(name string, kubeconfig []byte, log logr.Logger) (*Cluster, erro
 	cluster := &Cluster{
 		Name:            name,
 		RawKubeconfig:   kubeconfig,
-		log:             log.WithValues("cluster", name),
+		Log:             log.WithValues("cluster", name),
+		SyncPeriod:      SyncPeriodTime,
 		internalStopper: make(chan struct{}),
 		Started:         false,
 	}
@@ -90,7 +92,7 @@ func (c *Cluster) initK8SClients() error {
 	c.KubeCli = kubecli
 	o := manager.Options{
 		Scheme:     k8sclient.GetScheme(),
-		SyncPeriod: &SyncPeriodTime,
+		SyncPeriod: &c.SyncPeriod,
 	}
 
 	mgr, err := manager.New(c.RestConfig, o)

@@ -26,7 +26,7 @@ func (r *AppSetReconciler) ModifyStatus(ctx context.Context, req customctrl.Cust
 		return "", false, err
 	}
 
-	as, err := buildAppSetStatus(ctx, r.DksMgr.K8sMgr, req, app)
+	as, err := buildAppSetStatus2(ctx, r.DksMgr.K8sMgr, req, app)
 	if err != nil {
 		klog.Errorf("%s: aggregate AppSet.Status failed: %+v", req.NamespacedName, err)
 		return "", false, err
@@ -95,7 +95,8 @@ func buildAppSetStatus(ctx context.Context, dksManger *k8smanager.ClusterManager
 
 		// aggregate events
 		evts := []*workloadv1beta1.Event{}
-		for _, evt := range events.Items {
+		for i := range events.Items {
+			evt := &events.Items[i]
 			if isAppendEvt(evt, app) {
 				evts = append(evts, &workloadv1beta1.Event{
 					Message:         evt.Message,
@@ -121,7 +122,6 @@ func buildAppSetStatus(ctx context.Context, dksManger *k8smanager.ClusterManager
 		as.AggrStatus.Available == *app.Spec.Replicas &&
 		as.AggrStatus.Available == as.AggrStatus.Desired &&
 		as.AggrStatus.UnAvailable == 0 {
-
 		as.AggrStatus.Status = workloadv1beta1.AppStatusRuning
 		as.AggrStatus.WarnEvents = nil
 	} else {
@@ -132,6 +132,73 @@ func buildAppSetStatus(ctx context.Context, dksManger *k8smanager.ClusterManager
 	}
 	klog.V(4).Infof("%s: build status judgeStatus:%s, desired:%d, available:%d, replicas:%d, finalStatus:%s", req.NamespacedName, finalStatus, as.AggrStatus.Desired, as.AggrStatus.Available, *app.Spec.Replicas, as.AggrStatus.Status)
 
+	if changeObserved {
+		as.ObservedGeneration = app.ObjectMeta.Generation
+	} else {
+		as.ObservedGeneration = app.Status.ObservedGeneration
+	}
+
+	return as, nil
+}
+
+func buildAppSetStatus2(ctx context.Context, dksManger *k8smanager.ClusterManager, req customctrl.CustomRequest, app *workloadv1beta1.AppSet) (*workloadv1beta1.AppSetStatus, error) {
+	as := &workloadv1beta1.AppSetStatus{
+		AggrStatus: workloadv1beta1.AggrAppSetStatus{
+			Pods:       []*workloadv1beta1.Pod{},
+			Clusters:   []*workloadv1beta1.ClusterAppActual{},
+			WarnEvents: []*workloadv1beta1.Event{},
+		},
+	}
+
+	finalStatus := workloadv1beta1.AppStatusRuning
+	changeObserved := true
+
+	advs, err := GetAllClustersAdvDeploymentByApp(dksManger, req.NamespacedName, app)
+	if err != nil {
+		klog.Warningf("all cluster AdvDeployment get fail, err: %+v", err)
+		return nil, err
+	}
+
+	warnEvents, err := GetAllClustersEventByApp(dksManger, req.NamespacedName, app)
+	if err != nil {
+		klog.Warningf("all cluster warn events get fail, err: %+v", err)
+		return nil, err
+	}
+
+	for _, adv := range advs {
+		as.AggrStatus.Available += adv.Status.AggrStatus.Available
+		as.AggrStatus.UnAvailable += adv.Status.AggrStatus.UnAvailable
+		as.AggrStatus.Desired += adv.Status.AggrStatus.Desired
+
+		if adv.ObjectMeta.Generation != adv.Status.ObservedGeneration || adv.Status.AggrStatus.Status != workloadv1beta1.AppStatusRuning {
+			klog.V(5).Infof("adv name[%s] status is %s, meta generation:%d, observedGeneration:%d",
+				req.NamespacedName.Name, adv.Status.AggrStatus.Status, adv.ObjectMeta.Generation, adv.Status.ObservedGeneration)
+			finalStatus = workloadv1beta1.AppStatusInstalling
+		}
+
+		if changeObserved {
+			changeObserved = adv.ObjectMeta.Generation == adv.Status.ObservedGeneration
+		}
+	}
+
+	var replicas int32
+	if app.Spec.Replicas != nil {
+		replicas = *app.Spec.Replicas
+		as.AggrStatus.Desired = *app.Spec.Replicas
+	} else {
+		replicas = as.AggrStatus.Desired
+	}
+
+	// final status aggregate
+	if finalStatus == workloadv1beta1.AppStatusRuning && as.AggrStatus.Available == replicas && as.AggrStatus.UnAvailable == 0 {
+		as.AggrStatus.Status = workloadv1beta1.AppStatusRuning
+	} else {
+		as.AggrStatus.Status = workloadv1beta1.AppStatusInstalling
+		as.AggrStatus.WarnEvents = warnEvents
+	}
+
+	klog.V(5).Infof("%s build status:%s, desired:%d, available:%d, replicas:%d, finalStatus:%s",
+		req.NamespacedName, finalStatus, as.AggrStatus.Desired, as.AggrStatus.Available, *app.Spec.Replicas, as.AggrStatus.Status)
 	if changeObserved {
 		as.ObservedGeneration = app.ObjectMeta.Generation
 	} else {
@@ -180,7 +247,11 @@ func (r *AppSetReconciler) applyStatus(ctx context.Context, req customctrl.Custo
 	return true, err
 }
 
-func isAppendEvt(evt corev1.Event, app *workloadv1beta1.AppSet) bool {
+func isAppendEvt(evt *corev1.Event, app *workloadv1beta1.AppSet) bool {
+	if evt == nil || app == nil {
+		return false
+	}
+
 	if evt.Type == corev1.EventTypeNormal {
 		return false
 	}

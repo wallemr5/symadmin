@@ -239,7 +239,7 @@ func (r *AdvDeploymentReconciler) RecalculateStatus(ctx context.Context, advDepl
 	return status, isGenerationEqual, nil
 }
 
-//updateStatus Update the calculated status into CRD's status so that the controller which is watching for it can be noticed
+// updateStatus Update the calculated status into CRD's status so that the controller which is watching for it can be noticed
 func (r *AdvDeploymentReconciler) updateStatus(ctx context.Context, advDeploy *workloadv1beta1.AdvDeployment, recalStatus *workloadv1beta1.AdvDeploymentAggrStatus, isGenerationEqual bool) error {
 	obj := &workloadv1beta1.AdvDeployment{}
 

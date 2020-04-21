@@ -40,10 +40,10 @@ func (r *AdvDeploymentReconciler) RemoveFinalizers(ctx context.Context, req ctrl
 		}
 		obj.ObjectMeta.Finalizers = append(obj.ObjectMeta.Finalizers[:i], obj.ObjectMeta.Finalizers[i+1:]...)
 		if err := r.Client.Update(ctx, obj); err != nil {
-			klog.Errorf("Can not remove the finalizer entry from the list, err: %v", err)
+			klog.Errorf("Can not remove the finalizer entry from the list, err: %+v", err)
 			return errors.Wrap(err, "Can not remove the finalizer entry from the list")
 		}
-		klog.V(3).Infof("advDeploy: [%s], Remove the Finalizers and update it successfully", obj.Name)
+		klog.V(3).Infof("advDeploy[%s], Remove the Finalizers and update it successfully", obj.Name)
 	}
 
 	return nil

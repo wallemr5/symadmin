@@ -31,6 +31,7 @@ var (
 const (
 	KeyKubeconfig = "kubeconfig.yaml"
 	KeyStauts     = "status"
+	ClustersAll   = "all"
 )
 
 // ClusterManagerOption ...
@@ -167,7 +168,7 @@ func (m *ClusterManager) GetAll(name ...string) []*Cluster {
 	isAll := true
 	var ObserveName string
 	if len(name) > 0 {
-		if name[0] != "all" {
+		if name[0] != ClustersAll {
 			ObserveName = utils.ToClusterCrName(name[0])
 			isAll = false
 		}
@@ -303,13 +304,39 @@ func (m *ClusterManager) preStart() error {
 		}
 
 		if m.Opt.IsAPI {
-			// add field index must before cache start
+			// add field pod nodeName index must before cache start
 			if err := c.Mgr.GetFieldIndexer().IndexField(&corev1.Pod{}, "spec.nodeName", func(rawObj runtime.Object) []string {
 				pod := rawObj.(*corev1.Pod)
 				return []string{pod.Spec.NodeName}
 			}); err != nil {
-				klog.Warningf("cluster name: %s add field index spec.nodeName, err: %#v", c.Name, err)
+				klog.Warningf("cluster[%s] add field index pod spec.nodeName, err: %#v", c.Name, err)
+			} else {
+				klog.Infof("cluster[%s] add field index pod spec.nodeName successfully", c.Name)
 			}
+
+			// add field event pod name index must before cache start
+			if err := c.Mgr.GetFieldIndexer().IndexField(&corev1.Event{}, "podName", func(rawObj runtime.Object) []string {
+				event := rawObj.(*corev1.Event)
+				if event.InvolvedObject.Kind != "Pod" {
+					return []string{}
+				}
+				return []string{event.InvolvedObject.Name}
+			}); err != nil {
+				klog.Warningf("cluster[%s] add field index event podName, err: %#v", c.Name, err)
+			} else {
+				klog.Infof("cluster[%s] add field index envet podName successfully", c.Name)
+			}
+
+		}
+
+		// add field event type index must before cache start
+		if err := c.Mgr.GetFieldIndexer().IndexField(&corev1.Event{}, "type", func(rawObj runtime.Object) []string {
+			event := rawObj.(*corev1.Event)
+			return []string{event.Type}
+		}); err != nil {
+			klog.Warningf("cluster[%s] add field index event type, err: %#v", c.Name, err)
+		} else {
+			klog.Infof("cluster[%s] add field index envet type successfully", c.Name)
 		}
 
 		c.StartCache(ctx.Done())

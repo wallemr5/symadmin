@@ -64,7 +64,7 @@ func DefaultManagerOption() *ManagerOption {
 		HTTPAddr:                ":8080",
 		Threadiness:             1,
 		GoroutineThreshold:      1000,
-		ResyncPeriod:            30 * time.Minute,
+		ResyncPeriod:            2 * time.Hour,
 		EnableLeaderElection:    true,
 		LeaderElectionNamespace: "sym-admin",
 		GinLogEnabled:           true,

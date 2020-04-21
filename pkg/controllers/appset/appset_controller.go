@@ -209,7 +209,7 @@ func (r *AppSetReconciler) CustomReconcile(ctx context.Context, req customctrl.C
 		return reconcile.Result{}, err
 	}
 
-	// delete crd event
+	// delete all sub Resources
 	if !app.ObjectMeta.DeletionTimestamp.IsZero() {
 		return reconcile.Result{}, r.DeleteAll(ctx, req, app)
 	}

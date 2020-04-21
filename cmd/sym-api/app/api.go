@@ -43,6 +43,8 @@ func NewAPICmd(cli *DksCli) *cobra.Command {
 		Aliases: []string{"api"},
 		Short:   "Manage sym api server",
 		Run: func(cmd *cobra.Command, args []string) {
+			PrintFlags(cmd.Flags())
+
 			cfg, err := cli.GetK8sConfig()
 			if err != nil {
 				klog.Fatalf("unable to get kubeconfig err: %v", err)
