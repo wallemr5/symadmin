@@ -295,26 +295,27 @@ func GetAllClustersEventByApp(mgr *k8smanager.ClusterManager, req types.Namespac
 			e := &eventList.Items[i]
 			if e.InvolvedObject.Kind == "AdvDeployment" && e.InvolvedObject.Name == req.Name {
 				events = append(events, e)
-			} else {
-				if e.InvolvedObject.Kind != "Deployment" &&
-					e.InvolvedObject.Kind != "StatefulSet" &&
-					e.InvolvedObject.Kind != "Pod" {
-					continue
-				}
-
-				if !labels.CheckEventLabel(e.InvolvedObject.Name, req.Name) {
-					continue
-				}
-				events = append(events, e)
+				continue
 			}
+
+			if e.InvolvedObject.Kind != "Deployment" &&
+				e.InvolvedObject.Kind != "StatefulSet" &&
+				e.InvolvedObject.Kind != "Pod" {
+				continue
+			}
+
+			if !labels.CheckEventLabel(e.InvolvedObject.Name, req.Name) {
+				continue
+			}
+			events = append(events, e)
 		}
 	}
 
 	if len(events) == 0 {
 		return evts, nil
 	}
-	events = removeDuplicates(events)
 
+	events = removeDuplicates(events)
 	for _, event := range events {
 		evts = append(evts, &workloadv1beta1.Event{
 			Message:         event.Message,
@@ -357,8 +358,5 @@ func GetAllClustersAdvDeploymentByApp(mgr *k8smanager.ClusterManager, req types.
 		advs = append(advs, obj)
 	}
 
-	sort.Slice(advs, func(i int, j int) bool {
-		return advs[i].Name > advs[j].Name
-	})
 	return advs, nil
 }
