@@ -43,7 +43,8 @@ func (m *APIManager) GetEndpoints(c *gin.Context) {
 			return
 		}
 
-		for _, ep := range endpointList.Items {
+		for i := range endpointList.Items {
+			ep := &endpointList.Items[i]
 			var subset []string
 			for _, ss := range ep.Subsets {
 				port := strconv.Itoa(int(ss.Ports[0].Port))

@@ -71,7 +71,7 @@ func (m *APIManager) GetPodEvent(c *gin.Context) {
 		}
 		events := &corev1.EventList{}
 
-		err := cluster.Cache.List(ctx, listOptions, events)
+		err := cluster.Client.List(ctx, listOptions, events)
 		if err != nil {
 			if apierrors.IsNotFound(err) {
 				continue
@@ -237,11 +237,12 @@ func (m *APIManager) DeletePodByGroup(c *gin.Context) {
 			return
 		}
 
-		for _, pod := range podList.Items {
-			err = cluster.Client.Delete(ctx, &pod)
+		for i := range podList.Items {
+			pod := &podList.Items[i]
+			err = cluster.Client.Delete(ctx, pod)
 			if err != nil {
 				klog.Errorf("delete pod error: %v", err)
-				errorPods = append(errorPods, &pod)
+				errorPods = append(errorPods, pod)
 			}
 		}
 

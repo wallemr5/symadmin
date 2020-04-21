@@ -83,9 +83,9 @@ func (m *ClusterManager) GetPods(opts *client.ListOptions, clusterNames ...strin
 			}
 			return nil, err
 		}
-		for _, value := range podList.Items {
-			pod := value
-			result = append(result, &pod)
+		for i := range podList.Items {
+			pod := &podList.Items[i]
+			result = append(result, pod)
 		}
 	}
 	return result, nil
@@ -106,9 +106,9 @@ func (m *ClusterManager) GetNodes(opts *client.ListOptions, clusterNames ...stri
 			}
 			return nil, err
 		}
-		for _, value := range nodeList.Items {
-			node := value
-			result = append(result, &node)
+		for i := range nodeList.Items {
+			node := &nodeList.Items[i]
+			result = append(result, node)
 		}
 	}
 	return result, nil
@@ -129,9 +129,9 @@ func (m *ClusterManager) GetDeployment(opts *client.ListOptions, clusterNames ..
 			}
 			return nil, err
 		}
-		for _, value := range deployList.Items {
-			deploy := value
-			result = append(result, &deploy)
+		for i := range deployList.Items {
+			deploy := &deployList.Items[i]
+			result = append(result, deploy)
 		}
 	}
 	return result, nil
@@ -152,9 +152,9 @@ func (m *ClusterManager) GetService(opts *client.ListOptions, clusterNames ...st
 			}
 			return nil, err
 		}
-		for _, value := range serviceList.Items {
-			service := value
-			result = append(result, &service)
+		for i := range serviceList.Items {
+			service := &serviceList.Items[i]
+			result = append(result, service)
 		}
 	}
 	return result, nil
@@ -175,9 +175,9 @@ func (m *ClusterManager) GetEndpoints(opts *client.ListOptions, clusterNames ...
 			}
 			return nil, err
 		}
-		for _, value := range endpointsList.Items {
-			endpoints := value
-			result = append(result, &endpoints)
+		for i := range endpointsList.Items {
+			endpoints := &endpointsList.Items[i]
+			result = append(result, endpoints)
 		}
 	}
 	return result, nil
@@ -198,9 +198,9 @@ func (m *ClusterManager) GetEvent(opts *client.ListOptions, clusterNames ...stri
 			}
 			return nil, err
 		}
-		for _, value := range eventList.Items {
-			event := value
-			result = append(result, &event)
+		for i := range eventList.Items {
+			event := &eventList.Items[i]
+			result = append(result, event)
 		}
 	}
 	return result, nil
