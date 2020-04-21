@@ -217,9 +217,13 @@ func makeAdvDeploymentLabel(clusterSpec *workloadv1beta1.TargetCluster, app *wor
 		lb["lightningDomain0"] = *app.Spec.ServiceName
 	}
 
-	lb[labels.LabelKeyZone] = getMapKey(clusterSpec.Mata, labels.LabelKeyZone)
-	lb[labels.ObserveMustLabelClusterName] = getMapKey(clusterSpec.Mata, labels.ObserveMustLabelClusterName)
+	clusterName := getMapKey(clusterSpec.Mata, labels.ObserveMustLabelClusterName)
+	if clusterName == "null" {
+		clusterName = clusterSpec.Name
+	}
 
+	lb[labels.ObserveMustLabelClusterName] = clusterName
+	lb[labels.LabelKeyZone] = getMapKey(clusterSpec.Mata, labels.LabelKeyZone)
 	return lb
 }
 
