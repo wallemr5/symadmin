@@ -39,8 +39,13 @@ spec:
           {{- if .Values.image.leader }}
           - "--enable-leader"
           {{- end }}
+          {{- if .Values.image.oldCluster | default false }}
+          - "--enable-oldCluster"
+          {{- end }}
+          {{- if .Values.image.threadiness }}
           - "--threadiness"
-          - "4"
+          - {{ .Values.image.threadiness | quote | default "2" }}
+          {{- end }}
 
           ports:
             - name: http

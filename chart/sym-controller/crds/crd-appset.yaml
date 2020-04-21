@@ -1,0 +1,50 @@
+apiVersion: apiextensions.k8s.io/v1beta1
+kind: CustomResourceDefinition
+metadata:
+  annotations:
+    controller-gen.kubebuilder.io/version: v0.2.4
+  creationTimestamp: null
+  name: appsets.workload.dmall.com
+spec:
+  additionalPrinterColumns:
+    - JSONPath: .status.aggrStatus.desired
+      description: The desired number of pods.
+      name: DESIRED
+      type: integer
+    - JSONPath: .status.aggrStatus.available
+      description: The number of pods ready.
+      name: AVAILABLE
+      type: integer
+    - JSONPath: .status.aggrStatus.unAvailable
+      description: The number of pods unAvailable.
+      name: UNAVAILABLE
+      type: integer
+    - JSONPath: .status.aggrStatus.version
+      description: The image version.
+      name: VERSION
+      type: string
+    - JSONPath: .status.aggrStatus.status
+      description: The app run status.
+      name: STATUS
+      type: string
+    - JSONPath: .metadata.creationTimestamp
+      description: 'CreationTimestamp is a timestamp representing the server time when
+      this object was created. '
+      name: AGE
+      type: date
+  group: workload.dmall.com
+  names:
+    kind: AppSet
+    listKind: AppSetList
+    plural: appsets
+    singular: appset
+    shortNames:
+      - as
+  scope: Namespaced
+  subresources:
+    status: {}
+  version: v1beta1
+  versions:
+    - name: v1beta1
+      served: true
+      storage: true

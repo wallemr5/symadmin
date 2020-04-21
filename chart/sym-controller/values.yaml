@@ -13,6 +13,7 @@ image:
   worker: false
   reCreate: false
   leader: true
+  oldCluster: false
   threadiness: 4
 
 nameOverride: ""
