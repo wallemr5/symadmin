@@ -46,6 +46,7 @@ require (
 	github.com/imdario/mergo v0.3.8 // indirect
 	github.com/jmoiron/sqlx v1.2.0 // indirect
 	github.com/jonboulle/clockwork v0.1.0 // indirect
+	github.com/json-iterator/go v1.1.7
 	github.com/lestrrat-go/backoff v1.0.0
 	github.com/lib/pq v1.3.0 // indirect
 	github.com/mattbaird/jsonpatch v0.0.0-20171005235357-81af80346b1a // indirect
