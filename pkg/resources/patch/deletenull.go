@@ -1,12 +1,56 @@
 package patch
 
 import (
-	"encoding/json"
 	"reflect"
+	"unsafe"
 
 	"github.com/goph/emperror"
+	json "github.com/json-iterator/go"
 	"github.com/pkg/errors"
+	"k8s.io/apimachinery/pkg/util/intstr"
 )
+
+type CalculateOption func([]byte, []byte) ([]byte, []byte, error)
+
+func IgnoreStatusFields() CalculateOption {
+	return func(current, modified []byte) ([]byte, []byte, error) {
+		current, err := deleteStatusField(current)
+		if err != nil {
+			return []byte{}, []byte{}, emperror.Wrap(err, "could not delete status field from current byte sequence")
+		}
+
+		modified, err = deleteStatusField(modified)
+		if err != nil {
+			return []byte{}, []byte{}, emperror.Wrap(err, "could not delete status field from modified byte sequence")
+		}
+
+		return current, modified, nil
+	}
+}
+
+func init() {
+	// k8s.io/apimachinery/pkg/util/intstr.IntOrString behaves really badly
+	// from JSON marshaling point of view, it can't be empty basically.
+	// So we need to override the defined marshaling behaviour and write nil
+	// instead of 0, because usually (in all observed cases) 0 means "not set"
+	// for IntOrStr types.
+	// To make this happen we need to pull in json-iterator and override the
+	// factory marshaling overrides.
+	json.RegisterTypeEncoderFunc("intstr.IntOrString",
+		func(ptr unsafe.Pointer, stream *json.Stream) {
+			i := (*intstr.IntOrString)(ptr)
+			if i.IntValue() == 0 {
+				stream.WriteNil()
+			} else {
+				stream.WriteInt(i.IntValue())
+			}
+		},
+		func(ptr unsafe.Pointer) bool {
+			i := (*intstr.IntOrString)(ptr)
+			return i.IntValue() == 0
+		},
+	)
+}
 
 func DeleteNullInJson(jsonBytes []byte) ([]byte, map[string]interface{}, error) {
 	var patchMap map[string]interface{}
@@ -96,11 +140,28 @@ func deleteNullInSlice(m []interface{}) ([]interface{}, error) {
 	return filteredSlice, nil
 }
 
+func deleteStatusField(obj []byte) ([]byte, error) {
+	var objectMap map[string]interface{}
+	err := json.Unmarshal(obj, &objectMap)
+	if err != nil {
+		return []byte{}, emperror.Wrap(err, "could not unmarshal byte sequence")
+	}
+	delete(objectMap, "status")
+	obj, err = json.Marshal(objectMap)
+	if err != nil {
+		return []byte{}, emperror.Wrap(err, "could not marshal byte sequence")
+	}
+
+	return obj, nil
+}
+
 func isZero(v reflect.Value) bool {
 	switch v.Kind() {
 	default:
 		z := reflect.Zero(v.Type())
 		return v.Interface() == z.Interface()
+	case reflect.Float64, reflect.Int64:
+		return false
 	case reflect.Func, reflect.Map, reflect.Slice:
 		return v.IsNil()
 	case reflect.Array:

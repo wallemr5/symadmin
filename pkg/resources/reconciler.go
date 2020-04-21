@@ -3,6 +3,8 @@ package resources
 import (
 	"context"
 
+	"reflect"
+
 	"github.com/pkg/errors"
 	"gitlab.dmall.com/arch/sym-admin/pkg/resources/patch"
 	corev1 "k8s.io/api/core/v1"
@@ -58,9 +60,18 @@ func Reconcile(ctx context.Context, c client.Client, desired runtime.Object, des
 		}
 	} else {
 		if desiredState == DesiredStatePresent {
-			patchResult, err := patch.DefaultPatchMaker.Calculate(current, desired)
+			var patchResult *patch.PatchResult
+			if svcDesired, ok := desired.(*corev1.Service); ok {
+				svcCurrent, _ := current.(*corev1.Service)
+				if !reflect.DeepEqual(svcCurrent.GetLabels(), svcDesired.GetLabels()) {
+					klog.Infof("type svc name[%s] labels not same", svcDesired.Name)
+					goto Update
+				}
+			}
+			patchResult, err = patch.DefaultPatchMaker.Calculate(current, desired, patch.IgnoreStatusFields())
 			if err != nil {
 				klog.Errorf("could not match object key[%s] err: %v", key, err)
+				return err
 			} else if patchResult.IsEmpty() {
 				klog.V(4).Infof("resource key[%s] unchanged is in sync", key)
 				return nil
@@ -68,6 +79,7 @@ func Reconcile(ctx context.Context, c client.Client, desired runtime.Object, des
 				klog.V(2).Infof("resource key[%s] diffs patch: %s", key, string(patchResult.Patch))
 			}
 
+		Update:
 			// Need to set this before resourceversion is set, as it would constantly change otherwise
 			if err := patch.DefaultAnnotator.SetLastAppliedAnnotation(desired); err != nil {
 				klog.Errorf("Failed to set last applied annotation key[%s] err: %v", key, err)
