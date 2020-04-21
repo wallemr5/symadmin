@@ -66,6 +66,9 @@ func (m *APIManager) GetPodEvent(c *gin.Context) {
 			Namespace: namespace,
 			Raw:       &metav1.ListOptions{Limit: limit},
 		}
+		if podName != "all" && podName != "" {
+			listOptions.MatchingField("podName", podName)
+		}
 		events := &corev1.EventList{}
 
 		err := cluster.Cache.List(ctx, listOptions, events)
@@ -78,7 +81,8 @@ func (m *APIManager) GetPodEvent(c *gin.Context) {
 			return
 		}
 
-		for _, event := range events.Items {
+		for i := range events.Items {
+			event := &events.Items[i]
 			item := &model.Event{
 				ClusterName: cluster.GetName(),
 				Namespace:   event.GetNamespace(),
@@ -91,12 +95,11 @@ func (m *APIManager) GetPodEvent(c *gin.Context) {
 				Message:     event.Message,
 				Reason:      event.Reason,
 			}
-			if podName == "all" {
-				result = append(result, item)
-			} else if podName != "all" && item.ObjectName == podName {
-				result = append(result, item)
-			}
+			result = append(result, item)
 		}
+	}
+	if len(result) > int(limit) {
+		result = result[int64(len(result))-limit:]
 	}
 	sort.Slice(result, func(i, j int) bool {
 		t1, _ := time.Parse("2006-01-02 15:04:05", result[i].LastTime)
