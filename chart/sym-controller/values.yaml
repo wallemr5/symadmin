@@ -6,14 +6,14 @@ replicaCount: 1
 
 image:
   repository: dmall-bj.tencentcloudcr.com/symcn/sym-admin-controller
-  tag: v1.0.2
+  tag: v1.0.5
   pullPolicy: IfNotPresent
   logLevel: 4
-  master: false
-  worker: true
+  master: true
+  worker: false
   reCreate: false
   leader: true
-  threadiness: 2
+  threadiness: 4
 
 nameOverride: ""
 fullnameOverride: ""
@@ -55,16 +55,16 @@ tolerations:
   - key: sym-preserve
     operator: Exists
 
-affinity:
-  nodeAffinity:
-    preferredDuringSchedulingIgnoredDuringExecution:
-      - weight: 1
-        preference:
-          matchExpressions:
-            - key: sym-preserve
-              operator: In
-              values:
-                - monitor
+affinity: {}
+#  nodeAffinity:
+#    preferredDuringSchedulingIgnoredDuringExecution:
+#      - weight: 1
+#        preference:
+#          matchExpressions:
+#            - key: sym-preserve
+#              operator: In
+#              values:
+#                - monitor
 
 
 # all dev-test-prod
