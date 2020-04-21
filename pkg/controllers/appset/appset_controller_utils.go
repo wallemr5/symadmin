@@ -340,8 +340,13 @@ func GetAllClustersEventByApp(mgr *k8smanager.ClusterManager, req types.Namespac
 	return evts, nil
 }
 
-func GetAllClustersAdvDeploymentByApp(mgr *k8smanager.ClusterManager, req types.NamespacedName, app *workloadv1beta1.AppSet) ([]*workloadv1beta1.AdvDeployment, error) {
-	advs := make([]*workloadv1beta1.AdvDeployment, 0)
+type NameAdvDeployment struct {
+	ClusterName string
+	Adv         *workloadv1beta1.AdvDeployment
+}
+
+func GetAllClustersAdvDeploymentByApp(mgr *k8smanager.ClusterManager, req types.NamespacedName, app *workloadv1beta1.AppSet) ([]*NameAdvDeployment, error) {
+	advs := make([]*NameAdvDeployment, 0)
 
 	for _, cluster := range app.Spec.ClusterTopology.Clusters {
 		c, err := mgr.Get(cluster.Name)
@@ -359,7 +364,10 @@ func GetAllClustersAdvDeploymentByApp(mgr *k8smanager.ClusterManager, req types.
 			return nil, fmt.Errorf("cluster[%s] get AdvDeployment fail, err:%+v", cluster.Name, err)
 		}
 
-		advs = append(advs, obj)
+		advs = append(advs, &NameAdvDeployment{
+			ClusterName: cluster.Name,
+			Adv:         obj,
+		})
 	}
 
 	return advs, nil

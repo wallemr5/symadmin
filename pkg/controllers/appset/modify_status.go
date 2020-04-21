@@ -153,7 +153,7 @@ func buildAppSetStatus2(ctx context.Context, dksManger *k8smanager.ClusterManage
 	finalStatus := workloadv1beta1.AppStatusRuning
 	changeObserved := true
 
-	advs, err := GetAllClustersAdvDeploymentByApp(dksManger, req.NamespacedName, app)
+	nameAdvs, err := GetAllClustersAdvDeploymentByApp(dksManger, req.NamespacedName, app)
 	if err != nil {
 		klog.Warningf("all cluster AdvDeployment get fail, err: %+v", err)
 		return nil, err
@@ -165,19 +165,29 @@ func buildAppSetStatus2(ctx context.Context, dksManger *k8smanager.ClusterManage
 		return nil, err
 	}
 
-	for _, adv := range advs {
+	for _, nameAdv := range nameAdvs {
+		adv := nameAdv.Adv
+		as.AggrStatus.Version = mergeVersion(as.AggrStatus.Version, adv.Status.AggrStatus.Version)
+		as.AggrStatus.Clusters = append(as.AggrStatus.Clusters, &workloadv1beta1.ClusterAppActual{
+			Name:        nameAdv.ClusterName,
+			Desired:     adv.Status.AggrStatus.Desired,
+			Available:   adv.Status.AggrStatus.Available,
+			UnAvailable: adv.Status.AggrStatus.UnAvailable,
+			PodSets:     adv.Status.AggrStatus.PodSets,
+		})
+
 		as.AggrStatus.Available += adv.Status.AggrStatus.Available
 		as.AggrStatus.UnAvailable += adv.Status.AggrStatus.UnAvailable
 		as.AggrStatus.Desired += adv.Status.AggrStatus.Desired
 
-		if adv.ObjectMeta.Generation != adv.Status.ObservedGeneration || adv.Status.AggrStatus.Status != workloadv1beta1.AppStatusRuning {
-			klog.V(5).Infof("adv name[%s] status is %s, meta generation:%d, observedGeneration:%d",
-				req.NamespacedName.Name, adv.Status.AggrStatus.Status, adv.ObjectMeta.Generation, adv.Status.ObservedGeneration)
-			finalStatus = workloadv1beta1.AppStatusInstalling
-		}
-
 		if changeObserved {
 			changeObserved = adv.ObjectMeta.Generation == adv.Status.ObservedGeneration
+		}
+
+		if adv.ObjectMeta.Generation != adv.Status.ObservedGeneration || adv.Status.AggrStatus.Status != workloadv1beta1.AppStatusRuning {
+			klog.V(4).Infof("adv name[%s] status is %s, meta generation:%d, observedGeneration:%d",
+				req.NamespacedName.Name, adv.Status.AggrStatus.Status, adv.ObjectMeta.Generation, adv.Status.ObservedGeneration)
+			finalStatus = workloadv1beta1.AppStatusInstalling
 		}
 	}
 
