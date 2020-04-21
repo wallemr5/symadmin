@@ -89,12 +89,18 @@ func NewClientConfig(kubeConfig []byte) (*rest.Config, error) {
 	}
 
 	clientConfig := clientcmd.NewDefaultClientConfig(*apiconfig, &clientcmd.ConfigOverrides{})
-	config, err := clientConfig.ClientConfig()
+	cfg, err := clientConfig.ClientConfig()
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to build client config from API config")
 	}
 
-	return config, nil
+	// Adjust our client's rate limits based on the number of controllers we are running.
+	if cfg.QPS == 0.0 {
+		cfg.QPS = 40.0
+		cfg.Burst = 60
+	}
+
+	return cfg, nil
 }
 
 // NewClient creates a new Kubernetes client from config.

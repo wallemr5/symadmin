@@ -53,12 +53,18 @@ func NewDksCli(opt *RootOption) *DksCli {
 }
 
 func (c *DksCli) GetK8sConfig() (*rest.Config, error) {
-	config, err := k8sclient.GetConfigWithContext(c.Opt.Kubeconfig, c.Opt.ConfigContext)
+	cfg, err := k8sclient.GetConfigWithContext(c.Opt.Kubeconfig, c.Opt.ConfigContext)
 	if err != nil {
 		return nil, errors.Wrap(err, "could not get k8s config")
 	}
 
-	return config, nil
+	// Adjust our client's rate limits based on the number of controllers we are running.
+	if cfg.QPS == 0.0 {
+		cfg.QPS = 40.0
+		cfg.Burst = 60
+	}
+
+	return cfg, nil
 }
 
 func (c *DksCli) GetKubeInterface() (kubernetes.Interface, error) {
