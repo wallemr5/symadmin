@@ -9,12 +9,13 @@ image:
   tag: v1.0.5
   pullPolicy: IfNotPresent
   logLevel: 4
-  master: true
-  worker: false
+  master: false
+  worker: true
+  cluster: false
   reCreate: false
   leader: true
   oldCluster: false
-  threadiness: 4
+  threadiness: 2
 
 nameOverride: ""
 fullnameOverride: ""

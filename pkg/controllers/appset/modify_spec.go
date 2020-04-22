@@ -120,7 +120,7 @@ func applyAdvDeployment(ctx context.Context, cluster *k8smanager.Cluster, req cu
 		})
 
 		if err != nil {
-			klog.Warningf("cluster[%s] update advDeploy[%s] spec failed, err: %+v", advDeploy.Name, err)
+			klog.Warningf("cluster[%s] update advDeploy[%s] spec failed, err: %+v", cluster.Name, advDeploy.Name, err)
 			return false, err
 		}
 	}

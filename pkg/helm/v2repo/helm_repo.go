@@ -10,7 +10,7 @@ import (
 )
 
 const (
-	defaultInterval = 60 * 30
+	defaultInterval = 60 * 5
 )
 
 // HelmIndexSyncer sync helm repo index repeatedly

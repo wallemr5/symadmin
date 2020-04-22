@@ -2,17 +2,17 @@ apiVersion: workload.dmall.com/v1beta1
 kind: Cluster
 metadata:
   labels:
-    clusterName: tcc-bj5-dks-monit-01
+    clusterName: tcc-bj5-dks-test-01
     createdBy: sym-controller
-  name: tcc-bj5-dks-monit-01
-  namespace: default
+  name: tcc-bj5-dks-test-01
+  namespace: sym-admin
 spec:
-  symNodeName: 10.13.135.252
+  symNodeName: 10.13.135.17
   pause: false
   meta:
     area: beijing
     az: BJ5
-    id: "4"
+    id: "5"
     clusterType: tke
     clusterIngressHead: monitor
   helmSpec:
@@ -47,12 +47,16 @@ spec:
         grafana-ing: mg.symphony.dmall.com
         prom-ing: mp.symphony.dmall.com
         alertmanager-ing: ma.symphony.dmall.com
-    - name: sym-api
+    - name: sym-ctl
       repo: dmall
       namespace: sym-admin
-      chartName: sym-api
-      chartVersion: 1.1.3
+      chartName: sym-controller
+      chartVersion : 1.0.5
       values:
-        hosts: devapi.sym.dmall.com
-        tag: v1.0.5
-        repository: dmall-bj.tencentcloudcr.com/symcn/sym-admin-api
+        master: "false"
+        worker: "true"
+        cluster: "false"
+        reCreate: "true"
+        leader: "true"
+        oldCluster: "false"
+        threadiness: "2"
