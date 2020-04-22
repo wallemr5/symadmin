@@ -44,5 +44,25 @@ spec:
         prom-retention: 7d
         lpv-grafana-path: /root/grafana-data
         lpv-grafana-size: 1Gi
-
-
+    - name: sym-api
+      repo: dmall
+      namespace: sym-admin
+      chartName: sym-api
+      chartVersion: 1.0.5
+      values:
+        hosts: api.sym.dmall.com
+        tag: "v1.0.5"
+    - name: sym-ctl
+      repo: dmall
+      namespace: sym-admin
+      chartName: sym-controller
+      chartVersion : 1.0.5
+      values:
+        tag: "v1.0.5"
+        master: "true"
+        worker: "true"
+        cluster: "false"
+        reCreate: "false"
+        leader: "true"
+        oldCluster: "false"
+        threadiness: "1"
