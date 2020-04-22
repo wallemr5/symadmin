@@ -365,8 +365,7 @@ func (r *Reconciler) reconcileComponent(ctx context.Context, k *k8smanager.Clust
 		other.New(k, obj, hClient),
 		traefik.New(k, obj, hClient),
 		monitor.New(r.Mgr, k, obj, hClient),
-		//swift.New(k, obj, hClient),
-		sym_ctl.New(k, obj, hClient),
+		sym_ctl.New(r.Mgr, k, obj, hClient),
 		sym_api.New(k, obj, hClient),
 	}
 

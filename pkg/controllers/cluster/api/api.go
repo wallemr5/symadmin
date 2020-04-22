@@ -105,7 +105,7 @@ func makeOverrideSymAPI(app *workloadv1beta1.HelmChartSpec) map[string]interface
 		"affinity":    common.MakeNodeAffinity(),
 		"tolerations": common.MakeNodeTolerations(),
 		"ingress":     ingress,
-		"images":      image,
+		"image":       image,
 	}
 
 	return overrideValueMap
