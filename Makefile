@@ -1,4 +1,4 @@
-VERSION ?= v1.0.6-dev5
+VERSION ?= v1.0.6-dev6
 # Image URL to use all building/pushing image targets
 IMG_REG ?= dmall-bj.tencentcloudcr.com/symcn
 IMG_CTL := $(IMG_REG)/sym-admin-controller
@@ -123,13 +123,13 @@ helm-cluster:
 	helm upgrade --install sym-ctl-cluster --namespace sym-admin --set image.tag=${VERSION},image.cluster=true,image.worker=false,image.master=false,image.leader=false,image.threadiness=1,rbac.name=sym-controller-cluster ./chart/sym-controller
 
 helm-test:
-	helm upgrade --kubeconfig ${KUBECONFIG} --kube-context dmall-bus-test-bj5-01 --install sym-ctl --namespace sym-admin --set image.tag=${VERSION},image.worker=true,image.master=true,image.reCreate=true,image.threadiness=2 ./chart/sym-controller
-	helm upgrade --kubeconfig ${KUBECONFIG} --kube-context dmall-cd-test-beijing --install sym-ctl --namespace sym-admin --set image.tag=${VERSION},image.worker=true,image.master=true,image.reCreate=true,image.threadiness=2 ./chart/sym-controller
-	helm upgrade --kubeconfig ${KUBECONFIG} --kube-context dmall-cn-dev-bj-01 --install sym-ctl --namespace sym-admin --set image.tag=${VERSION},image.worker=true,image.master=true,image.reCreate=true,image.threadiness=2 ./chart/sym-controller
-	helm upgrade --kubeconfig ${KUBECONFIG} --kube-context dmall-bus-test-bj5-02 --install sym-ctl --namespace sym-admin --set image.tag=${VERSION},image.worker=true,image.master=false,image.reCreate=true,image.threadiness=2 ./chart/sym-controller
-	helm upgrade --kubeconfig ${KUBECONFIG} --kube-context dmall-bus-test-cd-01 --install sym-ctl --namespace sym-admin --set image.tag=${VERSION},image.worker=true,image.master=false,image.reCreate=true,image.threadiness=2 ./chart/sym-controller
-	helm upgrade --kubeconfig ${KUBECONFIG} --kube-context dmall-cd-test-chengdu --install sym-ctl --namespace sym-admin --set image.tag=${VERSION},image.worker=true,image.master=false,image.reCreate=true,image.threadiness=2 ./chart/sym-controller
-	helm upgrade --kubeconfig ${KUBECONFIG} --kube-context dmall-cn-dev-bj-02 --install sym-ctl --namespace sym-admin --set image.tag=${VERSION},image.worker=true,image.master=false,image.reCreate=true,image.threadiness=2 ./chart/sym-controller
+	helm upgrade --kubeconfig ${KUBECONFIG} --kube-context dmall-bus-test-bj5-01 --install sym-ctl --namespace sym-admin --set image.tag=${VERSION},image.worker=true,image.master=true,image.reCreate=true,image.threadiness=1 ./chart/sym-controller
+	helm upgrade --kubeconfig ${KUBECONFIG} --kube-context dmall-cd-test-beijing --install sym-ctl --namespace sym-admin --set image.tag=${VERSION},image.worker=true,image.master=true,image.reCreate=true,image.threadiness=1 ./chart/sym-controller
+	helm upgrade --kubeconfig ${KUBECONFIG} --kube-context dmall-cn-dev-bj-01 --install sym-ctl --namespace sym-admin --set image.tag=${VERSION},image.worker=true,image.master=true,image.reCreate=true,image.threadiness=1 ./chart/sym-controller
+	helm upgrade --kubeconfig ${KUBECONFIG} --kube-context dmall-bus-test-bj5-02 --install sym-ctl --namespace sym-admin --set image.tag=${VERSION},image.worker=true,image.master=false,image.reCreate=true,image.threadiness=1 ./chart/sym-controller
+	helm upgrade --kubeconfig ${KUBECONFIG} --kube-context dmall-bus-test-cd-01 --install sym-ctl --namespace sym-admin --set image.tag=${VERSION},image.worker=true,image.master=false,image.reCreate=true,image.threadiness=1 ./chart/sym-controller
+	helm upgrade --kubeconfig ${KUBECONFIG} --kube-context dmall-cd-test-chengdu --install sym-ctl --namespace sym-admin --set image.tag=${VERSION},image.worker=true,image.master=false,image.reCreate=true,image.threadiness=1 ./chart/sym-controller
+	helm upgrade --kubeconfig ${KUBECONFIG} --kube-context dmall-cn-dev-bj-02 --install sym-ctl --namespace sym-admin --set image.tag=${VERSION},image.worker=true,image.master=false,image.reCreate=true,image.threadiness=1 ./chart/sym-controller
 	helm upgrade --kubeconfig ${KUBECONFIG} --kube-context dmall-bus-test-bj5-01 --install sym-api --namespace sym-admin --set image.tag=${VERSION},ingress.hosts[0].host=testapi.sym.dmall.com,ingress.hosts[0].paths[0]=/ ./chart/sym-api
 	helm upgrade --kubeconfig ${KUBECONFIG} --kube-context dmall-cd-test-beijing --install sym-api --namespace sym-admin --set image.tag=${VERSION},ingress.hosts[0].host=testapi-djj.sym.dmall.com,ingress.hosts[0].paths[0]=/  ./chart/sym-api
 	helm upgrade --kubeconfig ${KUBECONFIG} --kube-context dmall-cn-dev-bj-01 --install sym-api --namespace sym-admin --set image.tag=${VERSION},ingress.hosts[0].host=devapi.sym.dmall.com,ingress.hosts[0].paths[0]=/ ./chart/sym-api

@@ -47,7 +47,7 @@ spec:
           {{- end }}
           {{- if .Values.image.threadiness }}
           - "--threadiness"
-          - {{ .Values.image.threadiness | quote | default "2" }}
+          - {{ .Values.image.threadiness | quote | default "1" }}
           {{- end }}
 
           ports:
