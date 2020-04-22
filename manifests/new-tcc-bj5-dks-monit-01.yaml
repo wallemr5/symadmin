@@ -51,8 +51,21 @@ spec:
       repo: dmall
       namespace: sym-admin
       chartName: sym-api
-      chartVersion: 1.1.3
+      chartVersion: 1.0.5
       values:
         hosts: devapi.sym.dmall.com
-        tag: v1.0.5
-        repository: dmall-bj.tencentcloudcr.com/symcn/sym-admin-api
+        tag: "v1.0.6-dev6"
+    - name: sym-ctl
+      repo: dmall
+      namespace: sym-admin
+      chartName: sym-controller
+      chartVersion : 1.0.5
+      values:
+        tag: "v1.0.6-dev6"
+        master: "true"
+        worker: "true"
+        cluster: "false"
+        reCreate: "true"
+        leader: "true"
+        oldCluster: "false"
+        threadiness: "1"
