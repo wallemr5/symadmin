@@ -8,4 +8,4 @@ keywords:
 sources:
   - http://gitlab.dmall.com/arch/sym-admin
 tillerVersion: '>=2.13.0'
-version: 1.1.4
+version: 1.0.5

@@ -33,6 +33,9 @@ spec:
           {{- if .Values.image.worker }}
           - "--enable-worker"
           {{- end }}
+          {{- if .Values.image.cluster }}
+          - "--enable-cluster"
+          {{- end }}
           {{- if .Values.image.reCreate | default false }}
           - "--debug"
           {{- end }}
