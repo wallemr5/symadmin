@@ -119,6 +119,9 @@ helm-worker:
 helm-api:
 	helm upgrade --install sym-api --namespace sym-admin --set image.tag=${VERSION} ./chart/sym-api
 
+helm-cluster:
+	helm upgrade --install sym-ctl-cluster --namespace sym-admin --set image.tag=${VERSION},image.cluster=true,image.worker=false,image.master=false,image.leader=false,image.threadiness=1,rbac.name=sym-controller-cluster ./chart/sym-controller
+
 helm-test:
 	helm upgrade --kubeconfig ${KUBECONFIG} --kube-context dmall-bus-test-bj5-01 --install sym-ctl --namespace sym-admin --set image.tag=${VERSION},image.worker=true,image.master=true,image.reCreate=true,image.threadiness=2 ./chart/sym-controller
 	helm upgrade --kubeconfig ${KUBECONFIG} --kube-context dmall-cd-test-beijing --install sym-ctl --namespace sym-admin --set image.tag=${VERSION},image.worker=true,image.master=true,image.reCreate=true,image.threadiness=2 ./chart/sym-controller
