@@ -175,8 +175,8 @@ func ConvertToStatefulSet(mgr manager.Manager, advDeploy *workloadv1beta1.AdvDep
 	return &sta, true
 }
 
-func (r *AdvDeploymentReconciler) ApplyResources(ctx context.Context, advDeploy *workloadv1beta1.AdvDeployment) ([]string, error) {
-	var err error
+func (r *AdvDeploymentReconciler) ApplyResources(ctx context.Context, advDeploy *workloadv1beta1.AdvDeployment) ([]string, int, error) {
+	var isChanged int
 	var objects object.K8sObjects
 
 	for _, podSet := range advDeploy.Spec.Topology.PodSets {
@@ -185,7 +185,7 @@ func (r *AdvDeploymentReconciler) ApplyResources(ctx context.Context, advDeploy 
 			r.HelmEnv.Helmv2env, advDeploy.Namespace, podSet.RawValues)
 		if err != nil {
 			klog.Errorf("Template podSet Name: %s err: %v", podSet.Name, err)
-			return nil, fmt.Errorf("podSet: %s parse k8s object failed", podSet.Name)
+			return nil, isChanged, fmt.Errorf("podSet: %s parse k8s object failed", podSet.Name)
 		}
 		objects = append(objects, obj...)
 	}
@@ -196,43 +196,52 @@ func (r *AdvDeploymentReconciler) ApplyResources(ctx context.Context, advDeploy 
 		case ServiceKind:
 			svc, ok := ConvertToSvc(r.Mgr, advDeploy, obj.UnstructuredObject())
 			if !ok {
-				return nil, fmt.Errorf("Convert Failed kind: %s Name: %s/%s ", obj.Kind, obj.Namespace, obj.Name)
+				return nil, isChanged, fmt.Errorf("Convert Failed kind: %s Name: %s/%s ", obj.Kind, obj.Namespace, obj.Name)
 			}
 
 			ownerRes = append(ownerRes, GetFormattedName(ServiceKind, svc))
-			err = resources.Reconcile(ctx, r.Client, svc, resources.DesiredStatePresent, r.Opt.Debug)
+			change, err := resources.Reconcile(ctx, r.Client, svc, resources.DesiredStatePresent, r.Opt.Debug)
 			if err != nil {
 				klog.Errorf("svc name: %s err: %v", svc.Name, err)
-				return nil, fmt.Errorf("advDeploy: %s svc object: %s reconcile failed", advDeploy.Name, obj.Name)
+				return nil, isChanged, fmt.Errorf("advDeploy: %s svc object: %s reconcile failed", advDeploy.Name, obj.Name)
+			}
+			if change > 0 {
+				isChanged++
 			}
 		case DeploymentKind:
 			deploy, ok := ConvertToDeployment(r.Mgr, advDeploy, obj.UnstructuredObject())
 			if !ok {
-				return nil, fmt.Errorf("Convert Failed kind: %s Name: %s/%s ", obj.Kind, obj.Namespace, obj.Name)
+				return nil, isChanged, fmt.Errorf("Convert Failed kind: %s Name: %s/%s ", obj.Kind, obj.Namespace, obj.Name)
 			}
 			ownerRes = append(ownerRes, GetFormattedName(DeploymentKind, deploy))
-			err = resources.Reconcile(ctx, r.Client, deploy, resources.DesiredStatePresent, r.Opt.Debug)
+			change, err := resources.Reconcile(ctx, r.Client, deploy, resources.DesiredStatePresent, r.Opt.Debug)
 			if err != nil {
 				klog.Errorf("deployment name: %s err: %v", deploy.Name, err)
-				return nil, fmt.Errorf("advDeploy: %s deployment object: %s reconcile failed", advDeploy.Name, obj.Name)
+				return nil, isChanged, fmt.Errorf("advDeploy: %s deployment object: %s reconcile failed", advDeploy.Name, obj.Name)
+			}
+			if change > 0 {
+				isChanged++
 			}
 		case StatefulSetKind:
 			sta, ok := ConvertToStatefulSet(r.Mgr, advDeploy, obj.UnstructuredObject())
 			if !ok {
-				return nil, fmt.Errorf("Convert Failed kind: %s Name: %s/%s ", obj.Kind, obj.Namespace, obj.Name)
+				return nil, isChanged, fmt.Errorf("Convert Failed kind: %s Name: %s/%s ", obj.Kind, obj.Namespace, obj.Name)
 			}
 			ownerRes = append(ownerRes, GetFormattedName(ServiceKind, sta))
-			err = resources.Reconcile(ctx, r.Client, sta, resources.DesiredStatePresent, r.Opt.Debug)
+			change, err := resources.Reconcile(ctx, r.Client, sta, resources.DesiredStatePresent, r.Opt.Debug)
 			if err != nil {
 				klog.Errorf("statefulset name: %s err: %v", sta.Name, err)
-				return nil, fmt.Errorf("advDeploy: %s statefulset object: %s reconcile failed", advDeploy.Name, obj.Name)
+				return nil, isChanged, fmt.Errorf("advDeploy: %s statefulset object: %s reconcile failed", advDeploy.Name, obj.Name)
+			}
+			if change > 0 {
+				isChanged++
 			}
 		default:
-			return nil, fmt.Errorf("unknown kind: %s Name: %s/%s ", obj.Kind, obj.Namespace, obj.Name)
+			return nil, isChanged, fmt.Errorf("unknown kind: %s Name: %s/%s ", obj.Kind, obj.Namespace, obj.Name)
 		}
 	}
 
-	return ownerRes, nil
+	return ownerRes, isChanged, nil
 }
 
 func GetAffinity(advDeploy *workloadv1beta1.AdvDeployment) *corev1.Affinity {

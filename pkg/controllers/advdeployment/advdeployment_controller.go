@@ -96,13 +96,6 @@ func Add(mgr manager.Manager, cMgr *pkgmanager.DksManager) error {
 		return err
 	}
 
-	// Watch for changes to Service for runtime controller
-	err = ctl.Watch(&source.Kind{Type: &corev1.Service{}}, utils.GetEnqueueRequestsSvcFucs(), utils.GetWatchPredicateForNs(), utils.GetWatchPredicateForApp())
-	if err != nil {
-		r.Log.Error(err, "Watching Deployment has an error")
-		return err
-	}
-
 	// Watch for changes to Deployment for runtime controller
 	err = ctl.Watch(&source.Kind{Type: &appsv1.Deployment{}}, utils.GetEnqueueRequestsFucs(), utils.GetWatchPredicateForNs(), utils.GetWatchPredicateForApp())
 	if err != nil {
@@ -192,35 +185,35 @@ func (r *AdvDeploymentReconciler) Reconcile(req ctrl.Request) (ctrl.Result, erro
 	}
 
 	if err := r.DeployTypeCheck(advDeploy); err != nil {
-		klog.Errorf("check err: %v", err)
+		klog.Errorf("advDeploy[%s] deploy type check failed, err: %+v", advDeploy.Name, err)
 		r.recorder.Event(advDeploy, corev1.EventTypeWarning, "deploy type check failed", err.Error())
 		return reconcile.Result{}, err
 	}
 
-	// _, err = r.ApplyReleases(ctx, advDeploy)
-	// if err != nil {
-	// 	r.recorder.Event(advDeploy, corev1.EventTypeWarning, "Apply releases failed", err.Error())
-	// 	logger.Error(err, "failed to apply releases")
-	// }
-
-	ownerRes, err := r.ApplyResources(ctx, advDeploy)
+	ownerRes, isChanged, err := r.ApplyResources(ctx, advDeploy)
 	if err != nil {
 		r.recorder.Event(advDeploy, corev1.EventTypeWarning, "apply resources failed", err.Error())
 		logger.Error(err, "failed to apply resources")
 		return reconcile.Result{}, err
 	}
 
-	// We can update the status for the advDeployment without modification for any release.
+	if isChanged > 0 {
+		return reconcile.Result{
+			Requeue:      true,
+			RequeueAfter: 5 * time.Second,
+		}, nil
+	}
+
 	aggregatedStatus, isGenerationEqual, err := r.RecalculateStatus(ctx, advDeploy, ownerRes)
 	if err != nil {
-		klog.Errorf("failed to recalculate the status of advDeploy [%s]: %v", advDeploy.Name, err)
-		r.recorder.Event(advDeploy, corev1.EventTypeWarning, "aggregate status failed", err.Error())
+		klog.Errorf("advDeploy[%s] status aggregate failed, err: %+v", advDeploy.Name, err)
+		r.recorder.Event(advDeploy, corev1.EventTypeWarning, "status aggregate failed", err.Error())
 		return reconcile.Result{}, err
 	}
 
 	if err = r.updateStatus(ctx, advDeploy, aggregatedStatus, isGenerationEqual); err != nil {
-		klog.Errorf("failed to update tthe status of advDeploy [%s]: %v", advDeploy.Name, err)
-		r.recorder.Event(advDeploy, corev1.EventTypeWarning, "update status failed", err.Error())
+		klog.Errorf("advDeploy[%s] status update failed, err: %+v", advDeploy.Name, err)
+		r.recorder.Event(advDeploy, corev1.EventTypeWarning, "status update failed", err.Error())
 		return reconcile.Result{}, err
 	}
 

@@ -31,22 +31,22 @@ func prepareResourceForUpdate(current, desired runtime.Object) {
 	}
 }
 
-func Reconcile(ctx context.Context, c client.Client, desired runtime.Object, desiredState DesiredState, isRecreate bool) error {
+func Reconcile(ctx context.Context, c client.Client, desired runtime.Object, desiredState DesiredState, isRecreate bool) (int, error) {
 	if desiredState == "" {
 		desiredState = DesiredStatePresent
 	}
 
+	var change int
 	var current = desired.DeepCopyObject()
-	// desiredType := reflect.TypeOf(desired)
-	// var desiredCopy = desired.DeepCopyObject()
+
 	key, err := client.ObjectKeyFromObject(current)
 	if err != nil {
-		return errors.Wrapf(err, "copy key[%s]", key)
+		return change, errors.Wrapf(err, "copy key[%s]", key)
 	}
 
 	err = c.Get(ctx, key, current)
 	if err != nil && !apierrors.IsNotFound(err) {
-		return errors.Wrapf(err, "getting resource key[%s]", key)
+		return change, errors.Wrapf(err, "getting resource key[%s]", key)
 	}
 	if apierrors.IsNotFound(err) {
 		if desiredState == DesiredStatePresent {
@@ -54,9 +54,10 @@ func Reconcile(ctx context.Context, c client.Client, desired runtime.Object, des
 				klog.Errorf("Failed to set last applied annotation key[%s] err: %v", key, err)
 			}
 			if err := c.Create(ctx, desired); err != nil {
-				return errors.Wrapf(err, "creating resource failed key[%s]", key)
+				return change, errors.Wrapf(err, "creating resource failed key[%s]", key)
 			}
 			klog.Infof("resource key[%s] created", key)
+			change++
 		}
 	} else {
 		if desiredState == DesiredStatePresent {
@@ -71,10 +72,10 @@ func Reconcile(ctx context.Context, c client.Client, desired runtime.Object, des
 			patchResult, err = patch.DefaultPatchMaker.Calculate(current, desired, patch.IgnoreStatusFields())
 			if err != nil {
 				klog.Errorf("could not match object key[%s] err: %v", key, err)
-				return err
+				return change, err
 			} else if patchResult.IsEmpty() {
 				klog.V(4).Infof("resource key[%s] unchanged is in sync", key)
-				return nil
+				return change, nil
 			} else {
 				klog.V(2).Infof("resource key[%s] diffs patch: %s", key, string(patchResult.Patch))
 			}
@@ -91,16 +92,17 @@ func Reconcile(ctx context.Context, c client.Client, desired runtime.Object, des
 						klog.Infof("resource key[%s] needs to be re-created err: %v", key, err)
 						err := c.Delete(ctx, current)
 						if err != nil {
-							return errors.Wrapf(err, "could not delete resource key[%s]", key)
+							return change, errors.Wrapf(err, "could not delete resource key[%s]", key)
 						}
 						klog.Infof("resource key[%s] deleted", key)
 						if err := c.Create(ctx, desired); err != nil {
-							return errors.Wrapf(err, "creating resource key[%s]", key)
+							return change, errors.Wrapf(err, "creating resource key[%s]", key)
 						}
 						klog.Infof("resource key[%s] created", key)
-						return nil
+						change++
+						return change, nil
 					}
-					return errors.Wrapf(err, "updating resource key[%s]", key)
+					return change, errors.Wrapf(err, "updating resource key[%s]", key)
 				}
 				klog.Infof("resource key:%s updated", key)
 			} else {
@@ -132,15 +134,17 @@ func Reconcile(ctx context.Context, c client.Client, desired runtime.Object, des
 
 				if retryErr != nil {
 					klog.Errorf("key[%s] retryErr: %v", key, retryErr)
-					return errors.Errorf("key[%s] only update err, please check", key)
+					return change, errors.Errorf("key[%s] only update err, please check", key)
 				}
+				change++
 			}
 		} else if desiredState == DesiredStateAbsent {
 			if err := c.Delete(ctx, current); err != nil {
-				return errors.Wrapf(err, "deleting resource key[%s]", key)
+				return change, errors.Wrapf(err, "deleting resource key[%s]", key)
 			}
 			klog.Infof("resource key[%s] deleted successfully", key)
+			change++
 		}
 	}
-	return nil
+	return change, nil
 }

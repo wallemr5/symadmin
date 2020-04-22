@@ -216,7 +216,7 @@ func (r *AppSetReconciler) CustomReconcile(ctx context.Context, req customctrl.C
 
 	// add finalizers
 	if !utils.ContainsString(app.ObjectMeta.Finalizers, labels.ControllerFinalizersName) {
-		klog.V(4).Infof("%s: finalizers not set:%s, set now", req.NamespacedName, labels.ControllerFinalizersName)
+		klog.V(2).Infof("%s set finalizers: %s", req.NamespacedName, labels.ControllerFinalizersName)
 
 		if app.ObjectMeta.Finalizers == nil {
 			app.ObjectMeta.Finalizers = []string{}
@@ -225,19 +225,22 @@ func (r *AppSetReconciler) CustomReconcile(ctx context.Context, req customctrl.C
 		return reconcile.Result{}, r.Client.Update(ctx, app)
 	}
 
-	// modify spec info
-	isChange, err := r.ModifySpec(ctx, req)
+	isChanged, err := r.ModifySpec(ctx, req, app)
 	if err != nil {
 		logger.Error(err, "modify advdeployment info with spec")
 		return reconcile.Result{}, err
 	}
-	if isChange {
-		return reconcile.Result{}, nil
+
+	if isChanged > 0 {
+		return reconcile.Result{
+			Requeue:      true,
+			RequeueAfter: 5 * time.Second,
+		}, nil
 	}
 
 	// update status
 	klog.V(4).Infof("%s/%s start aggregate status ... ", req.NamespacedName.Namespace, req.NamespacedName.Name)
-	status, _, err := r.ModifyStatus(ctx, req)
+	status, _, err := r.ModifyStatus(ctx, req, app)
 	if err != nil {
 		logger.Error(err, "update AppSet.Status fail")
 		return reconcile.Result{}, err

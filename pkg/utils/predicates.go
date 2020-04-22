@@ -1,8 +1,6 @@
 package utils
 
 import (
-	"strings"
-
 	workloadv1beta1 "gitlab.dmall.com/arch/sym-admin/pkg/apis/workload/v1beta1"
 	"k8s.io/apimachinery/pkg/api/equality"
 	"k8s.io/apimachinery/pkg/types"
@@ -43,23 +41,6 @@ func getObserveApp(labels map[string]string) string {
 
 	if va, ok := labels[ObserveMustLabelAppName]; ok {
 		klog.V(5).Infof("Observe label app:%s", va)
-		return va
-	}
-
-	return ""
-}
-
-func getObserveAppBySvc(labels map[string]string) string {
-	if _, ok := labels[ObserveMustLabelClusterName]; !ok {
-		return ""
-	}
-
-	if va, ok := labels[ObserveMustLabelAppName]; ok {
-		if strings.HasSuffix(va, "-svc") {
-			split := strings.Split(va, "-svc")
-			va = split[0]
-		}
-		klog.V(4).Infof("Observe svc label app: %s", va)
 		return va
 	}
 
@@ -136,35 +117,6 @@ func GetEnqueueRequestsFucs() handler.EventHandler {
 		GenericFunc: func(e event.GenericEvent, queue workqueue.RateLimitingInterface) {
 			queue.AddRateLimited(reconcile.Request{NamespacedName: types.NamespacedName{
 				Name:      getObserveApp(e.Meta.GetLabels()),
-				Namespace: e.Meta.GetNamespace(),
-			}})
-		},
-	}
-}
-
-func GetEnqueueRequestsSvcFucs() handler.EventHandler {
-	return handler.Funcs{
-		CreateFunc: func(e event.CreateEvent, queue workqueue.RateLimitingInterface) {
-			queue.AddRateLimited(reconcile.Request{NamespacedName: types.NamespacedName{
-				Name:      getObserveAppBySvc(e.Meta.GetLabels()),
-				Namespace: e.Meta.GetNamespace(),
-			}})
-		},
-		UpdateFunc: func(e event.UpdateEvent, queue workqueue.RateLimitingInterface) {
-			queue.AddRateLimited(reconcile.Request{NamespacedName: types.NamespacedName{
-				Name:      getObserveAppBySvc(e.MetaNew.GetLabels()),
-				Namespace: e.MetaNew.GetNamespace(),
-			}})
-		},
-		DeleteFunc: func(e event.DeleteEvent, queue workqueue.RateLimitingInterface) {
-			queue.AddRateLimited(reconcile.Request{NamespacedName: types.NamespacedName{
-				Name:      getObserveAppBySvc(e.Meta.GetLabels()),
-				Namespace: e.Meta.GetNamespace(),
-			}})
-		},
-		GenericFunc: func(e event.GenericEvent, queue workqueue.RateLimitingInterface) {
-			queue.AddRateLimited(reconcile.Request{NamespacedName: types.NamespacedName{
-				Name:      getObserveAppBySvc(e.Meta.GetLabels()),
 				Namespace: e.Meta.GetNamespace(),
 			}})
 		},
