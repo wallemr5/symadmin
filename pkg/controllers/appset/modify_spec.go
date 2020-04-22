@@ -123,9 +123,11 @@ func applyAdvDeployment(ctx context.Context, cluster *k8smanager.Cluster, req cu
 			klog.Warningf("cluster[%s] update advDeploy[%s] spec failed, err: %+v", advDeploy.Name, err)
 			return false, err
 		}
+
+		return true, nil
 	}
 
-	return true, nil
+	return false, nil
 }
 
 func compare(new, old *workloadv1beta1.AdvDeployment) bool {

@@ -11,7 +11,7 @@ KUBECONFIG ?= "./manifests/kubeconfig.yaml"
 # This repo's root import path (under GOPATH).
 ROOT := gitlab.dmall.com/arch/sym-admin
 
-GO_VERSION := 1.14.1
+GO_VERSION := 1.14.2
 ARCH     ?= $(shell go env GOARCH)
 BUILD_DATE = $(shell date +'%Y-%m-%dT%H:%M:%SZ')
 COMMIT    = $(shell git rev-parse --short HEAD)
