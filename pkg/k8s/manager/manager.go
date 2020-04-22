@@ -24,7 +24,8 @@ import (
 )
 
 var (
-	logger = logf.KBLog.WithName("controller")
+	logger  = logf.KBLog.WithName("controller")
+	timeout <-chan time.Time
 )
 
 // key config
@@ -421,10 +422,10 @@ func (m *ClusterManager) cluterCheck() {
 	})
 	m.clusters = newClusters
 
-	t := time.After(time.Second * 5)
+	timeout = time.After(time.Second * 5)
 	select {
 	case m.ClusterAddInfo <- addList:
-	case <-t:
+	case <-timeout:
 		klog.Infof("add cluster info timeout:%+v", addList)
 	}
 }
