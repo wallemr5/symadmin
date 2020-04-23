@@ -271,6 +271,8 @@ func (r *AdvDeploymentReconciler) updateStatus(ctx context.Context, advDeploy *w
 		// without this, you might trigger a sync as a result of updating your own status.
 		if isGenerationEqual {
 			obj.Status.ObservedGeneration = obj.ObjectMeta.Generation
+		} else {
+			obj.Status.ObservedGeneration = obj.ObjectMeta.Generation - 1
 		}
 
 		if r.Opt.OldCluster {

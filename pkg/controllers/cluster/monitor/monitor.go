@@ -1,14 +1,12 @@
 package monitor
 
 import (
+	"context"
 	"fmt"
 	"strings"
 
-	"context"
-
-	"github.com/go-logr/logr"
-
 	"github.com/ghodss/yaml"
+	"github.com/go-logr/logr"
 	"github.com/pkg/errors"
 	workloadv1beta1 "gitlab.dmall.com/arch/sym-admin/pkg/apis/workload/v1beta1"
 	"gitlab.dmall.com/arch/sym-admin/pkg/controllers/cluster/common"

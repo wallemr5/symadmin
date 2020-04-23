@@ -2,19 +2,19 @@ apiVersion: workload.dmall.com/v1beta1
 kind: Cluster
 metadata:
   labels:
-    clusterName: tcc-bj5-dks-meta-01
+    clusterName: tcc-bj5-dks-monit-01
     createdBy: sym-controller
-  name: tcc-bj5-dks-meta-01
+  name: tcc-bj5-dks-monit-01
   namespace: default
 spec:
-  symNodeName: 10.13.133.11
+  symNodeName: 10.13.135.252
   pause: false
   meta:
     area: beijing
     az: BJ5
-    id: "1"
+    id: "4"
     clusterType: tke
-    clusterIngressHead: dksmt1
+    clusterIngressHead: monitor
   helmSpec:
     maxHistory: 5
     namespace: kube-system
@@ -34,15 +34,38 @@ spec:
       chartVersion: 8.7.1
       values:
         custom-resources-config: disable
-        selector-only-system: disable
+        selector-only-system: enable
         lpv-path: /root/prometheus-data
         lpv-size: 20Gi
         prom-limit-cpu: "1"
         prom-limit-memory: 2Gi
         prom-req-cpu: "0.5"
         prom-req-memory: 1Gi
-        prom-retention: 7d
+        prom-retention: 2d
         lpv-grafana-path: /root/grafana-data
         lpv-grafana-size: 1Gi
-
-
+        grafana-ing: mg.symphony.dmall.com
+        prom-ing: mp.symphony.dmall.com
+        alertmanager-ing: ma.symphony.dmall.com
+    - name: sym-api
+      repo: dmall
+      namespace: sym-admin
+      chartName: sym-api
+      chartVersion: 1.0.5
+      values:
+        hosts: devapi.sym.dmall.com
+        tag: "v1.0.6-dev6"
+    - name: sym-ctl
+      repo: dmall
+      namespace: sym-admin
+      chartName: sym-controller
+      chartVersion : 1.0.5
+      values:
+        tag: "v1.0.6-dev6"
+        master: "true"
+        worker: "true"
+        cluster: "false"
+        reCreate: "true"
+        leader: "true"
+        oldCluster: "false"
+        threadiness: "1"
