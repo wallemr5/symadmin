@@ -70,7 +70,7 @@ func buildAdvDeployment(app *workloadv1beta1.AppSet, clusterTopology *workloadv1
 	return obj
 }
 
-func applyAdvDeployment(ctx context.Context, cluster *k8smanager.Cluster, req customctrl.CustomRequest, app *workloadv1beta1.AppSet, advDeploy *workloadv1beta1.AdvDeployment) (bool, error) {
+func applyAdvDeployment(ctx context.Context, cluster *k8smanager.Cluster, req customctrl.CustomRequest, app *workloadv1beta1.AppSet, new *workloadv1beta1.AdvDeployment) (bool, error) {
 	obj := &workloadv1beta1.AdvDeployment{}
 	err := cluster.Client.Get(ctx, types.NamespacedName{
 		Name:      app.Name,
@@ -79,8 +79,8 @@ func applyAdvDeployment(ctx context.Context, cluster *k8smanager.Cluster, req cu
 
 	if err != nil {
 		if apierrors.IsNotFound(err) {
-			advDeploy.Status.AggrStatus.Status = workloadv1beta1.AppStatusInstalling
-			err = cluster.Client.Create(ctx, advDeploy)
+			new.Status.AggrStatus.Status = workloadv1beta1.AppStatusInstalling
+			err = cluster.Client.Create(ctx, new)
 			if err != nil {
 				klog.Errorf("%s/%s create AdvDeployment by cluster[%s] failed,  err: %+v",
 					req.NamespacedName.Namespace, req.NamespacedName.Name, cluster.GetName(), err)
@@ -96,11 +96,12 @@ func applyAdvDeployment(ctx context.Context, cluster *k8smanager.Cluster, req cu
 		return false, err
 	}
 
-	if compare(obj, advDeploy) {
+	if compare(new, obj) {
 		err := retry.RetryOnConflict(retry.DefaultRetry, func() error {
 			time := metav1.Now()
-			advDeploy.Spec.DeepCopyInto(&obj.Spec)
-			obj.Labels = advDeploy.ObjectMeta.Labels
+			new.Spec.DeepCopyInto(&obj.Spec)
+			obj.Finalizers = new.Finalizers
+			obj.Labels = new.ObjectMeta.Labels
 			obj.Status.LastUpdateTime = &time
 
 			updateErr := cluster.Client.Update(ctx, obj)
@@ -112,13 +113,13 @@ func applyAdvDeployment(ctx context.Context, cluster *k8smanager.Cluster, req cu
 
 			getErr := cluster.Client.Get(ctx, req.NamespacedName, obj)
 			if getErr != nil {
-				klog.Errorf("cluster[%s] updateing get advDeploy[%s] failed, err: %+v", cluster.Name, advDeploy.Name, getErr)
+				klog.Errorf("cluster[%s] updateing get advDeploy[%s] failed, err: %+v", cluster.Name, new.Name, getErr)
 			}
 			return updateErr
 		})
 
 		if err != nil {
-			klog.Warningf("cluster[%s] update advDeploy[%s] spec failed, err: %+v", cluster.Name, advDeploy.Name, err)
+			klog.Warningf("cluster[%s] update advDeploy[%s] spec failed, err: %+v", cluster.Name, new.Name, err)
 			return false, err
 		}
 
@@ -129,11 +130,15 @@ func applyAdvDeployment(ctx context.Context, cluster *k8smanager.Cluster, req cu
 }
 
 func compare(new, old *workloadv1beta1.AdvDeployment) bool {
-	if !equality.Semantic.DeepEqual(new.Spec, old.Spec) {
+	if !equality.Semantic.DeepEqual(new.ObjectMeta.Finalizers, old.ObjectMeta.Finalizers) {
 		return true
 	}
 
 	if !equality.Semantic.DeepEqual(new.ObjectMeta.Labels, old.ObjectMeta.Labels) {
+		return true
+	}
+
+	if !equality.Semantic.DeepEqual(new.Spec, old.Spec) {
 		return true
 	}
 	return false

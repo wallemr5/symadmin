@@ -23,7 +23,6 @@ import (
 	"time"
 
 	"github.com/go-logr/logr"
-	"github.com/gofrs/uuid"
 	workloadv1beta1 "gitlab.dmall.com/arch/sym-admin/pkg/apis/workload/v1beta1"
 	"gitlab.dmall.com/arch/sym-admin/pkg/customctrl"
 	"gitlab.dmall.com/arch/sym-admin/pkg/healthcheck"
@@ -196,8 +195,7 @@ func (r *AppSetReconciler) ClusterChange() {
 
 // CustomReconcile for multi cluster reconcile
 func (r *AppSetReconciler) CustomReconcile(ctx context.Context, req customctrl.CustomRequest) (reconcile.Result, error) {
-	logger := r.Log.WithValues("key", req.NamespacedName, "id", uuid.Must(uuid.NewV4()).String())
-	ctx = utils.SetCtxLogger(ctx, logger)
+	logger := r.Log.WithValues("key", req.NamespacedName)
 
 	app := &workloadv1beta1.AppSet{}
 	err := r.Client.Get(ctx, req.NamespacedName, app)
@@ -238,15 +236,13 @@ func (r *AppSetReconciler) CustomReconcile(ctx context.Context, req customctrl.C
 		}, nil
 	}
 
-	// update status
-	klog.V(4).Infof("%s/%s start aggregate status ... ", req.NamespacedName.Namespace, req.NamespacedName.Name)
+	klog.V(4).Infof("%s/%s start aggregate status ... ", req.Namespace, req.Name)
 	status, _, err := r.ModifyStatus(ctx, req, app)
 	if err != nil {
 		logger.Error(err, "update AppSet.Status fail")
 		return reconcile.Result{}, err
 	}
 
-	// delete unexpect info
 	_, err = r.DeleteUnExpectInfo(ctx, req, status)
 	if err != nil {
 		logger.Error(err, "delete unexpect info")

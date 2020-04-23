@@ -23,7 +23,6 @@ import (
 	"fmt"
 
 	"github.com/go-logr/logr"
-	"github.com/gofrs/uuid"
 	workloadv1beta1 "gitlab.dmall.com/arch/sym-admin/pkg/apis/workload/v1beta1"
 	helmv2 "gitlab.dmall.com/arch/sym-admin/pkg/helm/v2"
 	"gitlab.dmall.com/arch/sym-admin/pkg/helm/v2repo"
@@ -110,12 +109,8 @@ func Add(mgr manager.Manager, cMgr *pkgmanager.DksManager) error {
 		return err
 	}
 
-	// // Watch for changes to Pod for runtime controller
-	// err = ctl.Watch(&source.Kind{Type: &corev1.Pod{}}, utils.GetEnqueueRequestsFucs(), utils.GetWatchPredicateForNs(), utils.GetWatchPredicateForApp())
-	// if err != nil {
-	// 	r.Log.Error(err, "Watch Pod err")
-	// 	return err
-	// }
+	// only trigger Service sync
+	_, _ = mgr.GetCache().GetInformer(&corev1.Service{})
 
 	helmv2env, err := helmv2.InitHelmRepoEnv("dmall", cMgr.Opt.Repos)
 	if err != nil {
@@ -150,17 +145,17 @@ func (r *AdvDeploymentReconciler) Reconcile(req ctrl.Request) (ctrl.Result, erro
 	klog.V(3).Infof("##### [%s] start to reconcile.", req.NamespacedName)
 
 	ctx := context.Background()
-	logger := r.Log.WithValues("key", req.NamespacedName, "id", uuid.Must(uuid.NewV4()).String())
+	logger := r.Log.WithValues("key", req.NamespacedName)
 
 	// Calculating how long did the reconciling process take
 	startTime := time.Now()
 	defer func() {
 		diffTime := time.Since(startTime)
 		var logLevel klog.Level
-		if diffTime > 2*time.Second {
+		if diffTime > 1*time.Second {
+			logLevel = 1
+		} else if diffTime > 100*time.Millisecond {
 			logLevel = 2
-		} else if diffTime > 1*time.Second {
-			logLevel = 3
 		} else {
 			logLevel = 4
 		}
@@ -181,7 +176,7 @@ func (r *AdvDeploymentReconciler) Reconcile(req ctrl.Request) (ctrl.Result, erro
 	}
 
 	if !advDeploy.ObjectMeta.DeletionTimestamp.IsZero() {
-		return reconcile.Result{}, r.RemoveFinalizers(ctx, req, advDeploy)
+		return reconcile.Result{}, nil
 	}
 
 	if err := r.DeployTypeCheck(advDeploy); err != nil {

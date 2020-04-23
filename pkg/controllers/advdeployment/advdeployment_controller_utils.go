@@ -3,38 +3,14 @@ package advdeployment
 import (
 	"context"
 
-	"github.com/pkg/errors"
 	workloadv1beta1 "gitlab.dmall.com/arch/sym-admin/pkg/apis/workload/v1beta1"
 	helmv2 "gitlab.dmall.com/arch/sym-admin/pkg/helm/v2"
 	"gitlab.dmall.com/arch/sym-admin/pkg/labels"
-	"gitlab.dmall.com/arch/sym-admin/pkg/utils"
 	corev1 "k8s.io/api/core/v1"
 	hapirelease "k8s.io/helm/pkg/proto/hapi/release"
 	rls "k8s.io/helm/pkg/proto/hapi/services"
 	"k8s.io/klog"
-	ctrl "sigs.k8s.io/controller-runtime"
 )
-
-// RemoveFinalizers remove the sym-admin's finalizer from the entry list.
-func (r *AdvDeploymentReconciler) RemoveFinalizers(ctx context.Context, req ctrl.Request, obj *workloadv1beta1.AdvDeployment) error {
-	if utils.ContainsString(obj.ObjectMeta.Finalizers, labels.ControllerFinalizersName) {
-		var i int
-		for idx, fz := range obj.ObjectMeta.Finalizers {
-			if fz == labels.ControllerFinalizersName {
-				i = idx
-				break
-			}
-		}
-		obj.ObjectMeta.Finalizers = append(obj.ObjectMeta.Finalizers[:i], obj.ObjectMeta.Finalizers[i+1:]...)
-		if err := r.Client.Update(ctx, obj); err != nil {
-			klog.Errorf("Can not remove the finalizer entry from the list, err: %+v", err)
-			return errors.Wrap(err, "Can not remove the finalizer entry from the list")
-		}
-		klog.V(3).Infof("advDeploy[%s], Remove the Finalizers and update it successfully", obj.Name)
-	}
-
-	return nil
-}
 
 // CleanAllReleases delete all releases of this advDeployment
 func (r *AdvDeploymentReconciler) CleanAllReleases(advDeploy *workloadv1beta1.AdvDeployment) error {
