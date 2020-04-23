@@ -48,17 +48,17 @@ spec:
       repo: dmall
       namespace: sym-admin
       chartName: sym-api
-      chartVersion: 1.0.5
+      chartVersion: 1.0.6
       values:
         hosts: api.sym.dmall.com
-        tag: "v1.0.5"
+        tag: "v1.0.6"
     - name: sym-ctl
       repo: dmall
       namespace: sym-admin
       chartName: sym-controller
-      chartVersion : 1.0.5
+      chartVersion : 1.0.6
       values:
-        tag: "v1.0.5"
+        tag: "v1.0.6"
         master: "true"
         worker: "true"
         cluster: "false"

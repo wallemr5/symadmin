@@ -1,0 +1,35 @@
+apiVersion: workload.dmall.com/v1beta1
+kind: Cluster
+metadata:
+  labels:
+    clusterName: tcc-bj5-dks-01
+    createdBy: sym-controller
+  name: tcc-bj5-dks-01
+  namespace: default
+spec:
+  symNodeName: 10.13.134.93
+  pause: false
+  meta:
+    area: beijing
+    az: BJ5
+    id: "2"
+    clusterType: tke
+  helmSpec:
+    maxHistory: 5
+    namespace: kube-system
+    overrideImageSpec: registry.cn-hangzhou.aliyuncs.com/google_containers/tiller:v2.13.1
+  apps:
+    - name: sym-ctl
+      repo: dmall
+      namespace: sym-admin
+      chartName: sym-controller
+      chartVersion : 1.0.6
+      values:
+        tag: "v1.0.6"
+        master: "false"
+        worker: "true"
+        cluster: "false"
+        reCreate: "false"
+        leader: "true"
+        oldCluster: "true"
+        threadiness: "1"

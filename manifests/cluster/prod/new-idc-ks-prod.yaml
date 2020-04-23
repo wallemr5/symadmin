@@ -1,0 +1,36 @@
+apiVersion: workload.dmall.com/v1beta1
+kind: Cluster
+metadata:
+  labels:
+    clusterName: idc-ks-prod
+    createdBy: sym-controller
+  name: idc-ks-prod
+  namespace: default
+spec:
+  symNodeName: 10.28.3.246
+  pause: false
+  meta:
+    area: beijing
+    az: BJ
+    id: "1"
+    clusterType: idc
+    clusterIngressHead: idc
+  helmSpec:
+    maxHistory: 5
+    namespace: kube-system
+    overrideImageSpec: registry.cn-hangzhou.aliyuncs.com/google_containers/tiller:v2.13.1
+  apps:
+    - name: sym-ctl
+      repo: dmall
+      namespace: sym-admin
+      chartName: sym-controller
+      chartVersion : 1.0.6
+      values:
+        tag: "v1.0.6"
+        master: "false"
+        worker: "true"
+        cluster: "false"
+        reCreate: "false"
+        leader: "true"
+        oldCluster: "false"
+        threadiness: "1"
