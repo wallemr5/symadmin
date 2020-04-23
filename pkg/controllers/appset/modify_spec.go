@@ -7,7 +7,6 @@ import (
 	workloadv1beta1 "gitlab.dmall.com/arch/sym-admin/pkg/apis/workload/v1beta1"
 	"gitlab.dmall.com/arch/sym-admin/pkg/customctrl"
 	k8smanager "gitlab.dmall.com/arch/sym-admin/pkg/k8s/manager"
-	"gitlab.dmall.com/arch/sym-admin/pkg/labels"
 	"gitlab.dmall.com/arch/sym-admin/pkg/utils"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/equality"
@@ -50,10 +49,9 @@ func buildAdvDeployment(app *workloadv1beta1.AppSet, clusterTopology *workloadv1
 
 	obj := &workloadv1beta1.AdvDeployment{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:       app.Name,
-			Namespace:  app.Namespace,
-			Labels:     makeAdvDeploymentLabel(clusterTopology, app),
-			Finalizers: []string{labels.ControllerFinalizersName},
+			Name:      app.Name,
+			Namespace: app.Namespace,
+			Labels:    makeAdvDeploymentLabel(clusterTopology, app),
 		},
 	}
 

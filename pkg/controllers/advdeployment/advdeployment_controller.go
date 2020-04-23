@@ -181,7 +181,7 @@ func (r *AdvDeploymentReconciler) Reconcile(req ctrl.Request) (ctrl.Result, erro
 	}
 
 	if !advDeploy.ObjectMeta.DeletionTimestamp.IsZero() {
-		return reconcile.Result{}, r.RemoveFinalizers(ctx, req)
+		return reconcile.Result{}, r.RemoveFinalizers(ctx, req, advDeploy)
 	}
 
 	if err := r.DeployTypeCheck(advDeploy); err != nil {

@@ -9,7 +9,6 @@ import (
 	"gitlab.dmall.com/arch/sym-admin/pkg/labels"
 	"gitlab.dmall.com/arch/sym-admin/pkg/utils"
 	corev1 "k8s.io/api/core/v1"
-	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	hapirelease "k8s.io/helm/pkg/proto/hapi/release"
 	rls "k8s.io/helm/pkg/proto/hapi/services"
 	"k8s.io/klog"
@@ -17,19 +16,7 @@ import (
 )
 
 // RemoveFinalizers remove the sym-admin's finalizer from the entry list.
-func (r *AdvDeploymentReconciler) RemoveFinalizers(ctx context.Context, req ctrl.Request) error {
-	obj := &workloadv1beta1.AdvDeployment{}
-	err := r.Client.Get(ctx, req.NamespacedName, obj)
-	if err != nil {
-		if apierrors.IsNotFound(err) {
-			klog.V(3).Infof("Can not find any advDeploy with name %s, ignore it.", req.NamespacedName)
-			return nil
-		}
-
-		klog.Errorf("failed to get AdvDeployment, err: %v", err)
-		return err
-	}
-
+func (r *AdvDeploymentReconciler) RemoveFinalizers(ctx context.Context, req ctrl.Request, obj *workloadv1beta1.AdvDeployment) error {
 	if utils.ContainsString(obj.ObjectMeta.Finalizers, labels.ControllerFinalizersName) {
 		var i int
 		for idx, fz := range obj.ObjectMeta.Finalizers {

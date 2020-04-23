@@ -121,7 +121,7 @@ func (r *AdvDeploymentReconciler) RecalculateStatus(ctx context.Context, advDepl
 			if err == nil {
 				err := r.Client.Update(ctx, svc)
 				if err != nil {
-					klog.Errorf("name: %s Update svc err: %#v", advDeploy.Name, err)
+					klog.Errorf("name [%s] update svc Owner err: %#v", advDeploy.Name, err)
 				}
 			}
 		}
@@ -130,7 +130,7 @@ func (r *AdvDeploymentReconciler) RecalculateStatus(ctx context.Context, advDepl
 	if len(deploys) == 0 {
 		statefulSets, err = r.GetStatefulSetByLabels(ctx, advDeploy)
 		if err != nil {
-			return nil, false, errors.Wrapf(err, "Find all relative statefulSet with application name [%s] has an error", advDeploy.Name)
+			return nil, false, errors.Wrapf(err, "name [%s] get statefulset by label", advDeploy.Name)
 		}
 	}
 
@@ -144,7 +144,7 @@ func (r *AdvDeploymentReconciler) RecalculateStatus(ctx context.Context, advDepl
 			if err == nil {
 				err := r.Client.Update(ctx, deploy)
 				if err != nil {
-					klog.Errorf("name: %s Update deploy: %s err: %#v", advDeploy.Name, deploy.Name, err)
+					klog.Errorf("name [%s] update deploy [%s] Owner err: %#v", advDeploy.Name, deploy.Name, err)
 				}
 			}
 		}
