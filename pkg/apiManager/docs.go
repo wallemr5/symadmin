@@ -191,6 +191,18 @@ e.g. <br/>
 <a href="/api/cluster/all/namespace/default/pods/all/event">/api/cluster/all/namespace/default/pods/all/event</a><br/>
 `
 
+// GetWarningEventsDesc ...
+var GetWarningEventsDesc = `
+Get warning events of pods and advdeployment. <br/>
+name: url param, the unique cluster name and all. <br/>
+namespace: url param, namespace name <br/>
+appName: query param, the unique app name. <br/>
+group: query string, the unique group name. <br/>
+<br/>
+e.g. <br/>
+<a href="/api/cluster/all/namespace/default/events/warning?appName=aabb&group=blue">/api/cluster/all/namespace/default/events/warning?appName=aabb&group=blue</a><br/>
+`
+
 // GetFilesDesc ...
 var GetFilesDesc = `
 Get the file list of the specified directory. <br/>

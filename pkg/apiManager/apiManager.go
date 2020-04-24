@@ -280,6 +280,12 @@ func (m *APIManager) Routes() []*router.Route {
 		},
 		{
 			Method:  "GET",
+			Path:    "/api/cluster/:name/namespace/:namespace/events/warning",
+			Handler: m.GetWarningEvents,
+			Desc:    GetWarningEventsDesc,
+		},
+		{
+			Method:  "GET",
 			Path:    "/api/pod/logfiles",
 			Handler: m.GetFiles,
 			Desc:    GetFilesDesc,
