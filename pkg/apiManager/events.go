@@ -40,8 +40,7 @@ func (m *APIManager) GetWarningEvents(c *gin.Context) {
 		}, adv)
 		if err != nil {
 			klog.Errorf("get advdeployment error: %v", err)
-			AbortHTTPError(c, GetPodError, "", err)
-			return
+			continue
 		}
 		advList = append(advList, adv)
 	}

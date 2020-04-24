@@ -23,9 +23,9 @@ spec:
       repo: dmall
       namespace: sym-admin
       chartName: sym-controller
-      chartVersion : 1.0.6
+      chartVersion : 1.0.7
       values:
-        tag: "v1.0.6"
+        tag: "v1.0.7"
         master: "false"
         worker: "true"
         cluster: "false"
