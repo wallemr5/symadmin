@@ -2,6 +2,7 @@ package apiManager
 
 import (
 	"context"
+	"errors"
 	"net/http"
 
 	"github.com/gin-gonic/gin"
@@ -16,20 +17,23 @@ import (
 func (m *APIManager) GetWarningEvents(c *gin.Context) {
 	clusterName := c.Param("name")
 	namespace := c.Param("namespace")
-	appName := c.DefaultQuery("appName", "all")
-	group := c.DefaultQuery("group", "")
+	appName, ok := c.GetQuery("appName")
+	if !ok {
+		AbortHTTPError(c, ParamInvalidError, "", errors.New("can not get appName"))
+		return
+	}
+	group, ok := c.GetQuery("group")
+	if !ok {
+		AbortHTTPError(c, ParamInvalidError, "", errors.New("can not get group"))
+		return
+	}
+
 	clusters := m.K8sMgr.GetAll(clusterName)
-
-	options := make(map[string]string)
-	if group != "" {
-		options["sym-group"] = group
-	}
-	if appName != "all" {
-		options["app"] = appName
-	}
-
 	podOptions := &client.ListOptions{Namespace: namespace}
-	podOptions.MatchingLabels(options)
+	podOptions.MatchingLabels(map[string]string{
+		"app":       appName,
+		"sym-group": group,
+	})
 	podList, err := m.Cluster.GetPods(podOptions, clusterName)
 	if err != nil {
 		klog.Error(err, "failed to get pod list")
