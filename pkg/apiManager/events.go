@@ -40,6 +40,10 @@ func (m *APIManager) GetWarningEvents(c *gin.Context) {
 		AbortHTTPError(c, GetPodError, "", err)
 		return
 	}
+	podMap := make(map[string]*corev1.Pod)
+	for _, s := range podList {
+		podMap[s.Name] = s
+	}
 
 	result := []*model.Event{}
 	for _, cluster := range clusters {
@@ -83,11 +87,14 @@ func (m *APIManager) GetWarningEvents(c *gin.Context) {
 				result = append(result, item)
 				continue
 			}
-			if event.InvolvedObject.Kind == "Pod" &&
-				isEventBelongPod(podList, event.InvolvedObject.Name) {
-				for _, e := range result {
-					if e.ObjectKind == "Pod" {
+
+			_, ok := podMap[event.InvolvedObject.Name]
+			if event.InvolvedObject.Kind == "Pod" && ok {
+				for i, e := range result {
+					if e.ObjectKind == "Pod" && e.Count >= event.Count {
 						continue EventLoop
+					} else if e.ObjectKind == "Pod" && e.Count < event.Count {
+						result = append(result[:i], result[i+1:]...)
 					}
 				}
 				item := &model.Event{
@@ -112,13 +119,4 @@ func (m *APIManager) GetWarningEvents(c *gin.Context) {
 		"message":   nil,
 		"resultMap": gin.H{"events": result},
 	})
-}
-
-func isEventBelongPod(podList []*corev1.Pod, podName string) bool {
-	for _, pod := range podList {
-		if pod.GetName() == podName {
-			return true
-		}
-	}
-	return false
 }
