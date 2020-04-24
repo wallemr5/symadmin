@@ -7,8 +7,10 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"gitlab.dmall.com/arch/sym-admin/pkg/apiManager/model"
+	workloadv1beta1 "gitlab.dmall.com/arch/sym-admin/pkg/apis/workload/v1beta1"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
+	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/klog"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
@@ -29,6 +31,27 @@ func (m *APIManager) GetWarningEvents(c *gin.Context) {
 	}
 
 	clusters := m.K8sMgr.GetAll(clusterName)
+	for _, cluster := range clusters {
+		as := &workloadv1beta1.AppSet{}
+		err := cluster.Client.Get(context.TODO(), types.NamespacedName{
+			Namespace: namespace,
+			Name:      appName,
+		}, as)
+		if err != nil {
+			klog.Errorf("get appset error: %v", err)
+			AbortHTTPError(c, GetPodError, "", err)
+			return
+		}
+		if as.Status.AggrStatus.Status == workloadv1beta1.AppStatusRuning {
+			c.IndentedJSON(http.StatusOK, gin.H{
+				"success":   true,
+				"message":   nil,
+				"resultMap": gin.H{"events": []*model.Event{}},
+			})
+			return
+		}
+	}
+
 	podOptions := &client.ListOptions{Namespace: namespace}
 	podOptions.MatchingLabels(map[string]string{
 		"app":       appName,
