@@ -31,25 +31,35 @@ func (m *APIManager) GetWarningEvents(c *gin.Context) {
 	}
 
 	clusters := m.K8sMgr.GetAll(clusterName)
+	advList := []*workloadv1beta1.AdvDeployment{}
 	for _, cluster := range clusters {
-		as := &workloadv1beta1.AppSet{}
+		adv := &workloadv1beta1.AdvDeployment{}
 		err := cluster.Client.Get(context.TODO(), types.NamespacedName{
 			Namespace: namespace,
 			Name:      appName,
-		}, as)
+		}, adv)
 		if err != nil {
-			klog.Errorf("get appset error: %v", err)
+			klog.Errorf("get advdeployment error: %v", err)
 			AbortHTTPError(c, GetPodError, "", err)
 			return
 		}
-		if as.Status.AggrStatus.Status == workloadv1beta1.AppStatusRuning {
-			c.IndentedJSON(http.StatusOK, gin.H{
-				"success":   true,
-				"message":   nil,
-				"resultMap": gin.H{"events": []*model.Event{}},
-			})
-			return
+		advList = append(advList, adv)
+	}
+
+	runningCount := 0
+	for _, adv := range advList {
+		if adv.Status.AggrStatus.Status == workloadv1beta1.AppStatusRuning {
+			runningCount++
 		}
+	}
+
+	if runningCount == len(advList) {
+		c.IndentedJSON(http.StatusOK, gin.H{
+			"success":   true,
+			"message":   nil,
+			"resultMap": gin.H{"events": []*model.Event{}},
+		})
+		return
 	}
 
 	podOptions := &client.ListOptions{Namespace: namespace}
