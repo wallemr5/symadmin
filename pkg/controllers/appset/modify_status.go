@@ -96,7 +96,8 @@ func buildAppSetStatus(ctx context.Context, dksManger *k8smanager.ClusterManager
 	if changeObserved {
 		as.ObservedGeneration = app.ObjectMeta.Generation
 	} else {
-		as.ObservedGeneration = app.Status.ObservedGeneration
+		//minus 1 to case previous fetch cached adv which may cause dirty data in this ObservedGeneration
+		as.ObservedGeneration = app.ObjectMeta.Generation - 1
 	}
 
 	return as, nil
@@ -105,7 +106,7 @@ func buildAppSetStatus(ctx context.Context, dksManger *k8smanager.ClusterManager
 func (r *AppSetReconciler) applyStatus(ctx context.Context, req customctrl.CustomRequest, app *workloadv1beta1.AppSet, as *workloadv1beta1.AppSetStatus) (isChange bool, err error) {
 	var change bool
 	if app.Status.ObservedGeneration != as.ObservedGeneration {
-		app.Status.ObservedGeneration = app.ObjectMeta.Generation
+		app.Status.ObservedGeneration = as.ObservedGeneration
 		change = true
 	}
 
