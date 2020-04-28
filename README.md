@@ -228,6 +228,8 @@ conventional-changelog -p angular -i CHANGELOG.md -s -p
 
 ## 开发、测试集群整理
 
+规范开发、测试环境集群，文件链接：[kubeconfig.yaml](./manifests/kubeconfig.yaml)
+
 | kubeconfig 编码         | 环境      | 集群说明                   | 腾讯云编码   |      hosts ip | 备注 |
 |-------------------------|-----------|----------------------------|--------------|---------------|------|
 | DEV-TCC-BJ5-MONIT-01    | 开发/生产 | 老薛监控集群，可作为开发   | cls-89a4hpb3 | 10.13.135.251 |      |
