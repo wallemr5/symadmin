@@ -40,7 +40,9 @@ spec:
           - "--debug"
           {{- end }}
           {{- if .Values.image.leader }}
-          - "--enable-leader"
+          - "--enable-leader=true"
+          {{- else }}
+          - "--enable-leader=false"
           {{- end }}
           {{- if .Values.image.oldCluster | default false }}
           - "--enable-oldCluster"
