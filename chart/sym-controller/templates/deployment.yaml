@@ -70,6 +70,7 @@ spec:
             periodSeconds: 30
           resources:
             {{- toYaml .Values.resources | nindent 12 }}
+      imagePullSecrets: tencenthubkey
       serviceAccountName: {{ .Values.rbac.name }}
       {{- with .Values.nodeSelector }}
       nodeSelector:
