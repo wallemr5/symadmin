@@ -23,7 +23,7 @@ spec:
       repo: dmall
       namespace: sym-admin
       chartName: sym-controller
-      chartVersion : 1.0.7
+      chartVersion : 1.0.12
       values:
         tag: "v1.0.7"
         master: "false"
