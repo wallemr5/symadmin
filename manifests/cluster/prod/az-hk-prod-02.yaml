@@ -1,0 +1,44 @@
+apiVersion: workload.dmall.com/v1beta1
+kind: Cluster
+metadata:
+  labels:
+    clusterName: az-hk-prod-02
+    createdBy: sym-controller
+  name: az-hk-prod-02
+  namespace: default
+spec:
+  symNodeName: aks-v16c128g-16534360-vmss000003
+  pause: false
+  meta:
+    area: hongkong
+    az: HK
+    id: "2"
+    clusterType: az
+    clusterIngressHead: az
+  helmSpec:
+    maxHistory: 5
+    namespace: kube-system
+    overrideImageSpec: gcr.io/kubernetes-helm/tiller:v2.13.1
+  apps:
+    - name: sym-ctl
+      repo: dmall
+      namespace: sym-admin
+      chartName: sym-controller
+      chartVersion : 1.0.13
+      values:
+        tag: "v1.0.7"
+        master: "true"
+        worker: "true"
+        cluster: "false"
+        reCreate: "false"
+        leader: "true"
+        oldCluster: "false"
+        threadiness: "1"
+    - name: sym-api
+      repo: dmall
+      namespace: sym-admin
+      chartName: sym-api
+      chartVersion: 1.0.13
+      values:
+        hosts: api.sym.inner-dmall.com.hk
+        tag: "v1.0.7"
