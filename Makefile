@@ -1,6 +1,6 @@
 VERSION ?= v1.0.7
 # Image URL to use all building/pushing image targets
-IMG_REG ?= hub.dmall.com/symcn
+IMG_REG ?= symcn.tencentcloudcr.com/symcn
 IMG_CTL := $(IMG_REG)/sym-admin-controller
 IMG_API := $(IMG_REG)/sym-admin-api
 # Produce CRDs that work back to Kubernetes 1.11 (no version conversion)
