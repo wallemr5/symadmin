@@ -227,7 +227,7 @@ func (r *AdvDeploymentReconciler) ApplyResources(ctx context.Context, advDeploy 
 			if !ok {
 				return nil, isChanged, fmt.Errorf("Convert Failed kind: %s Name: %s/%s ", obj.Kind, obj.Namespace, obj.Name)
 			}
-			ownerRes = append(ownerRes, GetFormattedName(ServiceKind, sta))
+			ownerRes = append(ownerRes, GetFormattedName(StatefulSetKind, sta))
 			change, err := resources.Reconcile(ctx, r.Client, sta, resources.DesiredStatePresent, r.Opt.Debug)
 			if err != nil {
 				klog.Errorf("statefulset name: %s err: %v", sta.Name, err)
