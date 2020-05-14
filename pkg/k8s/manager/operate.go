@@ -24,6 +24,7 @@ type BaseCluster interface {
 	GetPods(opts *client.ListOptions, clusterNames ...string) ([]*corev1.Pod, error)
 	GetNodes(opts *client.ListOptions, clusterNames ...string) ([]*corev1.Node, error)
 	GetDeployment(opts *client.ListOptions, clusterNames ...string) ([]*appv1.Deployment, error)
+	GetStatefulsets(opts *client.ListOptions, clusternames ...string) ([]*appv1.StatefulSet, error)
 	GetService(opts *client.ListOptions, clusterNames ...string) ([]*corev1.Service, error)
 	GetEndpoints(opts *client.ListOptions, clusterNames ...string) ([]*corev1.Endpoints, error)
 	GetEvent(opts *client.ListOptions, clusterNames ...string) ([]*corev1.Event, error)
@@ -132,6 +133,29 @@ func (m *ClusterManager) GetDeployment(opts *client.ListOptions, clusterNames ..
 		for i := range deployList.Items {
 			deploy := &deployList.Items[i]
 			result = append(result, deploy)
+		}
+	}
+	return result, nil
+}
+
+// GetStatefulsets ...
+func (m *ClusterManager) GetStatefulsets(opts *client.ListOptions, clusterNames ...string) ([]*appv1.StatefulSet, error) {
+	clusters := m.GetAll(clusterNames...)
+	ctx := context.Background()
+	result := make([]*appv1.StatefulSet, 0)
+
+	for _, cluster := range clusters {
+		staList := &appv1.StatefulSetList{}
+		err := cluster.Client.List(ctx, opts, staList)
+		if err != nil {
+			if apierrors.IsNotFound(err) {
+				continue
+			}
+			return nil, err
+		}
+		for i := range staList.Items {
+			sta := &staList.Items[i]
+			result = append(result, sta)
 		}
 	}
 	return result, nil

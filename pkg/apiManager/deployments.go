@@ -129,12 +129,32 @@ func (m *APIManager) GetDeploymentsStat(c *gin.Context) {
 	}
 
 	var desired, updated, ready, available, unavailable int32
-	for _, deployment := range deployments {
-		desired += *deployment.DesiredReplicas
-		updated += deployment.UpdatedReplicas
-		ready += deployment.ReadyReplicas
-		available += deployment.AvailableReplicas
-		unavailable += deployment.UnavailableReplicas
+	if len(deployments) == 0 {
+		stas, err := m.getStatefulset(clusterName, namespace, appName, group, zone, ldcLabel)
+		if err != nil {
+			klog.Errorf("failed to get statefulsets: %v", err)
+			c.IndentedJSON(http.StatusBadRequest, gin.H{
+				"success":   false,
+				"message":   err.Error(),
+				"resultMap": nil,
+			})
+			return
+		}
+		for _, sta := range stas {
+			desired += *sta.DesiredReplicas
+			updated += sta.UpdatedReplicas
+			ready += sta.ReadyReplicas
+			available += sta.AvailableReplicas
+			unavailable += sta.UnavailableReplicas
+		}
+	} else {
+		for _, deployment := range deployments {
+			desired += *deployment.DesiredReplicas
+			updated += deployment.UpdatedReplicas
+			ready += deployment.ReadyReplicas
+			available += deployment.AvailableReplicas
+			unavailable += deployment.UnavailableReplicas
+		}
 	}
 
 	result := model.DeploymentStatInfo{
@@ -193,6 +213,56 @@ func (m *APIManager) getDeployments(clusterName, namespace, appName, group, zone
 			UnavailableReplicas: deploy.Status.UnavailableReplicas,
 			Group:               deploy.Labels["sym-group"],
 			Selector:            deploy.Spec.Selector,
+		}
+		result = append(result, &info)
+	}
+
+	sort.Slice(result, func(i, j int) bool {
+		return result[i].Name < result[j].Name
+	})
+	return result, nil
+}
+
+func (m *APIManager) getStatefulset(clusterName, namespace, appName, group, zone, ldcLabel string) ([]*model.DeploymentInfo, error) {
+	result := make([]*model.DeploymentInfo, 0)
+
+	listOptions := &client.ListOptions{Namespace: namespace}
+	options := make(map[string]string)
+	if group != "" {
+		options["sym-group"] = group
+	}
+	if zone != "" {
+		options["sym-zone"] = zone
+	}
+	if ldcLabel != "" {
+		options["sym-ldc"] = ldcLabel
+	}
+	if appName != "all" {
+		options["app"] = appName
+	}
+
+	listOptions.MatchingLabels(options)
+	stas, err := m.Cluster.GetStatefulsets(listOptions, clusterName)
+	if err != nil {
+		klog.Errorf("failed to get statefulsets: %v", err)
+		return nil, err
+	}
+
+	for _, sta := range stas {
+		info := model.DeploymentInfo{
+			Name:                sta.Name,
+			ClusterCode:         sta.Labels["sym-cluster-info"],
+			Annotations:         sta.Annotations,
+			Labels:              sta.Labels,
+			StartTime:           sta.CreationTimestamp.Format("2006-01-02 15:04:05"),
+			NameSpace:           sta.Namespace,
+			DesiredReplicas:     sta.Spec.Replicas,
+			UpdatedReplicas:     sta.Status.UpdatedReplicas,
+			ReadyReplicas:       sta.Status.ReadyReplicas,
+			AvailableReplicas:   sta.Status.ReadyReplicas,
+			UnavailableReplicas: 0,
+			Group:               sta.Labels["sym-group"],
+			Selector:            sta.Spec.Selector,
 		}
 		result = append(result, &info)
 	}
