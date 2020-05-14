@@ -77,7 +77,7 @@ func DefaultManagerOption() *ManagerOption {
 		Debug:                   false,
 		Recover:                 false,
 		Repos: map[string]string{
-			"dmall": "http://chartmuseum.dmall.com",
+			"dmall": "https://kubernetes-charts.storage.googleapis.com",
 		},
 	}
 }
