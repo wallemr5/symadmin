@@ -37,6 +37,7 @@ func (m *APIManager) GetClusterResource(c *gin.Context) {
 	group := c.DefaultQuery("group", "")
 	zone := c.DefaultQuery("symZone", "")
 
+	var deployments []*model.DeploymentInfo
 	deployments, err := m.getDeployments(clusterName, namespace, appName, group, zone, ldcLabel)
 	if err != nil {
 		c.IndentedJSON(http.StatusBadRequest, gin.H{
@@ -45,6 +46,17 @@ func (m *APIManager) GetClusterResource(c *gin.Context) {
 			"resultMap": nil,
 		})
 		return
+	}
+	if len(deployments) == 0 {
+		deployments, err = m.getStatefulset(clusterName, namespace, appName, group, zone, ldcLabel)
+		if err != nil {
+			c.IndentedJSON(http.StatusBadRequest, gin.H{
+				"success":   false,
+				"message":   err.Error(),
+				"resultMap": nil,
+			})
+			return
+		}
 	}
 
 	pods, err := m.getPodListByAppName(clusterName, namespace, appName, group, zone, ldcLabel)
