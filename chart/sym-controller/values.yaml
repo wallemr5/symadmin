@@ -6,7 +6,7 @@ replicaCount: 1
 
 image:
   repository: symcn.tencentcloudcr.com/symcn/sym-admin-controller
-  tag: v1.0.7-df
+  tag: v1.0.8
   pullPolicy: IfNotPresent
   logLevel: 4
   master: false

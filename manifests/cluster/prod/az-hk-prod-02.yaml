@@ -24,9 +24,9 @@ spec:
       repo: dmall
       namespace: sym-admin
       chartName: sym-controller
-      chartVersion : 1.0.14
+      chartVersion : 1.0.15
       values:
-        tag: "v1.0.7-df"
+        tag: "v1.0.8"
         master: "true"
         worker: "true"
         cluster: "false"
@@ -39,7 +39,7 @@ spec:
       repo: dmall
       namespace: sym-admin
       chartName: sym-api
-      chartVersion: 1.0.14
+      chartVersion: 1.0.15
       values:
         hosts: api.sym.inner-dmall.com.hk
-        tag: "v1.0.7-df"
+        tag: "v1.0.8"
