@@ -108,6 +108,7 @@ func NewControllerCmd(cli *DksCli) *cobra.Command {
 		"Enable leader election for controller manager. Enabling this will ensure there is only one active controller manager.")
 	cmd.PersistentFlags().StringVar(&opt.LeaderElectionNamespace, "leader-namespaces", opt.LeaderElectionNamespace,
 		"the LeaderElectionNamespace is only one active controller manager.")
+	cmd.PersistentFlags().StringVar(&opt.DmallChartRepo, "charts-repo", opt.DmallChartRepo, "the dmall charts repo URL")
 	cmd.PersistentFlags().BoolVar(&opt.GinLogEnabled, "enable-ginlog", opt.GinLogEnabled, "Enabled will open gin run log.")
 	cmd.PersistentFlags().BoolVar(&opt.PprofEnabled, "enable-pprof", opt.PprofEnabled, "Enabled will open endpoint for go pprof.")
 	cmd.PersistentFlags().BoolVar(&opt.MasterEnabled, "enable-master", opt.MasterEnabled, "Enable master controller")

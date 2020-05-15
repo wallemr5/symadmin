@@ -16,6 +16,7 @@ image:
   leader: true
   oldCluster: false
   threadiness: 1
+  repos: "http://chartmuseum.dmall.com"
 
 nameOverride: ""
 fullnameOverride: ""

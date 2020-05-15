@@ -35,6 +35,7 @@ type ManagerOption struct {
 	ResyncPeriod       time.Duration
 	Features           []string
 	Repos              map[string]string
+	DmallChartRepo     string
 
 	// use expose /metrics, /read, /live, /pprof.
 	HTTPAddr                string
@@ -76,8 +77,9 @@ func DefaultManagerOption() *ManagerOption {
 		OldCluster:              false,
 		Debug:                   false,
 		Recover:                 false,
+		DmallChartRepo:          "",
 		Repos: map[string]string{
-			"dmall": "https://kubernetes-charts.storage.googleapis.com",
+			"dmall": "http://chartmuseum.dmall.com",
 		},
 	}
 }
@@ -101,6 +103,9 @@ func NewDksManager(cli k8smanager.MasterClient, opt *ManagerOption, componentNam
 	rt.AddRoutes("index", rt.DefaultRoutes())
 	rt.AddRoutes("health", healthHandler.Routes())
 	// rt.AddRoutes("cluster", mgr.Routes())
+	if opt.DmallChartRepo != "" {
+		opt.Repos["dmall"] = opt.DmallChartRepo
+	}
 
 	dksMgr := &DksManager{
 		Opt:           opt,

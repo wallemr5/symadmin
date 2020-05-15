@@ -39,6 +39,10 @@ spec:
           {{- if .Values.image.reCreate | default false }}
           - "--debug"
           {{- end }}
+          {{- if .Values.image.repos}}
+          - "--charts-repo"
+          - {{ .Values.image.repos | quote | default "http://chartmuseum.dmall.com" }}
+          {{- end }}
           {{- if .Values.image.leader }}
           - "--enable-leader=true"
           {{- else }}

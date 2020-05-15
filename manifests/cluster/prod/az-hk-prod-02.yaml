@@ -34,6 +34,7 @@ spec:
         leader: "true"
         oldCluster: "false"
         threadiness: "1"
+        repos: "https://kubernetes-charts.storage.googleapis.com"
     - name: sym-api
       repo: dmall
       namespace: sym-admin

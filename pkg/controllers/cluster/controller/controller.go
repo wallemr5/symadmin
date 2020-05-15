@@ -196,6 +196,9 @@ func makeOverrideSymCtl(app *workloadv1beta1.HelmChartSpec) map[string]interface
 	if v, ok := app.Values["threadiness"]; ok {
 		image["threadiness"] = v
 	}
+	if v, ok := app.Values["repos"]; ok {
+		image["repos"] = v
+	}
 	if v, ok := app.Values["tag"]; ok {
 		image["tag"] = v
 	}
