@@ -239,5 +239,5 @@ conventional-changelog -p angular -i CHANGELOG.md -s -p
 | test-tke-gz-bj5-bus-01 | 测试      | 业务测试单元化北京 GZ 集群 | cls-otdyiqyb |  10.16.247.78 |                  |
 | test-tke-rz-bj5-bus-01 | 测试      | 业务测试单元化北京 RZ 集群 | cls-h5f02nmb |  10.16.247.11 |                  |
 | test-tke-rz-cd-bus-01  | 测试      | 业务测试单元化成都 RZ 集群 | cls-3yclxq8t |  10.16.113.12 |                  |
-| test-tke-gz-bj5-glb    | 测试      | 业务测试单元化北京 GZ 集群 | cls-2ylraskd |  10.248.227.7 | 高老板测试用     |
-| test-tke-rz-cd-glb     | 测试      | 业务测试单元化成都 RZ 集群 | cls-ehx4vson | 10.248.227.74 | 高老板测试用     |
+| dev-tke-gz-bj5-glb     | 开发      | 业务开发集群 GZ            | cls-2ylraskd |  10.248.227.7 | 高老板测试用     |
+| dev-tke-rz-cd-glb      | 开发      | 业务开发集群 RZ            | cls-ehx4vson | 10.248.227.74 | 高老板测试用     |

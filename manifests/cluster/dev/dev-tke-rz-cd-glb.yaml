@@ -2,9 +2,9 @@ apiVersion: workload.dmall.com/v1beta1
 kind: Cluster
 metadata:
   labels:
-    clusterName: test-tke-rz-cd-glb
+    clusterName: dev-tke-rz-cd-glb
     createdBy: sym-controller
-  name: test-tke-rz-cd-glb
+  name: dev-tke-rz-cd-glb
   namespace: default
 spec:
   symNodeName: 10.248.227.69
