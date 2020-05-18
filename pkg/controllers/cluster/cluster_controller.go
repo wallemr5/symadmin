@@ -102,6 +102,11 @@ func Add(mgr manager.Manager, cMgr *pkgmanager.DksManager) error {
 	// 	return err
 	// }
 
+	// poderr := clusterutils.ApplyLauncherPod(cMgr.K8sMgr.KubeCli,"sym-admin", "10.13.135.252", "/web", "/web/1234")
+	// if poderr != nil {
+	// 	klog.Errorf("err: %v", poderr)
+	// }
+
 	helmv2env, err := helmv2.InitHelmRepoEnv("dmall", cMgr.Opt.Repos)
 	if err != nil {
 		klog.Errorf("Initializing a helm env has an error:%v", err)
