@@ -120,6 +120,12 @@ hostAliases:
   - ip: "10.16.70.8"
     hostnames:
       - "cls-glojus0v.ccs.tencent-cloud.com"
+  - ip: "10.248.227.7"
+    hostnames:
+      - "cls-2ylraskd.ccs.tencent-cloud.com"
+  - ip: "10.248.227.74"
+    hostnames:
+      - "cls-ehx4vson.ccs.tencent-cloud.com"
   - ip: "10.13.135.250"
     hostnames:
       - "chartmuseum.dmall.com"
