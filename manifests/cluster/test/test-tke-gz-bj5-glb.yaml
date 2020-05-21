@@ -1,0 +1,51 @@
+apiVersion: workload.dmall.com/v1beta1
+kind: Cluster
+metadata:
+  labels:
+    clusterName: test-tke-gz-bj5-glb
+    createdBy: sym-controller
+  name: test-tke-gz-bj5-glb
+  namespace: default
+spec:
+  symNodeName: 10.248.227.4
+  pause: false
+  meta:
+    area: beijing
+    az: BJ
+    id: "1"
+    clusterType: tke
+    clusterIngressHead: dks-test-glb
+  helmSpec:
+    maxHistory: 5
+    namespace: kube-system
+    overrideImageSpec: registry.cn-hangzhou.aliyuncs.com/google_containers/tiller:v2.13.1
+  apps:
+    - name: metrics-server
+      repo: dmall
+      namespace: monitoring
+    - name: traefik
+      repo: dmall
+      namespace: kube-system
+      chartVersion: 1.86.1
+    - name: sym-api
+      repo: dmall
+      namespace: sym-admin
+      chartName: sym-api
+      chartVersion: 1.0.15
+      values:
+        hosts: testapi-glb.sym.dmall.com
+        tag: "v1.0.8"
+    - name: sym-ctl
+      repo: dmall
+      namespace: sym-admin
+      chartName: sym-controller
+      chartVersion : 1.0.15
+      values:
+        tag: "v1.0.8"
+        master: "true"
+        worker: "true"
+        cluster: "false"
+        reCreate: "true"
+        leader: "true"
+        oldCluster: "false"
+        threadiness: "1"
