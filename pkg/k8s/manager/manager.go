@@ -285,7 +285,7 @@ func (m *ClusterManager) preStart() error {
 		return err
 	}
 
-	klog.Infof("find %d cluster form namespace: %s ls: %v ", len(configmaps), m.Opt.Namespace, m.Opt.LabelSelector)
+	klog.Infof("find %d cluster from namespace: %s ls: %v ", len(configmaps), m.Opt.Namespace, m.Opt.LabelSelector)
 	for _, cm := range configmaps {
 		kubeconfig, ok := convertToKubeconfig(cm)
 		if !ok {
