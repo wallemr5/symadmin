@@ -65,6 +65,9 @@ func buildAdvDeployment(app *workloadv1beta1.AppSet, clusterTopology *workloadv1
 
 	for _, set := range clusterTopology.PodSets {
 		podSet := set.DeepCopy()
+		if len(podSet.RawValues) == 0 && debug {
+			podSet.RawValues = makeHelmOverrideValus(podSet.Name, clusterTopology, app)
+		}
 		obj.Spec.Topology.PodSets = append(obj.Spec.Topology.PodSets, podSet)
 	}
 	return obj

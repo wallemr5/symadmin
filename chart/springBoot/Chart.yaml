@@ -5,8 +5,5 @@ keywords:
   - springBoot
   - app
   - jar
-maintainers:
-  - email: kui.xue@dmall.com
-    name: xk
 name: springBoot
-version: 0.0.2
+version: 0.0.3
