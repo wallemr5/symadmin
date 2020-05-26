@@ -4,13 +4,12 @@ metadata:
   name: bbcc
   namespace: default
 spec:
-  replicas: 10
+  replicas: 8
   podSpec:
     deployType: helm
     chart:
       chartUrl:
         url: dmall/springBoot
-        chartVersion: 0.0.1
   serviceName: inner.bbcc.dmall.com
   updateStrategy:
     upgradeType: canary|blue|green
@@ -21,18 +20,11 @@ spec:
     paused: false
   clusterTopology:
     clusters:
-      - name: tcc-bj4-dks-test-01
+      - name: tcc-bj5-dks-monit-01
         meta:
-          sym-available-zone: bj4
-          sym-cluster-info: tcc-bj4-dks-test-01
+          sym-available-zone: bj5
+          sym-cluster-info: tcc-bj5-dks-monit-01
         podSets:
-          - name: bbcc-gz01b-canary
-            replicas: 1
-            version: v4
-            image: registry.cn-hangzhou.aliyuncs.com/dmall/bbcc
-            meta:
-              sym-group: canary
-              sym-ldc: gz01b
           - name: bbcc-gz01b-blue
             replicas: 2
             version: v3
@@ -52,13 +44,6 @@ spec:
           sym-available-zone: bj5
           sym-cluster-info: tcc-bj5-dks-test-01
         podSets:
-          - name: bbcc-gz01a-canary
-            replicas: 1
-            image: registry.cn-hangzhou.aliyuncs.com/dmall/bbcc
-            version: v4
-            meta:
-              sym-group: canary
-              sym-ldc: gz01a
           - name: bbcc-gz01a-blue
             replicas: 2
             version: v3

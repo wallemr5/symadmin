@@ -2,6 +2,7 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: {{ include "springBoot.fullname" . }}
+  namespace: {{ $.Release.Namespace }}
   labels:
     {{ include "springBoot.labels" . | nindent 4 }}
     {{- if .Values.sym.labels }}
