@@ -230,14 +230,12 @@ conventional-changelog -p angular -i CHANGELOG.md -s -p
 
 规范开发、测试环境集群，文件链接：[kubeconfig.yaml](./manifests/kubeconfig.yaml)
 
-| kubeconfig 编码        | 环境      | 集群说明                   | 腾讯云编码   |      hosts ip | 备注             |
-|------------------------|-----------|----------------------------|--------------|---------------|------------------|
-| dev-tke-bj5-monit-01   | 开发/生产 | 线上监控集群，可作为开发   | cls-89a4hpb3 | 10.13.135.251 | 老薛监控组件集群 |
-| dev-tke-bj5-test-01    | 开发      | 组内开发集群               | cls-7xq1bq9f |  10.13.135.12 |                  |
-| cn-tke-bj5-test-01     | 测试      | 组内云原生北京测试集群     | cls-278pwqet | 10.16.247.131 |                  |
-| cn-tke-cd-test-01      | 测试      | 组内云原生成都测试集群     | cls-97rlivuj |  10.16.113.81 |                  |
-| test-tke-gz-bj5-bus-01 | 测试      | 业务测试单元化北京 GZ 集群 | cls-otdyiqyb |  10.16.247.78 |                  |
-| test-tke-rz-bj5-bus-01 | 测试      | 业务测试单元化北京 RZ 集群 | cls-h5f02nmb |  10.16.247.11 |                  |
-| test-tke-rz-cd-bus-01  | 测试      | 业务测试单元化成都 RZ 集群 | cls-3yclxq8t |  10.16.113.12 |                  |
-| dev-tke-gz-bj5-glb     | 开发      | 业务开发集群 GZ            | cls-2ylraskd |  10.248.227.7 | 高老板测试用     |
-| dev-tke-rz-cd-glb      | 开发      | 业务开发集群 RZ            | cls-ehx4vson | 10.248.227.74 | 高老板测试用     |
+| kubeconfig 编码        | 环境 | 集群说明                   | 腾讯云编码   |      hosts ip | 备注         |
+|------------------------|------|----------------------------|--------------|---------------|--------------|
+| cn-tke-bj5-test-01     | 开发 | 组内云原生北京开发集群     | cls-278pwqet | 10.16.247.131 |              |
+| cn-tke-cd-test-01      | 开发 | 组内云原生成都开发集群     | cls-97rlivuj |  10.16.113.81 |              |
+| test-tke-gz-bj5-bus-01 | 测试 | 业务测试单元化北京 GZ 集群 | cls-otdyiqyb |  10.16.247.78 |              |
+| test-tke-rz-bj5-bus-01 | 测试 | 业务测试单元化北京 RZ 集群 | cls-h5f02nmb |  10.16.247.11 |              |
+| test-tke-rz-cd-bus-01  | 测试 | 业务测试单元化成都 RZ 集群 | cls-3yclxq8t |  10.16.113.12 |              |
+| dev-tke-gz-bj5-glb     | 开发 | 业务开发集群 GZ            | cls-2ylraskd |  10.248.227.7 | 高老板测试用 |
+| dev-tke-rz-cd-glb      | 开发 | 业务开发集群 RZ            | cls-ehx4vson | 10.248.227.74 | 高老板测试用 |
