@@ -143,11 +143,14 @@ func (m *APIManager) GetPodByIP(c *gin.Context) {
 		})
 		return
 	}
-
+	pod := list.Items[0]
 	c.IndentedJSON(http.StatusOK, gin.H{
-		"success":   true,
-		"message":   nil,
-		"resultMap": gin.H{"podName": list.Items[0].Name},
+		"success": true,
+		"message": nil,
+		"resultMap": gin.H{
+			"appName": pod.Labels["app"],
+			"podName": pod.Name,
+		},
 	})
 }
 
