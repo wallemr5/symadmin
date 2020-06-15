@@ -12,6 +12,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/fields"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/klog"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -111,6 +112,42 @@ func (m *APIManager) GetPodEvent(c *gin.Context) {
 		"success":   true,
 		"message":   nil,
 		"resultMap": gin.H{"events": result},
+	})
+}
+
+// GetPodByIP ...
+func (m *APIManager) GetPodByIP(c *gin.Context) {
+	clusterName := c.Param("name")
+	podIP := c.Param("podIP")
+
+	ctx := context.Background()
+	list := &corev1.PodList{}
+
+	clusters := m.K8sMgr.GetAll(clusterName)
+	for _, cluster := range clusters {
+		err := cluster.Client.List(ctx, &client.ListOptions{
+			FieldSelector: fields.SelectorFromSet(fields.Set{"status.podIP": podIP})},
+			list)
+		if err != nil {
+			klog.Errorf("get pod from podIP error: %v", err)
+		}
+		if len(list.Items) > 0 {
+			break
+		}
+	}
+	if len(list.Items) == 0 {
+		c.IndentedJSON(http.StatusOK, gin.H{
+			"success":   true,
+			"message":   "Can't found pod by this IP",
+			"resultMap": gin.H{"podName": ""},
+		})
+		return
+	}
+
+	c.IndentedJSON(http.StatusOK, gin.H{
+		"success":   true,
+		"message":   nil,
+		"resultMap": gin.H{"podName": list.Items[0].Name},
 	})
 }
 
