@@ -315,6 +315,16 @@ func (m *ClusterManager) preStart() error {
 				klog.Infof("cluster[%s] add field index pod spec.nodeName successfully", c.Name)
 			}
 
+			// add field pod ip index must before cache start
+			if err := c.Mgr.GetFieldIndexer().IndexField(&corev1.Pod{}, "status.podIP", func(rawObj runtime.Object) []string {
+				pod := rawObj.(*corev1.Pod)
+				return []string{pod.Status.PodIP}
+			}); err != nil {
+				klog.Warningf("cluster[%s] add field index pod status.podIP, err: %#v", c.Name, err)
+			} else {
+				klog.Infof("cluster[%s] add field index pod status.podIP successfully", c.Name)
+			}
+
 			// add field event pod name index must before cache start
 			if err := c.Mgr.GetFieldIndexer().IndexField(&corev1.Event{}, "podName", func(rawObj runtime.Object) []string {
 				event := rawObj.(*corev1.Event)

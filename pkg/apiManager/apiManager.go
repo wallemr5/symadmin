@@ -196,7 +196,7 @@ func (m *APIManager) Routes() []*router.Route {
 		},
 		{
 			Method:  "GET",
-			Path:    "/api/cluster/all/appPod/IP/:podIP",
+			Path:    "/api/cluster/:name/ip/:podIP",
 			Handler: m.GetPodByIP,
 			Desc:    GetPodByLabelsDesc,
 		},
