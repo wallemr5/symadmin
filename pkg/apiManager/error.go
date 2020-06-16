@@ -41,6 +41,7 @@ const (
 	AddToSchemeError      = 9005
 	CreateHelmClientError = 9006
 	GetHelmReleasesError  = 9007
+	GetConfigMapError     = 9008
 )
 
 // AbortHTTPError ...
