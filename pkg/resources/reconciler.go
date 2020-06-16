@@ -87,6 +87,15 @@ func Reconcile(ctx context.Context, c client.Client, desired runtime.Object, des
 			}
 
 			if isRecreate {
+				metaAccessor := meta.NewAccessor()
+				currentResourceVersion, err := metaAccessor.ResourceVersion(current)
+				if err != nil {
+					klog.Errorf("key[%s] metaAccessor err: %v", key, err)
+					return change, nil
+				}
+
+				metaAccessor.SetResourceVersion(desired, currentResourceVersion)
+				prepareResourceForUpdate(current, desired)
 				if err := c.Update(ctx, desired); err != nil {
 					if apierrors.IsConflict(err) || apierrors.IsInvalid(err) {
 						klog.Infof("resource key[%s] needs to be re-created err: %v", key, err)
@@ -134,7 +143,7 @@ func Reconcile(ctx context.Context, c client.Client, desired runtime.Object, des
 
 				if retryErr != nil {
 					klog.Errorf("key[%s] retryErr: %v", key, retryErr)
-					return change, errors.Errorf("key[%s] only update err, please check", key)
+					return change, errors.Errorf("key[%s] only update err: %v, please check", key, retryErr)
 				}
 				change++
 			}

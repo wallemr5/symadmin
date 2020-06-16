@@ -308,6 +308,11 @@ func (m *APIManager) Routes() []*router.Route {
 			Handler: m.HandleFileLogs,
 			Desc:    HandleFileLogsDesc,
 		},
+		{
+			Method:  "GET",
+			Path:    "/api/cluster/:name/offlineWordloadDeploy",
+			Handler: m.HandleOfflineWordloadDeploy,
+		},
 	}
 
 	routes = append(routes, apiRoutes...)
