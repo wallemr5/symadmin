@@ -47,6 +47,7 @@ type ManagerOption struct {
 	MasterEnabled           bool
 	WorkerEnabled           bool
 	ClusterEnabled          bool
+	OfflinePodEnabled       bool
 	OldCluster              bool
 	Debug                   bool
 	Recover                 bool
@@ -74,6 +75,7 @@ func DefaultManagerOption() *ManagerOption {
 		MasterEnabled:           false,
 		WorkerEnabled:           false,
 		ClusterEnabled:          false,
+		OfflinePodEnabled:       false,
 		OldCluster:              false,
 		Debug:                   false,
 		Recover:                 false,
@@ -112,7 +114,7 @@ func NewDksManager(cli k8smanager.MasterClient, opt *ManagerOption, componentNam
 		Router:        rt,
 		HealthHandler: healthHandler,
 	}
-	if opt.MasterEnabled || opt.ClusterEnabled {
+	if opt.MasterEnabled || opt.ClusterEnabled || opt.OfflinePodEnabled {
 		klog.Info("start init multi cluster manager ... ")
 		kMgr, err := k8smanager.NewManager(cli, k8smanager.DefaultClusterManagerOption(false, labels.GetClusterLs()))
 		if err != nil {

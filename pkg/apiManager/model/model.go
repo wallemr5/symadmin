@@ -1,6 +1,8 @@
 package model
 
 import (
+	"time"
+
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
@@ -153,4 +155,15 @@ type Event struct {
 	LastTime    string `json:"lastTime,omitempty"`
 	Message     string `json:"message,omitempty"`
 	Reason      string `json:"reason,omitempty"`
+}
+
+type OfflinePod struct {
+	Name        string            `json:"name,omitempty"`
+	ClusterName string            `json:"clusterCode,omitempty"`
+	Namespace   string            `json:"namespace,omitempty"`
+	AppName     string            `json:"appName,omitempty"`
+	HostIP      string            `json:"hostIP,omitempty"`
+	PodIP       string            `json:"podIP,omitempty"`
+	Labels      map[string]string `json:"labels,omitempty"`
+	OfflineTime time.Time         `json:"offlineTime,omitempty"`
 }
