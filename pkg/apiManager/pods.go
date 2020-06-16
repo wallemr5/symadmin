@@ -137,9 +137,9 @@ func (m *APIManager) GetPodByIP(c *gin.Context) {
 	}
 	if len(list.Items) == 0 {
 		c.IndentedJSON(http.StatusOK, gin.H{
-			"success":   true,
+			"success":   false,
 			"message":   "Can't found pod by this IP",
-			"resultMap": gin.H{"podName": ""},
+			"resultMap": nil,
 		})
 		return
 	}
