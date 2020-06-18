@@ -9,6 +9,7 @@ import (
 	"io"
 	"math/rand"
 	"net/http"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 	"strconv"
 	"strings"
 	"sync"
@@ -321,6 +322,104 @@ func (m *APIManager) GetFiles(c *gin.Context) {
 			"success":   false,
 		},
 	})
+}
+
+func (m *APIManager) GetOfflineLogTerminal(c *gin.Context) {
+	clusterName := c.Param("name")
+	namespace := "sym-admin"
+
+	tty, _ := strconv.ParseBool(c.DefaultQuery("tty", "true"))
+	isStdin, _ := strconv.ParseBool(c.DefaultQuery("stdin", "true"))
+	isStdout, _ := strconv.ParseBool(c.DefaultQuery("stdout", "true"))
+	isStderr, _ := strconv.ParseBool(c.DefaultQuery("stderr", "true"))
+	once, _ := strconv.ParseBool(c.DefaultQuery("once", "false"))
+
+	var podName, containerName string
+
+	options := make(map[string]string)
+
+	options["app"] = "offline-pod-log"
+
+	hostIP, ok := c.GetQuery("hostIP")
+	if !ok {
+		AbortHTTPError(c, ParamInvalidError, "", errors.New("can not get hostIP"))
+		return
+	}
+
+	offlinePodIP := c.DefaultQuery("offlinePodIP", "")
+	containerID := c.DefaultQuery("containerID", "")
+	projectCode, ok := c.GetQuery("projectCode")
+	if !ok {
+		AbortHTTPError(c, ParamInvalidError, "", errors.New("can not get projectCode"))
+		return
+	}
+
+	appCode, ok := c.GetQuery("appCode")
+	if !ok {
+		AbortHTTPError(c, ParamInvalidError, "", errors.New("can not get appcCode"))
+		return
+	}
+
+	path := fmt.Sprintf("/web/logs/app/%s/%s", projectCode, appCode)
+
+	cluster, err := m.K8sMgr.Get(clusterName)
+	if err != nil {
+		klog.Errorf("get cluster error: %+v", err)
+		AbortHTTPError(c, GetClusterError, "", err)
+		return
+	}
+
+	listOptions := &client.ListOptions{Namespace: namespace}
+	listOptions.MatchingLabels(options)
+
+	podList, err := m.Cluster.GetPods(listOptions, clusterName)
+
+	if err != nil {
+		AbortHTTPError(c, ParamInvalidError, "", errors.New("can not get offlineDepoy"))
+		return
+	}
+	for _, pod := range podList {
+		if hostIP == pod.Status.HostIP {
+			podName = pod.Name
+			containerName = pod.Status.ContainerStatuses[0].Name
+			break
+		}
+	}
+	if podName == "" || containerName == "" {
+		AbortHTTPError(c, GetPodNotGroup, "", errors.New("can not get offlinepod"))
+		return
+	}
+	rand.Seed(time.Now().UnixNano())
+	ws, err := InitWebsocket(c.Writer, c.Request, rand.Uint32())
+	if err != nil {
+		klog.Errorf("init websocket conn error: %+v", err)
+		AbortHTTPError(c, WebsocketError, "", err)
+		return
+	}
+	defer ws.Close()
+	//oldpath /web/logs/app/logback/$appName/$podIP_$containerID/
+	//newpath /web/logs/app/$projectName/$appName/$podIP:$Port
+	if offlinePodIP != "" {
+		if containerID == "" {
+			path = fmt.Sprintf("/web/logs/app/%s/%s/%s*", projectCode, appCode, offlinePodIP)
+		} else {
+			path = fmt.Sprintf("/web/logs/app/logback/%s/%s_%s", appCode, offlinePodIP, containerID)
+		}
+	}
+
+	logshell := fmt.Sprintf("cd %s ;pwd &&/bin/sh", path)
+	cmd := []string{
+		"sh",
+		"-c",
+		logshell,
+	}
+
+	err = startProcess(cluster, namespace, podName, containerName,
+		cmd, isStdin, isStdout, isStderr, tty, once, ws)
+	if err != nil {
+		ws.Write(websocket.BinaryMessage, []byte(err.Error()+". "))
+		ws.closeChan <- 0
+	}
 }
 
 func startProcess(cluster *k8smanager.Cluster, namespace, podName, container string,

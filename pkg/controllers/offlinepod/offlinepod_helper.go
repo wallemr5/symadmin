@@ -103,6 +103,7 @@ func NewOfflinepodReconciler(mgr manager.Manager, cMgr *pkgmanager.DksManager) (
 					Namespace:   pod.Namespace,
 					HostIP:      pod.Status.HostIP,
 					PodIP:       pod.Status.PodIP,
+					ContainerID: pod.Status.ContainerStatuses[0].ContainerID,
 					OfflineTime: time.Now(),
 				})
 			},

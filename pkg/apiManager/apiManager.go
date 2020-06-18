@@ -315,8 +315,18 @@ func (m *APIManager) Routes() []*router.Route {
 		},
 		{
 			Method:  "GET",
+			Path:    "/api/offlinePodAppList/all",
+			Handler: m.GetAllOfflineApp,
+		},
+		{
+			Method:  "GET",
 			Path:    "/api/appname/:appname/offlinepodlist",
 			Handler: m.GetOfflinePods,
+		},
+		{
+			Method:  "GET",
+			Path:    "/api/cluster/:name/offlineWordloadPod/terminal",
+			Handler: m.GetOfflineLogTerminal,
 		},
 	}
 

@@ -164,6 +164,7 @@ type OfflinePod struct {
 	AppName     string            `json:"appName,omitempty"`
 	HostIP      string            `json:"hostIP,omitempty"`
 	PodIP       string            `json:"podIP,omitempty"`
+	ContainerID string            `json:"container_id,omitempty"`
 	Labels      map[string]string `json:"labels,omitempty"`
 	OfflineTime time.Time         `json:"offlineTime,omitempty"`
 }
