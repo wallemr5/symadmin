@@ -128,7 +128,7 @@ echo "Container will exit"
 	for _, cluster := range m.K8sMgr.GetAll() {
 		_, err := resources.Reconcile(context.TODO(), cluster.Client, ds, resources.DesiredStatePresent, true)
 		if err != nil {
-			klog.Errorf("cluster: %s apply err: %v", cluster.Name, err)
+			klog.Errorf("cluster: %s  apply err: %v", cluster.Name, err)
 			AbortHTTPError(c, ParamInvalidError, "", err)
 			return
 		}
