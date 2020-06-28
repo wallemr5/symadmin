@@ -30,7 +30,7 @@ func (m *APIManager) GetAllOfflineApp(c *gin.Context) {
 
 	if err != nil {
 		c.IndentedJSON(GetConfigMapError, gin.H{
-			"sucess":      "false",
+			"success":     "false",
 			"message":     "can not find offlineApp",
 			"offlineApps": nil,
 		})
@@ -40,7 +40,7 @@ func (m *APIManager) GetAllOfflineApp(c *gin.Context) {
 		offlineApp = append(offlineApp, cm.Name)
 	}
 	c.IndentedJSON(http.StatusOK, gin.H{
-		"sucess":      "success",
+		"success":     "success",
 		"message":     nil,
 		"offlineApps": offlineApp,
 	})

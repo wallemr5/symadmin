@@ -310,8 +310,8 @@ func (m *APIManager) Routes() []*router.Route {
 		},
 		{
 			Method:  "GET",
-			Path:    "/api/cluster/:name/offlineWordloadDeploy",
-			Handler: m.HandleOfflineWordloadDeploy,
+			Path:    "/api/cluster/:name/offlineWorkloadDeploy",
+			Handler: m.HandleOfflineWorkloadDeploy,
 		},
 		{
 			Method:  "GET",
@@ -325,7 +325,7 @@ func (m *APIManager) Routes() []*router.Route {
 		},
 		{
 			Method:  "GET",
-			Path:    "/api/cluster/:name/offlineWordloadPod/terminal",
+			Path:    "/api/cluster/:name/offlineWorkloadPod/terminal",
 			Handler: m.GetOfflineLogTerminal,
 		},
 	}

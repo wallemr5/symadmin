@@ -15,15 +15,15 @@ import (
 	"k8s.io/klog"
 )
 
-// HandleOfflineWordloadDeploy get log files in a pod
-func (m *APIManager) HandleOfflineWordloadDeploy(c *gin.Context) {
+// HandleOfflineWorkloadDeploy get log files in a pod
+func (m *APIManager) HandleOfflineWorkloadDeploy(c *gin.Context) {
 	hostPathType := corev1.HostPathDirectory
 	lb := map[string]string{
 		"app": "offline-pod-log",
 	}
 	ds := &appsv1.DaemonSet{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      "offline-wordload-ds",
+			Name:      "offline-workload-ds",
 			Namespace: "sym-admin",
 			Labels:    lb,
 		},
