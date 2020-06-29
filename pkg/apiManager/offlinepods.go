@@ -30,9 +30,9 @@ func (m *APIManager) GetAllOfflineApp(c *gin.Context) {
 
 	if err != nil {
 		c.IndentedJSON(GetConfigMapError, gin.H{
-			"success":     "false",
-			"message":     "can not find offlineApp",
-			"offlineApps": nil,
+			"success":   false,
+			"message":   "can not find offlineApp",
+			"resultMap": nil,
 		})
 		return
 	}
@@ -40,9 +40,11 @@ func (m *APIManager) GetAllOfflineApp(c *gin.Context) {
 		offlineApp = append(offlineApp, cm.Name)
 	}
 	c.IndentedJSON(http.StatusOK, gin.H{
-		"success":     "success",
-		"message":     nil,
-		"offlineApps": offlineApp,
+		"success": true,
+		"message": nil,
+		"resultMap": gin.H{
+			"offlineApps": offlineApp,
+		},
 	})
 }
 
@@ -74,9 +76,9 @@ func (m *APIManager) GetOfflinePods(c *gin.Context) {
 		AbortHTTPError(c, http.StatusNotFound, "", jerr)
 	}
 	//c.IndentedJSON(http.StatusOK, apps)
-	c.IndentedJSON(http.StatusBadRequest, gin.H{
-		"success": false,
-		"message": err.Error(),
+	c.IndentedJSON(http.StatusOK, gin.H{
+		"success": true,
+		"message": nil,
 		"resultMap": gin.H{
 			"info": apps,
 		},
