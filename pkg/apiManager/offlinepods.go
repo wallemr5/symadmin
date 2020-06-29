@@ -74,6 +74,7 @@ func (m *APIManager) GetOfflinePods(c *gin.Context) {
 	if jerr != nil {
 		klog.Errorf("failed to Unmarshal err: %v", jerr)
 		AbortHTTPError(c, http.StatusNotFound, "", jerr)
+		return
 	}
 	//c.IndentedJSON(http.StatusOK, apps)
 	c.IndentedJSON(http.StatusOK, gin.H{
