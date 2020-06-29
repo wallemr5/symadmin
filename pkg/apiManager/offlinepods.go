@@ -78,8 +78,7 @@ func (m *APIManager) GetOfflinePods(c *gin.Context) {
 		"success": false,
 		"message": err.Error(),
 		"resultMap": gin.H{
-			"path":   apps,
-			"applog": "",
+			"info": apps,
 		},
 	})
 
