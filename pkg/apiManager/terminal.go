@@ -407,7 +407,7 @@ func (m *APIManager) GetOfflineLogTerminal(c *gin.Context) {
 		}
 	}
 
-	logshell := fmt.Sprintf("cd %s ;pwd &&/bin/sh", path)
+	logshell := fmt.Sprintf("cd %s ;pwd &&/bin/bash", path)
 	cmd := []string{
 		"sh",
 		"-c",
