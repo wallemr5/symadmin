@@ -13,12 +13,14 @@ import (
 	"time"
 
 	"gitlab.dmall.com/arch/sym-admin/pkg/apiManager/model"
+	workloadv1beta1 "gitlab.dmall.com/arch/sym-admin/pkg/apis/workload/v1beta1"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/equality"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/klog"
+	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 )
 
 func Add(mgr manager.Manager, cMgr *pkgmanager.DksManager) error {
@@ -47,6 +49,8 @@ func (c *offlinepodImpl) reconciler(ctx context.Context, pod *model.OfflinePod) 
 		return nil
 	}
 
+	key := fmt.Sprintf("%s/%s", pod.Namespace, pod.AppName)
+	logger := c.Log.WithValues("key", key)
 	startTime := time.Now()
 	defer func() {
 		diffTime := time.Since(startTime)
@@ -61,9 +65,24 @@ func (c *offlinepodImpl) reconciler(ctx context.Context, pod *model.OfflinePod) 
 		klog.V(logLevel).Infof("##### [%s] reconciling is finished. time taken: %v. ", pod.Name, diffTime)
 	}()
 
-	aggrCm := &corev1.ConfigMap{}
+	advDeploy := &workloadv1beta1.AdvDeployment{}
 	err := c.Client.Get(ctx, types.NamespacedName{
-		Namespace: c.ObvNs,
+		Namespace: pod.Namespace,
+		Name:      pod.AppName,
+	}, advDeploy)
+	if err != nil {
+		if apierrors.IsNotFound(err) {
+			logger.Info("Can't find advDeploy")
+			return nil
+		}
+
+		logger.Error(err, "failed to get AdvDeployment")
+		return err
+	}
+
+	aggrCm := &corev1.ConfigMap{}
+	err = c.Client.Get(ctx, types.NamespacedName{
+		Namespace: pod.Namespace,
 		Name:      pod.AppName,
 	}, aggrCm)
 	if err != nil {
@@ -72,18 +91,25 @@ func (c *offlinepodImpl) reconciler(ctx context.Context, pod *model.OfflinePod) 
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      pod.AppName,
 					Labels:    GetConfigMapLabels(),
-					Namespace: c.ObvNs,
+					Namespace: pod.Namespace,
 				},
 			}
+
+			err = controllerutil.SetControllerReference(advDeploy, cm, c.MasterMgr.GetScheme())
+			if err != nil {
+				logger.Error(err, "failed to set reference with offline configmap")
+				return err
+			}
+
 			err := c.Client.Create(ctx, cm)
 			if err != nil {
-				klog.Errorf("failed to create ConfigMap, err: %v", err)
+				logger.Error(err, "failed to create offline configmap")
 				return err
 			}
 
 			aggrCm = cm
 		} else {
-			klog.Errorf("failed to get ConfigMap, err: %v", err)
+			logger.Error(err, "failed to get offline configmap")
 			return err
 		}
 	}
@@ -100,19 +126,24 @@ func (c *offlinepodImpl) reconciler(ctx context.Context, pod *model.OfflinePod) 
 	}
 
 	oldRaw = aggrCm.Data[ConfigDataKey]
-	if cache, ok = c.Cache[pod.AppName]; !ok {
-		cache = New(c.MaxOffline, pod.AppName)
-		c.Cache[pod.AppName] = cache
+	if cache, ok = c.Cache[key]; !ok {
+		maxOffline := c.MaxOffline
+		if advDeploy.Status.AggrStatus.Desired > c.MaxOffline {
+			maxOffline = advDeploy.Status.AggrStatus.Desired
+			logger.Info("set cache", "max offline", maxOffline)
+		}
+		cache = New(maxOffline, key)
+		c.Cache[key] = cache
 	}
 
 	if len(oldRaw) > 0 && cache.Len() == 0 {
 		jerr := json.Unmarshal([]byte(oldRaw), &apps)
 		if jerr != nil {
-			klog.Errorf("failed to Unmarshal err: %v", jerr)
+			logger.Error(jerr, "failed to Unmarshal offlineList")
 			return jerr
 		}
 
-		klog.Infof("name:%s add old cache pod items len: %d", pod.AppName, len(apps))
+		logger.Info("add old cache list", "items", len(apps))
 		for _, p := range apps {
 			cache.Add(p)
 		}
@@ -122,7 +153,7 @@ func (c *offlinepodImpl) reconciler(ctx context.Context, pod *model.OfflinePod) 
 	apps = cache.List()
 	appsByte, jerr := json.MarshalIndent(apps, "", "  ")
 	if jerr != nil {
-		klog.Errorf("failed to Marshal err: %v", jerr)
+		logger.Error(jerr, "failed to Marshal offlineList")
 		return jerr
 	}
 
@@ -135,8 +166,10 @@ func (c *offlinepodImpl) reconciler(ctx context.Context, pod *model.OfflinePod) 
 	aggrCm.Data[ConfigDataKey] = appsRaw
 	uerr := c.Client.Update(ctx, aggrCm)
 	if uerr != nil {
-		klog.Errorf("failed to create Update, err: %v", uerr)
+		logger.Error(uerr, "failed to update configmap offlineList")
 		return uerr
 	}
+
+	logger.Info("offline pod update success", "items", len(apps))
 	return nil
 }

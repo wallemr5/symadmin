@@ -6,6 +6,7 @@ import (
 
 	"sync"
 
+	"github.com/go-logr/logr"
 	"gitlab.dmall.com/arch/sym-admin/pkg/apiManager/model"
 	"gitlab.dmall.com/arch/sym-admin/pkg/labels"
 	pkgmanager "gitlab.dmall.com/arch/sym-admin/pkg/manager"
@@ -16,6 +17,7 @@ import (
 	"k8s.io/client-go/tools/cache"
 	"k8s.io/client-go/util/workqueue"
 	"k8s.io/klog"
+	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 )
@@ -32,9 +34,10 @@ type offlinepodImpl struct {
 	MasterMgr  manager.Manager
 	client.Client
 	ObvNs string
+	Log   logr.Logger
 	Cache map[string]*Cache
 	sync.RWMutex
-	MaxOffline int
+	MaxOffline int32
 }
 
 func getAppName(lb map[string]string) string {
@@ -53,7 +56,7 @@ func NewOfflinepodReconciler(mgr manager.Manager, cMgr *pkgmanager.DksManager) (
 		WorkQueue:  workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), controllerName),
 		MasterMgr:  mgr,
 		Client:     mgr.GetClient(),
-		ObvNs:      "sym-admin",
+		Log:        ctrl.Log.WithName("controllers").WithName(controllerName),
 		Cache:      make(map[string]*Cache),
 		MaxOffline: 10,
 	}

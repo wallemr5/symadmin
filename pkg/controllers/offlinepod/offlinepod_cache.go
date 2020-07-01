@@ -9,11 +9,11 @@ import (
 
 type Cache struct {
 	Name       string
-	MaxEntries int
+	MaxEntries int32
 	ll         *list.List
 }
 
-func New(maxEntries int, name string) *Cache {
+func New(maxEntries int32, name string) *Cache {
 	return &Cache{
 		Name:       name,
 		MaxEntries: maxEntries,
@@ -23,7 +23,7 @@ func New(maxEntries int, name string) *Cache {
 
 func (c *Cache) Add(value *model.OfflinePod) {
 	c.ll.PushFront(value)
-	if c.MaxEntries != 0 && c.ll.Len() > c.MaxEntries {
+	if c.MaxEntries != 0 && c.ll.Len() > int(c.MaxEntries) {
 		c.removeOldest()
 	}
 }
