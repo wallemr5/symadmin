@@ -65,11 +65,11 @@ func (c *offlinepodImpl) reconciler(ctx context.Context, pod *model.OfflinePod) 
 		klog.V(logLevel).Infof("##### [%s] reconciling is finished. time taken: %v. ", pod.Name, diffTime)
 	}()
 
-	advDeploy := &workloadv1beta1.AdvDeployment{}
+	as := &workloadv1beta1.AppSet{}
 	err := c.Client.Get(ctx, types.NamespacedName{
 		Namespace: pod.Namespace,
 		Name:      pod.AppName,
-	}, advDeploy)
+	}, as)
 	if err != nil {
 		if apierrors.IsNotFound(err) {
 			logger.Info("Can't find advDeploy")
@@ -95,7 +95,7 @@ func (c *offlinepodImpl) reconciler(ctx context.Context, pod *model.OfflinePod) 
 				},
 			}
 
-			err = controllerutil.SetControllerReference(advDeploy, cm, c.MasterMgr.GetScheme())
+			err = controllerutil.SetControllerReference(as, cm, c.MasterMgr.GetScheme())
 			if err != nil {
 				logger.Error(err, "failed to set reference with offline configmap")
 				return err
@@ -128,8 +128,8 @@ func (c *offlinepodImpl) reconciler(ctx context.Context, pod *model.OfflinePod) 
 	oldRaw = aggrCm.Data[ConfigDataKey]
 	if cache, ok = c.Cache[key]; !ok {
 		maxOffline := c.MaxOffline
-		if advDeploy.Status.AggrStatus.Desired > c.MaxOffline {
-			maxOffline = advDeploy.Status.AggrStatus.Desired
+		if as.Status.AggrStatus.Desired > c.MaxOffline {
+			maxOffline = as.Status.AggrStatus.Desired
 			logger.Info("set cache", "max offline", maxOffline)
 		}
 		cache = New(maxOffline, key)
