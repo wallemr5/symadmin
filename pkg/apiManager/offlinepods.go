@@ -48,15 +48,16 @@ func (m *APIManager) GetAllOfflineApp(c *gin.Context) {
 	})
 }
 
-// /api/appname/:appname/offlinepodlist
+// /api/namespace/:namespace/appname/:appname/offlinepodlist
 func (m *APIManager) GetOfflinePods(c *gin.Context) {
+	namespace := c.Param("namespace")
 	cmname := c.Param("appname")
 	apps := []*model.OfflinePod{}
 	client := m.K8sMgr.MasterClient.GetClient()
 	ctx := context.Background()
 	cm := &corev1.ConfigMap{}
 
-	err := client.Get(ctx, types.NamespacedName{Namespace: DEFAULT_NAMESPACE, Name: cmname}, cm)
+	err := client.Get(ctx, types.NamespacedName{Namespace: namespace, Name: cmname}, cm)
 
 	if err != nil {
 		klog.Errorf("get app error %v: ", err)

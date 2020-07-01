@@ -320,7 +320,7 @@ func (m *APIManager) Routes() []*router.Route {
 		},
 		{
 			Method:  "GET",
-			Path:    "/api/appname/:appname/offlinepodlist",
+			Path:    "/api/namespace/:namespace/appname/:appname/offlinepodlist",
 			Handler: m.GetOfflinePods,
 		},
 		{
