@@ -1,0 +1,68 @@
+apiVersion: workload.dmall.com/v1beta1
+kind: Cluster
+metadata:
+  labels:
+    clusterName: cn-tke-bj5-test-01
+    createdBy: sym-controller
+  name: cn-tke-bj5-test-01
+  namespace: sym-admin
+spec:
+  symNodeName: 10.16.247.132
+  pause: false
+  meta:
+    area: beijing
+    az: BJ5
+    id: "1"
+    clusterType: tke
+    clusterIngressHead: bj5-cn-u01
+  helmSpec:
+    maxHistory: 5
+    namespace: kube-system
+    overrideImageSpec: registry.cn-hangzhou.aliyuncs.com/google_containers/tiller:v2.13.1
+  apps:
+    - name: metrics-server
+      repo: dmall
+      namespace: monitoring
+    - name: traefik
+      repo: dmall
+      namespace: kube-system
+      chartVersion: 1.86.1
+    - name: monitor
+      repo: dmall
+      namespace: monitoring
+      chartName: prometheus-operator
+      chartVersion: 8.7.1
+      values:
+        custom-resources-config: disable
+        selector-only-system: enable
+        lpv-path: /root/prometheus-data
+        lpv-size: 20Gi
+        prom-limit-cpu: "1"
+        prom-limit-memory: 2Gi
+        prom-req-cpu: "0.5"
+        prom-req-memory: 1Gi
+        prom-retention: 2d
+        lpv-grafana-path: /root/grafana-data
+        lpv-grafana-size: 1Gi
+    # - name: sym-api
+    #   repo: dmall
+    #   namespace: sym-admin
+    #   chartName: sym-api
+    #   chartVersion: 1.0.5
+    #   values:
+    #     hosts: devapi.sym.dmall.com
+    #     tag: "v1.0.6-dev6"
+    # - name: sym-ctl
+    #   repo: dmall
+    #   namespace: sym-admin
+    #   chartName: sym-controller
+    #   chartVersion : 1.0.5
+    #   values:
+    #     tag: "v1.0.6-dev6"
+    #     master: "true"
+    #     worker: "true"
+    #     cluster: "false"
+    #     reCreate: "true"
+    #     leader: "true"
+    #     oldCluster: "false"
+    #     threadiness: "1"
