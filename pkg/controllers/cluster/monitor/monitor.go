@@ -532,6 +532,74 @@ func (r *reconciler) buildMonitorValues(app *workloadv1beta1.HelmChartSpec) map[
 						},
 					},
 				},
+				"additionalScrapeConfigs": []map[string]interface{}{
+					{
+						"job_name": "'istio-mesh'",
+						"kubernetes_sd_configs": []map[string]interface{}{
+							{
+								"role": "endpoints",
+								"namespaces": map[string]interface{}{
+									"names": []string{"istio-system"},
+								},
+							},
+						},
+						"relabel_configs": []map[string]interface{}{
+							{
+								"source_labels": []string{
+									"__meta_kubernetes_service_name",
+									"__meta_kubernetes_endpoint_port_name",
+								},
+								"action": "keep",
+								"regex":  "istio-telemetry;prometheus",
+							},
+						},
+					},
+					{
+						"job_name":     "'envoy-stats'",
+						"metrics_path": "/stats/prometheus",
+						"kubernetes_sd_configs": []map[string]interface{}{
+							{
+								"role": "pod",
+							},
+						},
+						"relabel_configs": []map[string]interface{}{
+							{
+								"source_labels": []string{
+									"__meta_kubernetes_pod_container_port_name",
+								},
+								"action": "keep",
+								"regex":  "'.*-envoy-prom'",
+							},
+							{
+								"source_labels": []string{
+									"__address__", "__meta_kubernetes_pod_annotation_prometheus_io_port",
+								},
+								"action":       "replace",
+								"regex":        "([^:]+)(?::\\d+)?;(\\d+)",
+								"replacement":  "$1:15090",
+								"target_label": "__address__",
+							},
+							{
+								"action": "labeldrop",
+								"regex":  "__meta_kubernetes_pod_label_(.+)",
+							},
+							{
+								"source_labels": []string{
+									"__meta_kubernetes_namespace",
+								},
+								"action":       "replace",
+								"target_label": "namespace",
+							},
+							{
+								"source_labels": []string{
+									"__meta_kubernetes_pod_name",
+								},
+								"action":       "replace",
+								"target_label": "pod_name",
+							},
+						},
+					},
+				},
 			},
 		},
 		"grafana": map[string]interface{}{
