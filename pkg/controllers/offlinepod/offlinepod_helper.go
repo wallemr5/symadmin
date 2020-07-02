@@ -91,11 +91,11 @@ func NewOfflinepodReconciler(mgr manager.Manager, cMgr *pkgmanager.DksManager) (
 					return
 				}
 
-				if len(pod.Status.HostIP) == 0 {
+				if !impl.isObserveNamespaces(pod.Namespace) {
 					return
 				}
 
-				if !impl.isObserveNamespaces(pod.Namespace) {
+				if len(pod.Status.HostIP) == 0 {
 					return
 				}
 
