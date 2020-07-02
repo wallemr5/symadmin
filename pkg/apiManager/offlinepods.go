@@ -3,6 +3,7 @@ package apiManager
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"github.com/gin-gonic/gin"
 	"gitlab.dmall.com/arch/sym-admin/pkg/apiManager/model"
 	corev1 "k8s.io/api/core/v1"
@@ -10,7 +11,6 @@ import (
 	"k8s.io/klog"
 	"net/http"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-	"time"
 )
 
 const (
@@ -62,7 +62,11 @@ func (m *APIManager) GetOfflinePods(c *gin.Context) {
 
 	if err != nil {
 		klog.Errorf("get app error %v: ", err)
-		AbortHTTPError(c, GetConfigMapError, "", err)
+		c.AbortWithStatusJSON(http.StatusNotFound, gin.H{
+			"success":   false,
+			"message":   err.Error(),
+			"resultMap": nil,
+		})
 		return
 	}
 
@@ -71,7 +75,7 @@ func (m *APIManager) GetOfflinePods(c *gin.Context) {
 		klog.Info("no applist ")
 		return
 	}
-
+	fmt.Println(raw)
 	jerr := json.Unmarshal([]byte(raw), &apps)
 	if jerr != nil {
 		klog.Errorf("failed to Unmarshal err: %v", jerr)
@@ -79,15 +83,6 @@ func (m *APIManager) GetOfflinePods(c *gin.Context) {
 		return
 	}
 
-	for i, v := range apps {
-		ts := v.OfflineTime.Format("2006-01-02 15:04:05")
-		parse, errP := time.Parse("2006-01-02 15:04:05", ts)
-		if errP == nil {
-			apps[i].OfflineTime = parse
-		}
-	}
-
-	//c.IndentedJSON(http.StatusOK, apps)
 	c.IndentedJSON(http.StatusOK, gin.H{
 		"success": true,
 		"message": nil,

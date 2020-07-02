@@ -1,8 +1,6 @@
 package model
 
 import (
-	"time"
-
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
@@ -166,5 +164,5 @@ type OfflinePod struct {
 	PodIP       string            `json:"podIP,omitempty"`
 	ContainerID string            `json:"containerId,omitempty"`
 	Labels      map[string]string `json:"labels,omitempty"`
-	OfflineTime time.Time         `json:"offlineTime,omitempty"`
+	OfflineTime string            `json:"offlineTime,omitempty"`
 }
