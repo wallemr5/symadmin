@@ -99,11 +99,6 @@ func NewOfflinepodReconciler(mgr manager.Manager, cMgr *pkgmanager.DksManager) (
 					return
 				}
 
-				if len(pod.Status.ContainerStatuses) == 0 ||
-					(len(pod.Status.ContainerStatuses) > 0 && len(pod.Status.ContainerStatuses[0].ContainerID) == 0) {
-					return
-				}
-
 				impl.WorkQueue.Add(&model.OfflinePod{
 					Name:        pod.Name,
 					ClusterName: clusterName,
