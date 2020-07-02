@@ -144,8 +144,10 @@ func (c *offlinepodImpl) reconciler(ctx context.Context, pod *model.OfflinePod) 
 		}
 
 		logger.Info("add old cache list", "items", len(apps))
-		for _, p := range apps {
-			cache.Add(p)
+
+		// latst data add to list front
+		for i := len(apps) - 1; i >= 0; i-- {
+			cache.Add(apps[i])
 		}
 	}
 
