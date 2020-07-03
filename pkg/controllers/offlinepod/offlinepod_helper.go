@@ -33,9 +33,9 @@ type offlinepodImpl struct {
 	WorkQueue  workqueue.RateLimitingInterface
 	MasterMgr  manager.Manager
 	client.Client
-	ObvNs string
-	Log   logr.Logger
-	Cache map[string]*Cache
+	Log            logr.Logger
+	Cache          map[string]*Cache
+	OfflinePodPool *sync.Pool
 	sync.RWMutex
 	MaxOffline int32
 }
@@ -58,7 +58,11 @@ func NewOfflinepodReconciler(mgr manager.Manager, cMgr *pkgmanager.DksManager) (
 		Client:     mgr.GetClient(),
 		Log:        ctrl.Log.WithName("controllers").WithName(controllerName),
 		Cache:      make(map[string]*Cache),
-		MaxOffline: 10,
+		OfflinePodPool: &sync.Pool{
+			New: func() interface{} {
+				return &model.OfflinePod{}
+			}},
+		MaxOffline: 2,
 	}
 
 	for _, cluster := range cMgr.K8sMgr.GetAll() {
@@ -99,16 +103,16 @@ func NewOfflinepodReconciler(mgr manager.Manager, cMgr *pkgmanager.DksManager) (
 					return
 				}
 
-				impl.WorkQueue.Add(&model.OfflinePod{
-					Name:        pod.Name,
-					ClusterName: clusterName,
-					AppName:     getAppName(pod.Labels),
-					Namespace:   pod.Namespace,
-					HostIP:      pod.Status.HostIP,
-					PodIP:       pod.Status.PodIP,
-					ContainerID: pod.Status.ContainerStatuses[0].ContainerID,
-					OfflineTime: time.Now().Format("2006-01-02 15:04:05"),
-				})
+				oPod := impl.GetOfflinePod()
+				oPod.Name = pod.Name
+				oPod.ClusterName = clusterName
+				oPod.AppName = getAppName(pod.Labels)
+				oPod.Namespace = pod.Namespace
+				oPod.HostIP = pod.Status.HostIP
+				oPod.PodIP = pod.Status.PodIP
+				oPod.ContainerID = pod.Status.ContainerStatuses[0].ContainerID
+				oPod.OfflineTime = time.Now().Format("2006-01-02 15:04:05")
+				impl.WorkQueue.Add(oPod)
 			},
 		})
 		klog.Infof("cluster name:%s AddEventHandler pod key to queue", cluster.Name)
@@ -173,4 +177,21 @@ func (c *offlinepodImpl) processNextWorkItem() bool {
 
 	c.WorkQueue.Forget(req)
 	return true
+}
+
+func (c *offlinepodImpl) GetOfflinePod() *model.OfflinePod {
+	return c.OfflinePodPool.Get().(*model.OfflinePod)
+}
+
+func (c *offlinepodImpl) PutOfflinePod(b *model.OfflinePod) {
+	b.Name = ""
+	b.ClusterName = ""
+	b.Namespace = ""
+	b.AppName = ""
+	b.HostIP = ""
+	b.PodIP = ""
+	b.ContainerID = ""
+	b.OfflineTime = ""
+	b.Labels = nil
+	c.OfflinePodPool.Put(b)
 }

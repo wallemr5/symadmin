@@ -132,10 +132,13 @@ func (c *offlinepodImpl) reconciler(ctx context.Context, pod *model.OfflinePod) 
 			maxOffline = as.Status.AggrStatus.Desired
 			logger.Info("set cache", "max offline", maxOffline)
 		}
-		cache = New(maxOffline, key)
+		cache = New(maxOffline, key, c)
 		c.Cache[key] = cache
 	}
 
+	if as.Status.AggrStatus.Desired > c.MaxOffline && cache.GetMaxEntries() != as.Status.AggrStatus.Desired {
+		cache.SetMaxEntries(as.Status.AggrStatus.Desired)
+	}
 	if len(oldRaw) > 0 && cache.Len() == 0 {
 		jerr := json.Unmarshal([]byte(oldRaw), &apps)
 		if jerr != nil {
@@ -165,10 +168,23 @@ func (c *offlinepodImpl) reconciler(ctx context.Context, pod *model.OfflinePod) 
 		return nil
 	}
 
-	aggrCm.Data[ConfigDataKey] = appsRaw
-	uerr := c.Client.Update(ctx, aggrCm)
+	// re get
+	upCm := &corev1.ConfigMap{}
+	err = c.Client.Get(ctx, types.NamespacedName{
+		Namespace: pod.Namespace,
+		Name:      pod.AppName,
+	}, upCm)
+	if err != nil {
+		logger.Error(err, "failed to get offlineList configmap")
+		return err
+	}
+	if upCm.Data == nil {
+		upCm.Data = make(map[string]string)
+	}
+	upCm.Data[ConfigDataKey] = appsRaw
+	uerr := c.Client.Update(ctx, upCm)
 	if uerr != nil {
-		logger.Error(uerr, "failed to update configmap offlineList")
+		logger.Error(uerr, "failed to update offlineList configmap")
 		return uerr
 	}
 
