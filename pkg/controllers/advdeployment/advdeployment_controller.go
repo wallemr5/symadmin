@@ -46,34 +46,31 @@ import (
 )
 
 const (
-	controllerName        = "advDeployment-controller"
-	DefaultHelmRepoEnable = false
+	controllerName = "advDeployment-controller"
 )
 
 // AdvDeploymentReconciler reconciles a AdvDeployment object
 type AdvDeploymentReconciler struct {
 	client.Client
-	Name       string
-	Log        logr.Logger
-	Mgr        manager.Manager
-	KubeCli    kubernetes.Interface
-	Cfg        *rest.Config
-	HelmEnv    *v2repo.HelmIndexSyncer
-	Opt        *pkgmanager.ManagerOption
-	recorder   record.EventRecorder
-	RepoEnable bool
+	Name     string
+	Log      logr.Logger
+	Mgr      manager.Manager
+	KubeCli  kubernetes.Interface
+	Cfg      *rest.Config
+	HelmEnv  *v2repo.HelmIndexSyncer
+	Opt      *pkgmanager.ManagerOption
+	recorder record.EventRecorder
 }
 
 // Add add controller to runtime manager
 func Add(mgr manager.Manager, cMgr *pkgmanager.DksManager) error {
 	r := &AdvDeploymentReconciler{
-		Name:       controllerName,
-		Client:     mgr.GetClient(),
-		Mgr:        mgr,
-		Log:        ctrl.Log.WithName("controllers").WithName("AdvDeployment"),
-		Opt:        cMgr.Opt,
-		recorder:   mgr.GetRecorder(controllerName),
-		RepoEnable: DefaultHelmRepoEnable,
+		Name:     controllerName,
+		Client:   mgr.GetClient(),
+		Mgr:      mgr,
+		Log:      ctrl.Log.WithName("controllers").WithName("AdvDeployment"),
+		Opt:      cMgr.Opt,
+		recorder: mgr.GetRecorder(controllerName),
 	}
 
 	r.Cfg = mgr.GetConfig()
@@ -115,10 +112,6 @@ func Add(mgr manager.Manager, cMgr *pkgmanager.DksManager) error {
 	// only trigger Service sync
 	_, _ = mgr.GetCache().GetInformer(&corev1.Service{})
 
-	if !r.RepoEnable {
-		klog.Infof("helm repo not use, skip")
-		return nil
-	}
 	helmv2env, err := helmv2.InitHelmRepoEnv("dmall", cMgr.Opt.Repos)
 	if err != nil {
 		klog.Errorf("Initializing a helm env has an error:%v", err)
