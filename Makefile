@@ -1,4 +1,4 @@
-VERSION ?= v1.0.9-dev11
+VERSION ?= v1.0.9-dev16
 # Image URL to use all building/pushing image targets
 IMG_REG ?= symcn.tencentcloudcr.com/symcn
 IMG_CTL := $(IMG_REG)/sym-admin-controller
@@ -98,7 +98,7 @@ build-api:
 docker-push: docker-push-controller docker-push-api
 
 # Push the docker image
-docker-push-controller:
+docker-push-controller: docker-build-controller
 	docker build -t ${IMG_CTL}:${VERSION} -f ./docker/Dockerfile-ctl .
 	docker push ${IMG_CTL}:${VERSION}
 
