@@ -29,8 +29,6 @@ spec:
           - {{ .Values.image.logLevel | quote | default "4" }}
           {{- if .Values.image.master }}
           - "--enable-master"
-          {{- end }}
-          {{- if .Values.image.offlinepod }}
           - "--enable-offlinepod"
           {{- end }}
           {{- if .Values.image.worker }}

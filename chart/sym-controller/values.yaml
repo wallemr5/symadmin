@@ -6,12 +6,12 @@ replicaCount: 1
 
 image:
   repository: symcn.tencentcloudcr.com/symcn/sym-admin-controller
-  tag: v1.0.8
+  tag: v1.0.10
   pullPolicy: IfNotPresent
   logLevel: 4
-  master: false
-  offlinepod: false
-  worker: true
+  master: true
+  offlinepod: true
+  worker: false
   cluster: false
   reCreate: false
   leader: true

@@ -48,7 +48,7 @@ spec:
       repo: dmall
       namespace: sym-admin
       chartName: sym-api
-      chartVersion: 1.0.15
+      chartVersion: 1.0.17
       values:
         hosts: api.sym.dmall.com
         tag: "v1.0.10"
@@ -56,7 +56,7 @@ spec:
       repo: dmall
       namespace: sym-admin
       chartName: sym-controller
-      chartVersion : 1.0.15
+      chartVersion : 1.0.17
       values:
         tag: "v1.0.10"
         master: "true"

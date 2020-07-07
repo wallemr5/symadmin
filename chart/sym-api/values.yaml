@@ -6,7 +6,7 @@ replicaCount: 4
 
 image:
   repository: symcn.tencentcloudcr.com/symcn/sym-admin-api
-  tag: v1.0.8
+  tag: v1.0.10
   pullPolicy: IfNotPresent
 
 nameOverride: ""
