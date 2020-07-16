@@ -239,3 +239,19 @@ conventional-changelog -p angular -i CHANGELOG.md -s -p
 | test-tke-rz-cd-bus-01  | 测试 | 业务测试单元化成都 RZ 集群 | cls-3yclxq8t |  10.16.113.12 |              |
 | dev-tke-gz-bj5-glb     | 开发 | 业务开发集群 GZ            | cls-2ylraskd |  10.248.227.7 | 高老板测试用 |
 | dev-tke-rz-cd-glb      | 开发 | 业务开发集群 RZ            | cls-ehx4vson | 10.248.227.74 | 高老板测试用 |
+
+集群 hosts 如下：
+
+```
+10.13.135.251 cls-89a4hpb3.ccs.tencent-cloud.com
+10.13.135.12  cls-7xq1bq9f.ccs.tencent-cloud.com
+10.13.133.7 cls-0snem5sv.ccs.tencent-cloud.com
+10.16.247.78 cls-otdyiqyb.ccs.tencent-cloud.com
+10.16.247.11 cls-h5f02nmb.ccs.tencent-cloud.com
+10.16.113.12 cls-3yclxq8t.ccs.tencent-cloud.com
+10.13.135.250 chartmuseum.dmall.com
+10.13.133.134 cls-azg4i2et.ccs.tencent-cloud.com
+10.16.70.8 cls-glojus0v.ccs.tencent-cloud.com
+10.248.227.7 cls-2ylraskd.ccs.tencent-cloud.com
+10.248.227.74 cls-ehx4vson.ccs.tencent-cloud.com
+```
