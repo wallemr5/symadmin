@@ -2,6 +2,6 @@ package monitor
 
 import "testing"
 
-func TestBuilAadditionalScrapeConfigs(t *testing.T) {
-	builAadditionalScrapeConfigs()
+func TestBuilAdditionalScrapeConfigs(t *testing.T) {
+	builAdditionalScrapeConfigs()
 }

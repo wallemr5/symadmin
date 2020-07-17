@@ -261,7 +261,7 @@ var additionalScrapeConfigsStr = `
     target_label: pod_name
 `
 
-func builAadditionalScrapeConfigs() []map[string]interface{} {
+func builAdditionalScrapeConfigs() []map[string]interface{} {
 	b, _ := yaml.YAMLToJSON([]byte(additionalScrapeConfigsStr))
 	scrapeConfig := []map[string]interface{}{}
 	yaml.Unmarshal(b, &scrapeConfig)

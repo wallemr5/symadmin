@@ -14,7 +14,7 @@ spec:
     az: CD
     id: "1"
     clusterType: tke
-    clusterIngressHead: dks-test-glb
+    clusterIngressHead: dks-test-rz-glb
   helmSpec:
     maxHistory: 5
     namespace: kube-system
@@ -27,13 +27,30 @@ spec:
       repo: dmall
       namespace: kube-system
       chartVersion: 1.86.1
+    - name: monitor
+      repo: dmall
+      namespace: monitoring
+      chartName: prometheus-operator
+      chartVersion: 8.7.1
+      values:
+        custom-resources-config: disable
+        selector-only-system: enable
+        lpv-path: /root/prometheus-data
+        lpv-size: 20Gi
+        prom-limit-cpu: "4"
+        prom-limit-memory: 8Gi
+        prom-req-cpu: "0.5"
+        prom-req-memory: 1Gi
+        prom-retention: 2d
+        lpv-grafana-path: /root/grafana-data
+        lpv-grafana-size: 1Gi
     - name: sym-ctl
       repo: dmall
       namespace: sym-admin
       chartName: sym-controller
-      chartVersion : 1.0.15
+      chartVersion : 1.0.17
       values:
-        tag: "v1.0.8"
+        tag: "v1.0.10"
         master: "false"
         worker: "true"
         cluster: "false"
@@ -41,3 +58,4 @@ spec:
         leader: "true"
         oldCluster: "false"
         threadiness: "1"
+        repos: "https://kubernetes-charts.storage.googleapis.com"

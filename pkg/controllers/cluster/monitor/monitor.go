@@ -532,7 +532,7 @@ func (r *reconciler) buildMonitorValues(app *workloadv1beta1.HelmChartSpec) map[
 						},
 					},
 				},
-				"additionalScrapeConfigs": builAadditionalScrapeConfigs(),
+				"additionalScrapeConfigs": builAdditionalScrapeConfigs(),
 			},
 		},
 		"grafana": map[string]interface{}{
@@ -728,11 +728,11 @@ func (r *reconciler) Reconcile(log logr.Logger, obj interface{}) (interface{}, e
 	_, ns, chartURL := common.BuildHelmInfo(app)
 	// monitor rls name need add cluster name
 	rlsName := "monitor-" + r.obj.Name
-	err := r.preInstallMonitoringCheckCrd(rlsName, chartURL, app.ChartVersion)
-	if err != nil {
-		klog.Errorf("Reconcile crd err: %v", err)
-		return nil, err
-	}
+	// err := r.preInstallMonitoringCheckCrd(rlsName, chartURL, app.ChartVersion)
+	// if err != nil {
+	// 	klog.Errorf("Reconcile crd err: %v", err)
+	// 	return nil, err
+	// }
 
 	va := r.buildMonitorValues(app)
 	vaByte, err := yaml.Marshal(va)
