@@ -12,6 +12,10 @@ spec:
       name: xds
       protocol: TCP
       targetPort: 8001
+    - name: metrics
+      port: 8000
+      protocol: TCP
+      targetPort: 8000
   selector: {{- include "contour.matchLabels" . | nindent 4 }}
     app.kubernetes.io/component: contour
   type: ClusterIP
@@ -76,6 +80,10 @@ spec:
       {{- else if eq .Values.envoy.service.type "ClusterIP" }}
       nodePort: null
       {{- end }}
+    - name: metrics
+      port: 8002
+      protocol: TCP
+      targetPort: 8002
   selector: {{- include "contour.matchLabels" . | nindent 4 }}
     app.kubernetes.io/component: envoy
   type: {{ .Values.envoy.service.type }}

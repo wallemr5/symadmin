@@ -33,6 +33,9 @@ spec:
         prom-retention: 30d
         lpv-grafana-path: /mnt/grafana-data
         lpv-grafana-size: 1Gi
+        #     grafana-ing: g.symphony.dmall.com
+        #     prom-ing: p.symphony.dmall.com
+        #     alertmanager-ing: a.symphony.dmall.com
     - name: node-problem-detector
       repo: dmall
       chartVersion: 1.5.2
@@ -40,7 +43,12 @@ spec:
     - name: contour
       repo: dmall
       namespace: projectcontour
-      chartVersion: 1.1.2
+      chartVersion: 1.1.4
+    - name: metrics-server
+      repo: dmall
+      namespace: monitoring
+      values:
+        sym-affinity: enable
     - name: sym-ctl
       repo: dmall
       namespace: sym-admin

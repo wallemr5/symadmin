@@ -74,6 +74,7 @@ func (r *reconciler) makeOverrideContour() map[string]interface{} {
 					"memory": "128Mi",
 				},
 			},
+			"tolerations": common.MakeNodeTolerations(),
 		},
 		"prometheus": map[string]interface{}{
 			"serviceMonitor": map[string]interface{}{

@@ -1,22 +1,6 @@
 {{- if .Values.prometheus.serviceMonitor.enabled }}
 {{- if .Values.contour.enabled }}
 ---
-apiVersion: v1
-kind: Service
-metadata:
-  name: {{ include "contour.fullname" . }}-contour-metrics
-  labels: {{- include "contour.labels" . | nindent 4 }}
-    app.kubernetes.io/component: contour
-spec:
-  type: ClusterIP
-  selector: {{- include "contour.matchLabels" . | nindent 4 }}
-    app.kubernetes.io/component: contour
-  ports:
-  - name: metrics
-    port: 8000
-    protocol: TCP
-    targetPort: 8000
----
 apiVersion: monitoring.coreos.com/v1
 kind: ServiceMonitor
 metadata:
@@ -44,22 +28,6 @@ spec:
     {{- end }}
 {{- end }}
 {{- if .Values.envoy.enabled }}
----
-apiVersion: v1
-kind: Service
-metadata:
-  name: {{ include "contour.fullname" . }}-envoy-metrics
-  labels: {{- include "contour.labels" . | nindent 4 }}
-    app.kubernetes.io/component: envoy
-spec:
-  type: ClusterIP
-  selector: {{- include "contour.matchLabels" . | nindent 4 }}
-    app.kubernetes.io/component: envoy
-  ports:
-  - name: metrics
-    port: 8002
-    protocol: TCP
-    targetPort: 8002
 ---
 apiVersion: monitoring.coreos.com/v1
 kind: ServiceMonitor

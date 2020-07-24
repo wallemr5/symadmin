@@ -93,7 +93,7 @@ configInline:
 
 ## Number of contour Pod replicas
 ##
-replicaCount: 2
+replicaCount: 1
 
 rbac:
   # create specifies whether to install and use RBAC rules.
@@ -200,6 +200,9 @@ contour:
 
 envoy:
   enabled: true
+  daemonsetEnabled: false
+  deploymentEnabled: true
+  replicaCount: 3
   image:
     registry: docker.io
     repository: envoyproxy/envoy

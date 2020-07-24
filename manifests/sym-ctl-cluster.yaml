@@ -22,13 +22,15 @@ spec:
     spec:
       containers:
         - name: sym-ctl-cluster
-          image: symcn.tencentcloudcr.com/symcn/sym-admin-controller:v1.1.0-dev6
+          image: symcn.tencentcloudcr.com/symcn/sym-admin-controller:v1.1.0-dev7
           imagePullPolicy: IfNotPresent
           args:
             - "controller"
             - "-v"
-            - "3"
+            - "4"
             - "--enable-cluster"
+            - "--enable-worker=false"
+            - "--enable-master=false"
             - "--enable-leader=false"
             - "--charts-repo=http://chartmuseum.dmall.com"
           ports:

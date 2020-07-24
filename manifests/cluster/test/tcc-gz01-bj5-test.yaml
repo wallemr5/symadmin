@@ -1,0 +1,67 @@
+apiVersion: workload.dmall.com/v1beta1
+kind: Cluster
+metadata:
+  labels:
+    clusterName: tcc-gz01-bj5-test
+    createdBy: sym-controller
+  name: tcc-gz01-bj5-test
+  namespace: sym-admin
+spec:
+  symNodeName: 10.16.247.80
+  pause: false
+  meta:
+    area: beijing
+    az: bj5
+    clusterType: tke
+    clusterIngressHead: dkstu01
+  apps:
+    - name: contour
+      repo: dmall
+      namespace: projectcontour
+      chartVersion: 1.1.4
+    - name: sym-api
+      repo: dmall
+      namespace: sym-admin
+      chartName: sym-api
+      chartVersion: 1.0.17
+      values:
+        hosts: testapi.sym.dmall.com
+        tag: "v1.1.0-dev6"
+    - name: monitor
+      repo: dmall
+      chartVersion: 9.1.0
+      values:
+        lpv-path: /root/prometheus-data
+        lpv-size: 20Gi
+        custom-resources-config: disable
+        selector-only-system: disable
+        prom-limit-cpu: "4"
+        prom-limit-memory: 8Gi
+        prom-req-cpu: "1"
+        prom-req-memory: 2Gi
+        prom-retention: 3d
+      namespace: monitoring
+    - name: node-problem-detector
+      repo: dmall
+      chartVersion: 1.5.2
+      namespace: monitoring
+    - name: metrics-server
+      repo: dmall
+      namespace: monitoring
+      values:
+        sym-affinity: enable
+    - name: sym-ctl
+      repo: dmall
+      namespace: sym-admin
+      chartName: sym-controller
+      chartVersion : 1.0.18
+      values:
+        tag: "v1.1.0-dev6"
+        master: "true"
+        worker: "true"
+        offlinepod: "true"
+        cluster: "false"
+        reCreate: "true"
+        leader: "true"
+        oldCluster: "false"
+        threadiness: "1"

@@ -53,7 +53,7 @@ func New(mgr manager.Manager, k *k8smanager.Cluster, obj *workloadv1beta1.Cluste
 		r.urlHead = h
 	}
 
-	r.ingressImpl = common.GetIngressImpl(obj.Spec.Meta)
+	r.ingressImpl = "contour"
 	return r
 }
 
