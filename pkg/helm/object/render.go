@@ -2,19 +2,22 @@ package object
 
 import (
 	"bytes"
+	"fmt"
 	"net/http"
 	"os"
 	"path"
 	"strings"
 
 	"github.com/pkg/errors"
-	"k8s.io/helm/pkg/chartutil"
-	"k8s.io/helm/pkg/proto/hapi/chart"
-	"k8s.io/helm/pkg/renderutil"
-	"k8s.io/helm/pkg/timeconv"
-)
+	"helm.sh/helm/v3/pkg/chart"
+	"helm.sh/helm/v3/pkg/chart/loader"
+	"helm.sh/helm/v3/pkg/chartutil"
+	"k8s.io/klog"
 
-type ReleaseOptions chartutil.ReleaseOptions
+	"helm.sh/helm/v3/pkg/engine"
+	"k8s.io/cli-runtime/pkg/genericclioptions"
+	"k8s.io/client-go/discovery"
+)
 
 func GetDefaultValues(fs http.FileSystem) ([]byte, error) {
 	file, err := fs.Open(chartutil.ValuesfileName)
@@ -32,62 +35,8 @@ func GetDefaultValues(fs http.FileSystem) ([]byte, error) {
 	return buf.Bytes(), nil
 }
 
-func Render(fs http.FileSystem, values string, releaseOptions ReleaseOptions, chartName string) (K8sObjects, error) {
-	chrtConfig := &chart.Config{
-		Raw:    values,
-		Values: map[string]*chart.Value{},
-	}
-
-	files, err := getFiles(fs)
-	if err != nil {
-		return nil, err
-	}
-
-	// Create chart and render templates
-	chrt, err := chartutil.LoadFiles(files)
-	if err != nil {
-		return nil, err
-	}
-
-	renderOpts := renderutil.Options{
-		ReleaseOptions: chartutil.ReleaseOptions{
-			Name:      releaseOptions.Name,
-			IsInstall: true,
-			IsUpgrade: false,
-			Time:      timeconv.Now(),
-			Namespace: releaseOptions.Namespace,
-		},
-		KubeVersion: "",
-	}
-
-	renderedTemplates, err := renderutil.Render(chrt, chrtConfig, renderOpts)
-	if err != nil {
-		return nil, err
-	}
-
-	// Merge templates and inject
-	var buf bytes.Buffer
-	for _, tmpl := range files {
-		if !strings.HasSuffix(tmpl.Name, "yaml") && !strings.HasSuffix(tmpl.Name, "yml") && !strings.HasSuffix(tmpl.Name, "tpl") {
-			continue
-		}
-		t := path.Join(chartName, tmpl.Name)
-		if _, err := buf.WriteString(renderedTemplates[t]); err != nil {
-			return nil, err
-		}
-		buf.WriteString("\n---\n")
-	}
-
-	objects, err := ParseK8sObjectsFromYAMLManifest(buf.String())
-	if err != nil {
-		return nil, err
-	}
-
-	return objects, nil
-}
-
-func getFiles(fs http.FileSystem) ([]*chartutil.BufferedFile, error) {
-	files := []*chartutil.BufferedFile{
+func getFiles(fs http.FileSystem) ([]*loader.BufferedFile, error) {
+	files := []*loader.BufferedFile{
 		{
 			Name: chartutil.ChartfileName,
 		},
@@ -109,7 +58,7 @@ func getFiles(fs http.FileSystem) ([]*chartutil.BufferedFile, error) {
 			for _, file := range dirFiles {
 				filename := file.Name()
 				if strings.HasSuffix(filename, "yaml") || strings.HasSuffix(filename, "yml") || strings.HasSuffix(filename, "tpl") || strings.HasSuffix(filename, "json") {
-					files = append(files, &chartutil.BufferedFile{
+					files = append(files, &loader.BufferedFile{
 						Name: dirName + "/" + filename,
 					})
 				}
@@ -248,4 +197,198 @@ func UninstallObjectOrder() func(o *K8sObject) int {
 		}
 		return 1000
 	}
+}
+
+func GetRequestedChart(chartPackage []byte) (*chart.Chart, error) {
+	return loader.LoadArchive(bytes.NewReader(chartPackage))
+}
+
+// GetVersionSet retrieves a set of available k8s API versions
+func GetVersionSet(client discovery.ServerResourcesInterface) (chartutil.VersionSet, error) {
+	groups, resources, err := client.ServerGroupsAndResources()
+	if err != nil && !discovery.IsGroupDiscoveryFailedError(err) {
+		return chartutil.DefaultVersionSet, errors.Wrap(err, "could not get apiVersions from Kubernetes")
+	}
+
+	// FIXME: The Kubernetes test fixture for cli appears to always return nil
+	// for calls to Discovery().ServerGroupsAndResources(). So in this case, we
+	// return the default API list. This is also a safe value to return in any
+	// other odd-ball case.
+	if len(groups) == 0 && len(resources) == 0 {
+		return chartutil.DefaultVersionSet, nil
+	}
+
+	versionMap := make(map[string]interface{})
+	versions := []string{}
+
+	// Extract the groups
+	for _, g := range groups {
+		for _, gv := range g.Versions {
+			versionMap[gv.GroupVersion] = struct{}{}
+		}
+	}
+
+	// Extract the resources
+	var id string
+	var ok bool
+	for _, r := range resources {
+		for _, rl := range r.APIResources {
+
+			// A Kind at a GroupVersion can show up more than once. We only want
+			// it displayed once in the final output.
+			id = path.Join(r.GroupVersion, rl.Kind)
+			if _, ok = versionMap[id]; !ok {
+				versionMap[id] = struct{}{}
+			}
+		}
+	}
+
+	// Convert to a form that NewVersionSet can use
+	for k := range versionMap {
+		versions = append(versions, k)
+	}
+
+	return chartutil.VersionSet(versions), nil
+}
+
+// capabilities builds a Capabilities from discovery information.
+func GetCapabilities(getter genericclioptions.RESTClientGetter) (*chartutil.Capabilities, error) {
+	dc, err := getter.ToDiscoveryClient()
+	if err != nil {
+		return nil, errors.Wrap(err, "could not get Kubernetes discovery client")
+	}
+	// force a discovery cache invalidation to always fetch the latest server version/capabilities.
+	dc.Invalidate()
+	kubeVersion, err := dc.ServerVersion()
+	if err != nil {
+		return nil, errors.Wrap(err, "could not get server version from Kubernetes")
+	}
+	// Issue #6361:
+	// Client-Go emits an error when an API service is registered but unimplemented.
+	// We trap that error here and print a warning. But since the discovery client continues
+	// building the API object, it is correctly populated with all valid APIs.
+	// See https://github.com/kubernetes/kubernetes/issues/72051#issuecomment-521157642
+	apiVersions, err := GetVersionSet(dc)
+	if err != nil {
+		if discovery.IsGroupDiscoveryFailedError(err) {
+			klog.Warningf("WARNING: The Kubernetes server has an orphaned API service. Server reports: %s", err)
+			klog.Warningf("WARNING: To fix this, kubectl delete apiservice <service-name>")
+		} else {
+			return nil, errors.Wrap(err, "could not get apiVersions from Kubernetes")
+		}
+	}
+
+	return &chartutil.Capabilities{
+		APIVersions: apiVersions,
+		KubeVersion: chartutil.KubeVersion{
+			Version: kubeVersion.GitVersion,
+			Major:   kubeVersion.Major,
+			Minor:   kubeVersion.Minor,
+		},
+	}, nil
+}
+
+func RenderTemplate(chartPackage []byte, rlsName, ns string, overrideValue string) (K8sObjects, error) {
+	chrt, err := GetRequestedChart(chartPackage)
+	if err != nil {
+		return nil, fmt.Errorf("loading chart has an error: %v", err)
+	}
+
+	overrideValues, err := chartutil.ReadValues([]byte(overrideValue))
+	if err != nil {
+		return nil, fmt.Errorf("ReadValues has an error: %v", err)
+	}
+
+	options := chartutil.ReleaseOptions{
+		Name:      rlsName,
+		Namespace: ns,
+		Revision:  1,
+		IsInstall: true,
+		IsUpgrade: false,
+	}
+
+	chrtValues, err := chartutil.ToRenderValues(chrt, overrideValues, options, nil)
+	if err != nil {
+		return nil, err
+	}
+
+	renderedTemplates, err := engine.Render(chrt, chrtValues)
+	if err != nil {
+		klog.Errorf("render err: %v", err)
+		return nil, err
+	}
+
+	var objects []*K8sObject
+	for name, yaml := range renderedTemplates {
+		yaml = RemoveNonYAMLLines(yaml)
+		if yaml == "" {
+			continue
+		}
+
+		objs, err := ParseK8sObjectsFromYAMLManifest(yaml)
+		if err != nil {
+			return nil, errors.Wrapf(err, "name: %s Failed to parse yaml to a k8s objs", name)
+		}
+
+		objects = append(objects, objs...)
+	}
+
+	return objects, nil
+}
+
+func Render(fs http.FileSystem, rlsName, ns, chartName string, overrideValue string) (K8sObjects, error) {
+	files, err := getFiles(fs)
+	if err != nil {
+		return nil, err
+	}
+
+	// Create chart and render templates
+	chrt, err := loader.LoadFiles(files)
+	if err != nil {
+		return nil, err
+	}
+
+	overrideValues, err := chartutil.ReadValues([]byte(overrideValue))
+	if err != nil {
+		return nil, fmt.Errorf("ReadValues has an error: %v", err)
+	}
+
+	options := chartutil.ReleaseOptions{
+		Name:      rlsName,
+		Namespace: ns,
+		Revision:  1,
+		IsInstall: true,
+		IsUpgrade: false,
+	}
+
+	chrtValues, err := chartutil.ToRenderValues(chrt, overrideValues, options, nil)
+	if err != nil {
+		return nil, err
+	}
+
+	renderedTemplates, err := engine.Render(chrt, chrtValues)
+	if err != nil {
+		klog.Errorf("render err: %v", err)
+		return nil, err
+	}
+
+	// Merge templates and inject
+	var buf bytes.Buffer
+	for _, tmpl := range files {
+		if !strings.HasSuffix(tmpl.Name, "yaml") && !strings.HasSuffix(tmpl.Name, "yml") && !strings.HasSuffix(tmpl.Name, "tpl") {
+			continue
+		}
+		t := path.Join(chartName, tmpl.Name)
+		if _, err := buf.WriteString(renderedTemplates[t]); err != nil {
+			return nil, err
+		}
+		buf.WriteString("\n---\n")
+	}
+
+	objects, err := ParseK8sObjectsFromYAMLManifest(buf.String())
+	if err != nil {
+		return nil, err
+	}
+
+	return objects, nil
 }

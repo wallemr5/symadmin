@@ -9,6 +9,7 @@ import (
 
 	"fmt"
 
+	helmv3 "gitlab.dmall.com/arch/sym-admin/pkg/helm/v3"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/klog"
@@ -23,13 +24,12 @@ var (
 	NodeSelectorKey    = "sym-preserve"
 	NodeSelectorVa     = "monitor"
 	NodeMonitorName    = "node-role.kubernetes.io/monitor"
-	RepositoryHub      = "registry.cn-hangzhou.aliyuncs.com/dmall/"
-	PromCrdSuffix      = "monitoring.coreos.com"
 	MasterNodeLabelKey = "node-role.kubernetes.io/master"
 
 	ClusterAlert       = "clusterAlert"
 	ClusterType        = "clusterType"
 	ClusterIngressHead = "clusterIngressHead"
+	ClusterIngressImpl = "clusterIngressImpl"
 )
 
 // ComponentReconciler ...
@@ -77,7 +77,7 @@ func MakeNodeTolerations() []map[string]interface{} {
 // PreLabelsNs ...
 func PreLabelsNs(k *k8smanager.Cluster, obj *workloadv1beta1.Cluster) error {
 	nss := &corev1.NamespaceList{}
-	err := k.Client.List(context.TODO(), &client.ListOptions{}, nss)
+	err := k.Client.List(context.TODO(), nss, &client.ListOptions{})
 	if err != nil {
 		klog.Errorf("list ns err: %+v", err)
 		return err
@@ -196,4 +196,57 @@ func BuildHelmInfo(app *workloadv1beta1.HelmChartSpec) (rlsName string, ns strin
 	rlsName = app.Name
 	chartUrl = fmt.Sprintf("%s/%s", repo, chartName)
 	return
+}
+
+func ConvertAppHelmReleasePtr(rls *helmv3.Release) *workloadv1beta1.AppHelmStatus {
+	objs := make([]*workloadv1beta1.ResourcesObject, 0, len(rls.ReleaseResources))
+	for _, res := range rls.ReleaseResources {
+		objs = append(objs, &workloadv1beta1.ResourcesObject{
+			Group: res.Group,
+			Kind:  res.Kind,
+			Name:  res.Name,
+		})
+	}
+
+	ret := &workloadv1beta1.AppHelmStatus{
+		Name:         rls.ChartName,
+		ChartVersion: rls.Version,
+		RlsName:      rls.ReleaseName,
+		RlsStatus:    rls.ReleaseInfo.Status,
+		RlsVersion:   rls.ReleaseVersion,
+		Resources:    objs,
+	}
+
+	return ret
+}
+
+func GetIngressImpl(lb map[string]string) string {
+	if k, ok := lb[ClusterIngressImpl]; ok {
+		return k
+	}
+
+	return "traefik"
+}
+
+func GetLbServiceAnnotations(clusterType string, cli client.Client) map[string]interface{} {
+	serviceAnnotations := map[string]interface{}{}
+	switch clusterType {
+	case "tke":
+		svc := &corev1.Service{}
+		err := cli.Get(context.TODO(), types.NamespacedName{Name: "kube-user", Namespace: "default"}, svc)
+		if err == nil && svc.Spec.Type == corev1.ServiceTypeLoadBalancer {
+			if va, ok := svc.Annotations["service.kubernetes.io/qcloud-loadbalancer-internal-subnetid"]; ok {
+				klog.Infof("find tke cluster qcloud-loadbalancer-internal-subnetid[%s]", va)
+				serviceAnnotations["service.kubernetes.io/qcloud-loadbalancer-internal-subnetid"] = va
+			}
+		}
+	case "aks":
+		serviceAnnotations["service.beta.kubernetes.io/azure-load-balancer-internal"] = true
+	case "gke":
+		serviceAnnotations["cloud.google.com/load-balancer-type"] = "Internal"
+	case "ack":
+	case "eks":
+	}
+
+	return serviceAnnotations
 }

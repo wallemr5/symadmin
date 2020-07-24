@@ -22,8 +22,7 @@ bin
 *.swp
 *.swo
 *~
-*.sum
 cache
-.vscode/launch.json
-manifests/appset-springBoot-bbcc2.yaml
-chart/tmp
+helm3
+.vscode/
+charts/tmp/

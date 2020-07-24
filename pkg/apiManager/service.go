@@ -11,6 +11,7 @@ import (
 	k8smanager "gitlab.dmall.com/arch/sym-admin/pkg/k8s/manager"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
+	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/klog"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -90,13 +91,14 @@ func (m *APIManager) GetServiceInfo(c *gin.Context) {
 func getService(clusters []*k8smanager.Cluster, namespace, appName string) ([]*model.ServiceInfo, error) {
 	ctx := context.Background()
 	result := make([]*model.ServiceInfo, 0, 4)
-	options := &client.ListOptions{Namespace: namespace}
-	options.MatchingLabels(map[string]string{
-		"app": appName + "-svc", // 协商service selector 需要加"-svc"加后缀
-	})
+	lb := labels.Set{
+		"app": appName + "-svc",
+	}
+	options := &client.ListOptions{Namespace: namespace, LabelSelector: lb.AsSelector()}
+
 	for _, cluster := range clusters {
 		svclist := &corev1.ServiceList{}
-		err := cluster.Client.List(ctx, options, svclist)
+		err := cluster.Client.List(ctx, svclist, options)
 		if err != nil {
 			if apierrors.IsNotFound(err) {
 				continue

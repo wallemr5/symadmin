@@ -4,12 +4,14 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"net/http"
+
 	"github.com/gin-gonic/gin"
 	"gitlab.dmall.com/arch/sym-admin/pkg/apiManager/model"
 	corev1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/klog"
-	"net/http"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
@@ -18,16 +20,18 @@ const (
 )
 
 func (m *APIManager) GetAllOfflineApp(c *gin.Context) {
-	options := make(map[string]string)
-	options["controllerOwner"] = "offlinePod"
-	listOptions := &client.ListOptions{Namespace: DEFAULT_NAMESPACE}
-	listOptions.MatchingLabels(options)
+	lb := labels.Set{
+		"controllerOwner": "offlinePod",
+	}
+
+	listOptions := &client.ListOptions{Namespace: DEFAULT_NAMESPACE, LabelSelector: lb.AsSelector()}
+
 	offlineApp := make([]string, 0, 10)
 	ctx := context.Background()
 
 	cmlist := &corev1.ConfigMapList{}
 	client := m.K8sMgr.MasterClient.GetClient()
-	err := client.List(ctx, listOptions, cmlist)
+	err := client.List(ctx, cmlist, listOptions)
 
 	if err != nil {
 		c.IndentedJSON(GetConfigMapError, gin.H{

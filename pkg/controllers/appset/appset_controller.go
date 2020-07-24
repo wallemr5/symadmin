@@ -30,6 +30,7 @@ import (
 	"gitlab.dmall.com/arch/sym-admin/pkg/labels"
 	pkgmanager "gitlab.dmall.com/arch/sym-admin/pkg/manager"
 	"gitlab.dmall.com/arch/sym-admin/pkg/utils"
+	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/equality"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/util/wait"
@@ -37,9 +38,9 @@ import (
 	"k8s.io/client-go/tools/record"
 	"k8s.io/klog"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	logf "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
-	logf "sigs.k8s.io/controller-runtime/pkg/runtime/log"
 )
 
 const (
@@ -105,8 +106,8 @@ func NewAppSetController(mgr manager.Manager, cMgr *pkgmanager.DksManager) (*App
 	c := &AppSetReconciler{
 		DksMgr:   cMgr,
 		Manager:  mgr,
-		Log:      logf.KBLog.WithName(controllerName),
-		recorder: mgr.GetRecorder(controllerName),
+		Log:      logf.Log.WithName(controllerName),
+		recorder: mgr.GetEventRecorderFor(controllerName),
 	}
 
 	// Create a new custom controller
@@ -122,7 +123,7 @@ func NewAppSetController(mgr manager.Manager, cMgr *pkgmanager.DksManager) (*App
 		}
 	}
 
-	appSetInformer, err := mgr.GetCache().GetInformer(&workloadv1beta1.AppSet{})
+	appSetInformer, err := mgr.GetCache().GetInformer(context.TODO(), &workloadv1beta1.AppSet{})
 	if err != nil {
 		klog.Fatalf("master appset crd informer watch err:%+v", err)
 	}
@@ -155,7 +156,7 @@ func NewAppSetController(mgr manager.Manager, cMgr *pkgmanager.DksManager) (*App
 }
 
 func (r *AppSetReconciler) registryResource(cluster *k8smanager.Cluster) error {
-	advDeploymentInformer, err := cluster.Cache.GetInformer(&workloadv1beta1.AdvDeployment{})
+	advDeploymentInformer, err := cluster.Cache.GetInformer(context.TODO(), &workloadv1beta1.AdvDeployment{})
 	if err != nil {
 		klog.Errorf("cluster name:%s can't add AdvDeployment InformerEntry, err: %+v", cluster.Name, err)
 		return err
@@ -223,9 +224,10 @@ func (r *AppSetReconciler) CustomReconcile(ctx context.Context, req customctrl.C
 		return reconcile.Result{}, r.Client.Update(ctx, app)
 	}
 
-	isChanged, err := r.ModifySpec(ctx, req, app)
+	isChanged, err := r.ApplySpec(ctx, req, app)
 	if err != nil {
-		logger.Error(err, "modify advdeployment info with spec")
+		logger.Error(err, "apply advdeployment info with spec")
+		r.recorder.Event(app, corev1.EventTypeWarning, "apply advDeployment failed", err.Error())
 		return reconcile.Result{}, err
 	}
 
@@ -237,13 +239,13 @@ func (r *AppSetReconciler) CustomReconcile(ctx context.Context, req customctrl.C
 	}
 
 	klog.V(4).Infof("%s/%s start aggregate status ... ", req.Namespace, req.Name)
-	status, _, err := r.ModifyStatus(ctx, req, app)
+	status, _, err := r.ApplyStatus(ctx, req, app)
 	if err != nil {
 		logger.Error(err, "update AppSet.Status fail")
 		return reconcile.Result{}, err
 	}
 
-	_, err = r.DeleteUnExpectInfo(ctx, req, status)
+	_, err = r.DeleteUnuseAdvDeployment(ctx, req, status)
 	if err != nil {
 		logger.Error(err, "delete unexpect info")
 		return reconcile.Result{}, err

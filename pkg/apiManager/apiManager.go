@@ -4,6 +4,8 @@ import (
 	"fmt"
 	"time"
 
+	"context"
+
 	workloadv1beta1 "gitlab.dmall.com/arch/sym-admin/pkg/apis/workload/v1beta1"
 	"gitlab.dmall.com/arch/sym-admin/pkg/healthcheck"
 	k8smanager "gitlab.dmall.com/arch/sym-admin/pkg/k8s/manager"
@@ -104,7 +106,7 @@ func NewAPIManager(cli k8smanager.MasterClient, opt *Option, componentName strin
 func (m *APIManager) registryResource(cluster *k8smanager.Cluster) error {
 	healthHandler := healthcheck.GetHealthHandler()
 	clusterName := cluster.Name
-	advDeployInformer, _ := cluster.Cache.GetInformer(&workloadv1beta1.AdvDeployment{})
+	advDeployInformer, _ := cluster.Cache.GetInformer(context.TODO(), &workloadv1beta1.AdvDeployment{})
 	healthHandler.AddReadinessCheck(fmt.Sprintf("%s_%s", clusterName, "advDeploy_cache_sync"), func() error {
 		if advDeployInformer.HasSynced() {
 			return nil
@@ -112,7 +114,7 @@ func (m *APIManager) registryResource(cluster *k8smanager.Cluster) error {
 		return fmt.Errorf("cluster:%s AdvDeployment cache not sync", clusterName)
 	})
 
-	podInformer, _ := cluster.Cache.GetInformer(&corev1.Pod{})
+	podInformer, _ := cluster.Cache.GetInformer(context.TODO(), &corev1.Pod{})
 	healthHandler.AddReadinessCheck(fmt.Sprintf("%s_%s", clusterName, "pod_cache_sync"), func() error {
 		if podInformer.HasSynced() {
 			return nil
@@ -120,7 +122,7 @@ func (m *APIManager) registryResource(cluster *k8smanager.Cluster) error {
 		return fmt.Errorf("cluster:%s pod cache not sync", clusterName)
 	})
 
-	deploymentInformer, _ := cluster.Cache.GetInformer(&appsv1.Deployment{})
+	deploymentInformer, _ := cluster.Cache.GetInformer(context.TODO(), &appsv1.Deployment{})
 	healthHandler.AddReadinessCheck(fmt.Sprintf("%s_%s", clusterName, "deployment_cache_sync"), func() error {
 		if deploymentInformer.HasSynced() {
 			return nil
@@ -128,7 +130,7 @@ func (m *APIManager) registryResource(cluster *k8smanager.Cluster) error {
 		return fmt.Errorf("cluster:%s deployment cache not sync", clusterName)
 	})
 
-	statefulSetInformer, _ := cluster.Cache.GetInformer(&appsv1.StatefulSet{})
+	statefulSetInformer, _ := cluster.Cache.GetInformer(context.TODO(), &appsv1.StatefulSet{})
 	healthHandler.AddReadinessCheck(fmt.Sprintf("%s_%s", clusterName, "statefulset_cache_sync"), func() error {
 		if statefulSetInformer.HasSynced() {
 			return nil
@@ -136,7 +138,7 @@ func (m *APIManager) registryResource(cluster *k8smanager.Cluster) error {
 		return fmt.Errorf("cluster:%s statefulset cache not sync", clusterName)
 	})
 
-	nodeInformer, _ := cluster.Cache.GetInformer(&corev1.Node{})
+	nodeInformer, _ := cluster.Cache.GetInformer(context.TODO(), &corev1.Node{})
 	healthHandler.AddReadinessCheck(fmt.Sprintf("%s_%s", clusterName, "node_cache_sync"), func() error {
 		if nodeInformer.HasSynced() {
 			return nil
@@ -144,7 +146,7 @@ func (m *APIManager) registryResource(cluster *k8smanager.Cluster) error {
 		return fmt.Errorf("cluster:%s node cache not sync", clusterName)
 	})
 
-	serviceInformer, _ := cluster.Cache.GetInformer(&corev1.Service{})
+	serviceInformer, _ := cluster.Cache.GetInformer(context.TODO(), &corev1.Service{})
 	healthHandler.AddReadinessCheck(fmt.Sprintf("%s_%s", clusterName, "service_cache_sync"), func() error {
 		if serviceInformer.HasSynced() {
 			return nil
@@ -152,8 +154,8 @@ func (m *APIManager) registryResource(cluster *k8smanager.Cluster) error {
 		return fmt.Errorf("cluster:%s service cache not sync", clusterName)
 	})
 
-	cluster.Cache.GetInformer(&corev1.Event{})
-	cluster.Cache.GetInformer(&corev1.Endpoints{})
+	cluster.Cache.GetInformer(context.TODO(), &corev1.Event{})
+	cluster.Cache.GetInformer(context.TODO(), &corev1.Endpoints{})
 	return nil
 }
 

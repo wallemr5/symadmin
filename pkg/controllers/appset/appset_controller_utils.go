@@ -28,8 +28,10 @@ import (
 	workloadv1beta1 "gitlab.dmall.com/arch/sym-admin/pkg/apis/workload/v1beta1"
 	k8smanager "gitlab.dmall.com/arch/sym-admin/pkg/k8s/manager"
 	"gitlab.dmall.com/arch/sym-admin/pkg/labels"
+	pkgLabels "gitlab.dmall.com/arch/sym-admin/pkg/labels"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
+	"k8s.io/apimachinery/pkg/fields"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/klog"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -210,11 +212,15 @@ func getMapKey(target map[string]string, key string) string {
 	return "null"
 }
 
+func formatToDNS1123(name string) string {
+	return strings.ToLower(strings.ReplaceAll(name, ".", "-"))
+}
+
 func makeAdvDeploymentLabel(clusterSpec *workloadv1beta1.TargetCluster, app *workloadv1beta1.AppSet) map[string]string {
 	lb := map[string]string{}
 
-	if app.Spec.ServiceName != nil {
-		lb["lightningDomain0"] = *app.Spec.ServiceName
+	if app.Spec.ServiceName != nil && len(*app.Spec.ServiceName) > 0 {
+		lb["lightningDomain0"] = formatToDNS1123(*app.Spec.ServiceName)
 	}
 
 	clusterName := getMapKey(clusterSpec.Mata, labels.ObserveMustLabelClusterName)
@@ -225,6 +231,19 @@ func makeAdvDeploymentLabel(clusterSpec *workloadv1beta1.TargetCluster, app *wor
 	lb[labels.ObserveMustLabelClusterName] = clusterName
 	lb[labels.LabelKeyZone] = getMapKey(clusterSpec.Mata, labels.LabelKeyZone)
 	return lb
+}
+
+func makeAdvDeploymentAnnotation(app *workloadv1beta1.AppSet) map[string]string {
+	an := map[string]string{}
+
+	if v, ok := app.Annotations[pkgLabels.WorkLoadAnnotationHpa]; ok {
+		an[pkgLabels.WorkLoadAnnotationHpa] = v
+	}
+
+	if v, ok := app.Annotations[pkgLabels.WorkLoadAnnotationHpaMetrics]; ok {
+		an[pkgLabels.WorkLoadAnnotationHpaMetrics] = v
+	}
+	return an
 }
 
 func mergeVersion(v1, v2 string) string {
@@ -278,8 +297,11 @@ func GetAllClustersEventByApp(mgr *k8smanager.ClusterManager, req types.Namespac
 	events := make([]*corev1.Event, 0)
 	evts := make([]*workloadv1beta1.Event, 0)
 
-	eventOption := &client.ListOptions{Namespace: req.Namespace}
-	eventOption.MatchingField("type", corev1.EventTypeWarning)
+	eventOption := &client.ListOptions{
+		Namespace:     req.Namespace,
+		FieldSelector: fields.Set{"type": corev1.EventTypeWarning}.AsSelector(),
+	}
+
 	for _, cluster := range app.Spec.ClusterTopology.Clusters {
 		c, err := mgr.Get(cluster.Name)
 		if err != nil {
@@ -288,7 +310,7 @@ func GetAllClustersEventByApp(mgr *k8smanager.ClusterManager, req types.Namespac
 		}
 
 		eventList := &corev1.EventList{}
-		if err := c.Client.List(context.TODO(), eventOption, eventList); err != nil {
+		if err := c.Client.List(context.TODO(), eventList, eventOption); err != nil {
 			if apierrors.IsNotFound(err) {
 				continue
 			}

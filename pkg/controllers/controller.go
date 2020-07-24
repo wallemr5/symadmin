@@ -1,4 +1,4 @@
-package controller
+package controllers
 
 import (
 	"gitlab.dmall.com/arch/sym-admin/pkg/controllers/advdeployment"

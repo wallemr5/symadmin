@@ -1,5 +1,5 @@
 /*
-Copyright 2019 The dks authors.
+Copyright 2020 The dks authors.
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -18,22 +18,21 @@ package app
 
 import (
 	"github.com/spf13/cobra"
-	controller "gitlab.dmall.com/arch/sym-admin/pkg/controllers"
+	"gitlab.dmall.com/arch/sym-admin/pkg/controllers"
 	k8sclient "gitlab.dmall.com/arch/sym-admin/pkg/k8s/client"
 
 	"k8s.io/klog"
-	// ctrl "sigs.k8s.io/controller-runtime"
 	ctrlmanager "sigs.k8s.io/controller-runtime/pkg/manager"
 	"sigs.k8s.io/controller-runtime/pkg/runtime/signals"
 
 	k8smanager "gitlab.dmall.com/arch/sym-admin/pkg/k8s/manager"
 	"gitlab.dmall.com/arch/sym-admin/pkg/manager"
 	"gitlab.dmall.com/arch/sym-admin/pkg/utils"
-	logf "sigs.k8s.io/controller-runtime/pkg/runtime/log"
+	logf "sigs.k8s.io/controller-runtime/pkg/log"
 )
 
 var (
-	logger = logf.KBLog.WithName("controller")
+	logger = logf.Log.WithName("controller")
 )
 
 func NewControllerCmd(cli *DksCli) *cobra.Command {
@@ -53,8 +52,10 @@ func NewControllerCmd(cli *DksCli) *cobra.Command {
 			mgr, err := ctrlmanager.New(cfg, ctrlmanager.Options{
 				Scheme:                  k8sclient.GetScheme(),
 				MetricsBindAddress:      "0",
+				HealthProbeBindAddress:  "0",
 				LeaderElection:          opt.EnableLeaderElection,
 				LeaderElectionNamespace: opt.LeaderElectionNamespace,
+				LeaderElectionID:        "sym-admin-controller",
 				// Port:               9443,
 				SyncPeriod: &opt.ResyncPeriod,
 			})
@@ -85,7 +86,7 @@ func NewControllerCmd(cli *DksCli) *cobra.Command {
 
 			// Setup all Controllers
 			klog.Info("Setting up controller")
-			if err := controller.AddToManager(mgr, dksMgr); err != nil {
+			if err := controllers.AddToManager(mgr, dksMgr); err != nil {
 				klog.Fatalf("unable to register controllers to the manager err: %v", err)
 			}
 

@@ -1,0 +1,58 @@
+apiVersion: workload.dmall.com/v1beta1
+kind: Cluster
+metadata:
+  labels:
+    clusterName: tke4-prod-02
+    createdBy: sym-controller
+  name: tke4-prod-02
+  namespace: default
+spec:
+  symNodeName: 10.13.134.96
+  pause: false
+  meta:
+    area: beijing
+    az: bj5
+    clusterType: tke
+    clusterAlert: "auto"
+    clusterIngressHead: tke2
+    clusterIngressImpl: contour
+  apps:
+    - name: monitor
+      repo: dmall
+      namespace: monitoring
+      chartName: prometheus-operator
+      chartVersion: 9.1.0
+      values:
+        custom-resources-config: enable
+        lpv-path: /mnt/prometheus-data
+        lpv-size: 96Gi
+        prom-limit-cpu: "24"
+        prom-limit-memory: 32Gi
+        prom-req-cpu: "16"
+        prom-req-memory: 16Gi
+        prom-retention: 30d
+        lpv-grafana-path: /mnt/grafana-data
+        lpv-grafana-size: 1Gi
+    - name: node-problem-detector
+      repo: dmall
+      chartVersion: 1.5.2
+      namespace: monitoring
+    - name: contour
+      repo: dmall
+      namespace: projectcontour
+      chartVersion: 1.1.2
+    - name: sym-ctl
+      repo: dmall
+      namespace: sym-admin
+      chartName: sym-controller
+      chartVersion : 1.0.17
+      values:
+        tag: "v1.0.10"
+        master: "false"
+        worker: "true"
+        cluster: "false"
+        reCreate: "false"
+        leader: "true"
+        oldCluster: "false"
+        threadiness: "1"
+

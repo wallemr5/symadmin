@@ -19,12 +19,12 @@ import (
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/klog"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	logf "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
-	logf "sigs.k8s.io/controller-runtime/pkg/runtime/log"
 )
 
 var (
-	logger  = logf.KBLog.WithName("controller")
+	logger  = logf.Log.WithName("controller")
 	timeout <-chan time.Time
 )
 
@@ -120,10 +120,10 @@ func (m *ClusterManager) getClusterConfigmap() ([]*corev1.ConfigMap, error) {
 	cms := make([]*corev1.ConfigMap, 0, 4)
 	if m.Started {
 		configmaps := &corev1.ConfigMapList{}
-		err := m.Manager.GetClient().List(context.Background(), &client.ListOptions{
+		err := m.Manager.GetClient().List(context.Background(), configmaps, &client.ListOptions{
 			LabelSelector: labels.SelectorFromSet(m.Opt.LabelSelector),
 			Namespace:     m.Opt.Namespace,
-		}, configmaps)
+		})
 		if err != nil {
 			if apierrors.IsNotFound(err) {
 				return nil, err
@@ -137,7 +137,8 @@ func (m *ClusterManager) getClusterConfigmap() ([]*corev1.ConfigMap, error) {
 		}
 
 	} else {
-		cmList, err := m.KubeCli.CoreV1().ConfigMaps(m.Opt.Namespace).List(metav1.ListOptions{LabelSelector: labels.SelectorFromSet(m.Opt.LabelSelector).String()})
+		cmList, err := m.KubeCli.CoreV1().ConfigMaps(m.Opt.Namespace).
+			List(context.TODO(), metav1.ListOptions{LabelSelector: labels.SelectorFromSet(m.Opt.LabelSelector).String()})
 		if err != nil {
 			klog.Errorf("unable to get cluster configmap err: %v", err)
 		}
@@ -306,7 +307,7 @@ func (m *ClusterManager) preStart() error {
 
 		if m.Opt.IsAPI {
 			// add field pod nodeName index must before cache start
-			if err := c.Mgr.GetFieldIndexer().IndexField(&corev1.Pod{}, "spec.nodeName", func(rawObj runtime.Object) []string {
+			if err := c.Mgr.GetFieldIndexer().IndexField(context.TODO(), &corev1.Pod{}, "spec.nodeName", func(rawObj runtime.Object) []string {
 				pod := rawObj.(*corev1.Pod)
 				return []string{pod.Spec.NodeName}
 			}); err != nil {
@@ -316,7 +317,7 @@ func (m *ClusterManager) preStart() error {
 			}
 
 			// add field pod ip index must before cache start
-			if err := c.Mgr.GetFieldIndexer().IndexField(&corev1.Pod{}, "status.podIP", func(rawObj runtime.Object) []string {
+			if err := c.Mgr.GetFieldIndexer().IndexField(context.TODO(), &corev1.Pod{}, "status.podIP", func(rawObj runtime.Object) []string {
 				pod := rawObj.(*corev1.Pod)
 				return []string{pod.Status.PodIP}
 			}); err != nil {
@@ -326,7 +327,7 @@ func (m *ClusterManager) preStart() error {
 			}
 
 			// add field event pod name index must before cache start
-			if err := c.Mgr.GetFieldIndexer().IndexField(&corev1.Event{}, "podName", func(rawObj runtime.Object) []string {
+			if err := c.Mgr.GetFieldIndexer().IndexField(context.TODO(), &corev1.Event{}, "podName", func(rawObj runtime.Object) []string {
 				event := rawObj.(*corev1.Event)
 				if event.InvolvedObject.Kind != "Pod" {
 					return []string{}
@@ -341,7 +342,7 @@ func (m *ClusterManager) preStart() error {
 		}
 
 		// add field event type index must before cache start
-		if err := c.Mgr.GetFieldIndexer().IndexField(&corev1.Event{}, "type", func(rawObj runtime.Object) []string {
+		if err := c.Mgr.GetFieldIndexer().IndexField(context.TODO(), &corev1.Event{}, "type", func(rawObj runtime.Object) []string {
 			event := rawObj.(*corev1.Event)
 			return []string{event.Type}
 		}); err != nil {

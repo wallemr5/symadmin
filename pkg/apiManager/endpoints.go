@@ -10,6 +10,7 @@ import (
 	"gitlab.dmall.com/arch/sym-admin/pkg/apiManager/model"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
+	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/klog"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
@@ -22,13 +23,15 @@ func (m *APIManager) GetEndpoints(c *gin.Context) {
 
 	ctx := context.Background()
 	eps := make([]*model.Endpoint, 0, 4)
-	listOptions := &client.ListOptions{}
-	listOptions.MatchingLabels(map[string]string{
+
+	lb := labels.Set{
 		"app": appName + "-svc",
-	})
+	}
+	listOptions := &client.ListOptions{LabelSelector: lb.AsSelector()}
+
 	for _, cluster := range clusters {
 		endpointList := &corev1.EndpointsList{}
-		err := cluster.Client.List(ctx, listOptions, endpointList)
+		err := cluster.Client.List(ctx, endpointList, listOptions)
 		if err != nil {
 			if apierrors.IsNotFound(err) {
 				continue

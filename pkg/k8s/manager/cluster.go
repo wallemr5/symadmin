@@ -4,6 +4,8 @@ import (
 	"strings"
 	"time"
 
+	"context"
+
 	"github.com/go-logr/logr"
 	"github.com/pkg/errors"
 	k8sclient "gitlab.dmall.com/arch/sym-admin/pkg/k8s/client"
@@ -91,8 +93,11 @@ func (c *Cluster) initK8SClients() error {
 	klog.V(5).Infof("##### cluster [%s] NewClientCli. time taken: %v. ", c.Name, time.Since(startTime))
 	c.KubeCli = kubecli
 	o := manager.Options{
-		Scheme:     k8sclient.GetScheme(),
-		SyncPeriod: &c.SyncPeriod,
+		Scheme:                 k8sclient.GetScheme(),
+		MetricsBindAddress:     "0",
+		HealthProbeBindAddress: "0",
+		LeaderElection:         false,
+		SyncPeriod:             &c.SyncPeriod,
 	}
 
 	mgr, err := manager.New(c.RestConfig, o)
@@ -108,7 +113,7 @@ func (c *Cluster) initK8SClients() error {
 }
 
 func (c *Cluster) healthCheck() bool {
-	body, err := c.KubeCli.Discovery().RESTClient().Get().AbsPath("/healthz").Do().Raw()
+	body, err := c.KubeCli.Discovery().RESTClient().Get().AbsPath("/healthz").Do(context.TODO()).Raw()
 	if err != nil {
 		runtime.HandleError(errors.Wrapf(err, "Failed to do cluster health check for cluster %q", c.Name))
 		c.Status = ClusterOffline

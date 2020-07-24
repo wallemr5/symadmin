@@ -9,6 +9,7 @@ import (
 	"github.com/gin-gonic/gin"
 	"gitlab.dmall.com/arch/sym-admin/pkg/apiManager/model"
 	appv1 "k8s.io/api/apps/v1"
+	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/klog"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -176,8 +177,7 @@ func (m *APIManager) GetDeploymentsStat(c *gin.Context) {
 func (m *APIManager) getDeployments(clusterName, namespace, appName, group, zone, ldcLabel string) ([]*model.DeploymentInfo, error) {
 	result := make([]*model.DeploymentInfo, 0)
 
-	listOptions := &client.ListOptions{Namespace: namespace}
-	options := make(map[string]string)
+	options := labels.Set{}
 	if group != "" {
 		options["sym-group"] = group
 	}
@@ -191,7 +191,7 @@ func (m *APIManager) getDeployments(clusterName, namespace, appName, group, zone
 		options["app"] = appName
 	}
 
-	listOptions.MatchingLabels(options)
+	listOptions := &client.ListOptions{Namespace: namespace, LabelSelector: options.AsSelector()}
 	deployments, err := m.Cluster.GetDeployment(listOptions, clusterName)
 	if err != nil {
 		klog.Errorf("failed to get deployments: %v", err)
@@ -226,8 +226,7 @@ func (m *APIManager) getDeployments(clusterName, namespace, appName, group, zone
 func (m *APIManager) getStatefulset(clusterName, namespace, appName, group, zone, ldcLabel string) ([]*model.DeploymentInfo, error) {
 	result := make([]*model.DeploymentInfo, 0)
 
-	listOptions := &client.ListOptions{Namespace: namespace}
-	options := make(map[string]string)
+	options := labels.Set{}
 	if group != "" {
 		options["sym-group"] = group
 	}
@@ -241,7 +240,10 @@ func (m *APIManager) getStatefulset(clusterName, namespace, appName, group, zone
 		options["app"] = appName
 	}
 
-	listOptions.MatchingLabels(options)
+	listOptions := &client.ListOptions{
+		Namespace:     namespace,
+		LabelSelector: options.AsSelector(),
+	}
 	stas, err := m.Cluster.GetStatefulsets(listOptions, clusterName)
 	if err != nil {
 		klog.Errorf("failed to get statefulsets: %v", err)

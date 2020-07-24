@@ -1,0 +1,89 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "polar.fullname" . }}-config
+  labels:
+    app.kubernetes.io/name: {{ include "polar.name" . }}
+    helm.sh/chart: {{ include "polar.chart" . }}
+    app.kubernetes.io/instance: {{ .Release.Name }}
+    app.kubernetes.io/managed-by: {{ .Release.Service }}
+data:
+  polar.yml: |
+    version: "1.0.9"
+    threadNum: 10
+    GCIntervalTime: 40
+    breakerAddr: ""
+    busLogBatchSize: 100
+    fileEventCycle: "*/2 * * * * ?"
+    logBatchSendMessageSize: 10
+
+    log:
+      dir: "/web/logs/polar"
+      name: "polar.log"
+      formart: ""
+      retainDay: 3
+      level: "INFO"
+
+    runtime:
+       cpu: 1
+       mem: 500
+       Enabled: true
+
+    monitor:
+       heartbeatUrl: "http://ds.dmc.inner-dmall.com.hk/dataReceive/heartbeat"
+       alarmUrl: "http://ds.dmc.inner-dmall.com.hk/dataReceive/alarm"
+       procMDataUrl: "http://ds.dmc.inner-dmall.com.hk/dataReceive/processMonitorData"
+       enabled: true
+       proCode: "polar"
+       appCode: "polar_df_prd"
+       monitorCron: "*/20 * * * * *"
+       procMDataCron: "0 */1 * * * *"
+    metaServer:
+       enabled: true
+       pluginName: "polar_df_prd"
+       adminPort: 16426
+       adminUrl: "/polar/admin"
+       promUrl: "/metrics"
+       promPort: 8798
+       metaServerUrl: "http://ds.dmc.inner-dmall.com.hk/digger/heartbeat"
+       secretKey: "007"
+
+    collect:
+      position:
+        # 单位秒，默认14天
+        InactivityStoreTime: 1209600
+        # 单位秒
+        FlushInterval: 10
+        # 文件前50个字符
+        FileFirstCharNum: 50
+        StoreDir: "/web/config/polar/store/pos"
+      common:
+        ip: ""
+        #　采集历史文件的数量
+        historyFileNum: 15
+        #  定时删除已经过期的文件
+        cleanFileTaskCron: "0 0 2 * * *"
+        #  定时检查监听任务是否漏采
+        checkFileWatchTaskCron: "0 */2 * * * *"
+      watch:
+        isContainer: false
+        #容器文件目录清理时间 7天
+        containerDirExpire: 604800
+        root: "/web/logs/app"
+        depth: 3
+        ifacePrefix: ["10.28","10.13"]
+      rpc:
+        HttpServerAdminPort: 16426
+        HttpServerPromPort: 8798
+        HttpServerToken: B011ED48-3D37-44B2-B917-33C411D1AD77
+        ControllerDomain: console.polar.inner-dmall.com.hk
+        ControllerHttpToken: B011ED48-3D37-44B2-B917-33C411D1AD77
+
+    #令牌桶定时更新
+    bucket:
+      BucketCron: "0 0 3 * * *"
+      BucketDefaultSize: 20000
+      # 填充频率间隔
+      BillInterval: 60
+
+

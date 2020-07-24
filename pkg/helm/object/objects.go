@@ -165,12 +165,12 @@ func (o *K8sObject) YAML() ([]byte, error) {
 }
 
 // YAMLDebugString returns a YAML representation of the K8sObject, or an error string if the K8sObject cannot be rendered to YAML.
-func (o *K8sObject) YAMLDebugString() (string, error) {
+func (o *K8sObject) YAMLDebugString() string {
 	y, err := o.YAML()
 	if err != nil {
-		return "", err
+		return ""
 	}
-	return string(y), nil
+	return string(y)
 }
 
 // AddLabels adds labels to the K8sObject.
@@ -219,17 +219,18 @@ func ParseK8sObjectsFromYAMLManifest(manifest string) (K8sObjects, error) {
 
 	var objects K8sObjects
 
-	for _, yaml := range yamls {
-		yaml = RemoveNonYAMLLines(yaml)
-		if yaml == "" {
+	for _, yml := range yamls {
+		yml = RemoveNonYAMLLines(yml)
+		if yml == "" {
 			continue
 		}
-		o, err := ParseYAMLToK8sObject([]byte(yaml))
+		o, err := ParseYAMLToK8sObject([]byte(yml))
 		if err != nil {
-			klog.Errorf("Failed to parse YAML to a k8s object: %v", err.Error())
+			klog.Errorf("Failed to parse YAML to a k8s object: %v", err)
 			continue
 		}
 
+		klog.V(5).Infof("kind: %s name: %s/%s \n%s", o.Kind, o.Namespace, o.Name, yml)
 		objects = append(objects, o)
 	}
 

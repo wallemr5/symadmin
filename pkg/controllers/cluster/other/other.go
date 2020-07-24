@@ -3,29 +3,30 @@ package other
 import (
 	"fmt"
 
+	"emperror.dev/errors"
 	"github.com/ghodss/yaml"
 	"github.com/go-logr/logr"
 	workloadv1beta1 "gitlab.dmall.com/arch/sym-admin/pkg/apis/workload/v1beta1"
 	"gitlab.dmall.com/arch/sym-admin/pkg/controllers/cluster/common"
-	helmv2 "gitlab.dmall.com/arch/sym-admin/pkg/helm/v2"
+	helmv3 "gitlab.dmall.com/arch/sym-admin/pkg/helm/v3"
 	k8smanager "gitlab.dmall.com/arch/sym-admin/pkg/k8s/manager"
 	"k8s.io/klog"
 )
 
 type reconciler struct {
-	name    string
-	k       *k8smanager.Cluster
-	obj     *workloadv1beta1.Cluster
-	hClient *helmv2.Client
+	name string
+	k    *k8smanager.Cluster
+	obj  *workloadv1beta1.Cluster
+	env  *helmv3.HelmEnv
 }
 
 // New ...
-func New(k *k8smanager.Cluster, obj *workloadv1beta1.Cluster, hClient *helmv2.Client) common.ComponentReconciler {
+func New(k *k8smanager.Cluster, obj *workloadv1beta1.Cluster, env *helmv3.HelmEnv) common.ComponentReconciler {
 	return &reconciler{
-		name:    "other",
-		k:       k,
-		hClient: hClient,
-		obj:     obj,
+		name: "other",
+		k:    k,
+		obj:  obj,
+		env:  env,
 	}
 }
 
@@ -46,9 +47,13 @@ func (r *reconciler) Reconcile(log logr.Logger, obj interface{}) (interface{}, e
 		return nil, fmt.Errorf("app name or namespace is empty")
 	}
 
-	rlsName, ns, chartUrl := common.BuildHelmInfo(app)
+	env, err := helmv3.NewHelmEnv(r.env, r.k.RawKubeconfig, app.Namespace, r.k.KubeCli)
+	if err != nil {
+		return nil, errors.Wrapf(err, "failed new helm env")
+	}
+
+	rlsName, ns, chartURL := common.BuildHelmInfo(app)
 	var vaByte []byte
-	var err error
 	if app.OverrideValue != "" {
 		vaByte = []byte(app.OverrideValue)
 	} else {
@@ -63,21 +68,14 @@ func (r *reconciler) Reconcile(log logr.Logger, obj interface{}) (interface{}, e
 				klog.Errorf("app[%s] Marshal overrideValueMap err:%+v", app.Name, err)
 				return nil, err
 			}
-			klog.Infof("rlsName:%s OverrideValue:\n%s", rlsName, string(vaByte))
 		}
 	}
 
-	rls, err := helmv2.ApplyRelease(rlsName, chartUrl, app.ChartVersion, nil, r.hClient, ns, nil, vaByte)
+	klog.V(4).Infof("rlsName:%s OverrideValue:\n%s", rlsName, string(vaByte))
+	rls, err := helmv3.ApplyRelease(env, rlsName, chartURL, app.ChartVersion, nil, ns, vaByte, nil)
 	if err != nil || rls == nil {
 		return nil, err
 	}
 
-	return &workloadv1beta1.AppHelmStatuses{
-		Name:         app.Name,
-		ChartVersion: rls.GetChart().GetMetadata().GetVersion(),
-		RlsName:      rls.Name,
-		RlsVersion:   rls.GetVersion(),
-		RlsStatus:    rls.GetInfo().GetStatus().Code.String(),
-		OverrideVa:   rls.GetConfig().GetRaw(),
-	}, nil
+	return common.ConvertAppHelmReleasePtr(rls), nil
 }

@@ -2,6 +2,7 @@ package monitor
 
 import (
 	"github.com/ghodss/yaml"
+	workloadv1beta1 "gitlab.dmall.com/arch/sym-admin/pkg/apis/workload/v1beta1"
 )
 
 var additionalScrapeConfigsStr = `
@@ -261,7 +262,10 @@ var additionalScrapeConfigsStr = `
     target_label: pod_name
 `
 
-func builAdditionalScrapeConfigs() []map[string]interface{} {
+func builAadditionalScrapeConfigs(app *workloadv1beta1.HelmChartSpec) []map[string]interface{} {
+	if _, ok := app.Values["istioScrape"]; !ok {
+		return nil
+	}
 	b, _ := yaml.YAMLToJSON([]byte(additionalScrapeConfigsStr))
 	scrapeConfig := []map[string]interface{}{}
 	yaml.Unmarshal(b, &scrapeConfig)

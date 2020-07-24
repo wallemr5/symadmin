@@ -10,6 +10,8 @@ import (
 	workloadv1beta1 "gitlab.dmall.com/arch/sym-admin/pkg/apis/workload/v1beta1"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
+	"k8s.io/apimachinery/pkg/fields"
+	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/klog"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -61,11 +63,12 @@ func (m *APIManager) GetWarningEvents(c *gin.Context) {
 		return
 	}
 
-	podOptions := &client.ListOptions{Namespace: namespace}
-	podOptions.MatchingLabels(map[string]string{
+	lb := labels.Set{
 		"app":       appName,
 		"sym-group": group,
-	})
+	}
+	podOptions := &client.ListOptions{Namespace: namespace, LabelSelector: lb.AsSelector()}
+
 	podList, err := m.Cluster.GetPods(podOptions, clusterName)
 	if err != nil {
 		klog.Error(err, "failed to get pod list")
@@ -80,11 +83,14 @@ func (m *APIManager) GetWarningEvents(c *gin.Context) {
 	result := []*model.Event{}
 	for _, cluster := range clusters {
 		ctx := context.Background()
-		listOptions := &client.ListOptions{Namespace: namespace}
-		listOptions.MatchingField("type", corev1.EventTypeWarning)
-		events := &corev1.EventList{}
 
-		err := cluster.Client.List(ctx, listOptions, events)
+		fd := fields.Set{
+			"type": corev1.EventTypeWarning,
+		}
+		listOptions := &client.ListOptions{Namespace: namespace, FieldSelector: fd.AsSelector()}
+
+		events := &corev1.EventList{}
+		err := cluster.Client.List(ctx, events, listOptions)
 		if err != nil {
 			if apierrors.IsNotFound(err) {
 				continue

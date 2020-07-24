@@ -12,29 +12,33 @@ spec:
   meta:
     area: beijing
     az: BJ
-    id: "1"
     clusterType: tke
-    clusterIngressHead: dks-test-gz-glb
-  helmSpec:
-    maxHistory: 5
-    namespace: kube-system
-    overrideImageSpec: registry.cn-hangzhou.aliyuncs.com/google_containers/tiller:v2.13.1
+    clusterIngressHead: dks-test-glb
+#  helmSpec:
+#    maxHistory: 5
+#    namespace: kube-system
+#    overrideImageSpec: registry.cn-hangzhou.aliyuncs.com/google_containers/tiller:v2.13.1
   apps:
-    - name: metrics-server
+#    - name: metrics-server
+#      repo: dmall
+#      namespace: monitoring
+#    - name: traefik
+#      repo: dmall
+#      namespace: kube-system
+#      chartVersion: 1.86.1
+    - name: contour
       repo: dmall
-      namespace: monitoring
-    - name: traefik
-      repo: dmall
-      namespace: kube-system
-      chartVersion: 1.86.1
+      namespace: projectcontour
+      chartVersion: 1.1.2
     - name: monitor
       repo: dmall
       namespace: monitoring
       chartName: prometheus-operator
-      chartVersion: 8.7.1
+      chartVersion: 9.1.0
       values:
+        istioScrape: enable
         custom-resources-config: disable
-        selector-only-system: enable
+        selector-only-system: disable
         lpv-path: /root/prometheus-data
         lpv-size: 20Gi
         prom-limit-cpu: "4"
@@ -51,20 +55,19 @@ spec:
       chartVersion: 1.0.17
       values:
         hosts: testapi-glb.sym.dmall.com
-        tag: "v1.0.10"
+        tag: "v1.1.0-dev6"
     - name: sym-ctl
       repo: dmall
       namespace: sym-admin
       chartName: sym-controller
-      chartVersion : 1.0.17
+      chartVersion : 1.0.18
       values:
-        tag: "v1.0.10"
+        tag: "v1.1.0-dev6"
         master: "true"
-        offlinepod: "true"
         worker: "true"
+        offlinepod: "true"
         cluster: "false"
-        reCreate: "false"
+        reCreate: "true"
         leader: "true"
         oldCluster: "false"
         threadiness: "1"
-        repos: "https://kubernetes-charts.storage.googleapis.com"

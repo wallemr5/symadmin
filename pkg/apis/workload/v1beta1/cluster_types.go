@@ -59,6 +59,7 @@ type HelmChartSpec struct {
 	ChartVersion  string            `json:"chartVersion,omitempty"`
 	OverrideValue string            `json:"overrideValue,omitempty"`
 	Values        map[string]string `json:"values,omitempty"`
+	RawValueSet   map[string]string `json:"rawValueSet,omitempty"`
 }
 
 type MonitoringStatus struct {
@@ -68,25 +69,32 @@ type MonitoringStatus struct {
 }
 
 type ClusterStatus struct {
-	AppStatus        []*AppHelmStatuses        `json:"appStatus,omitempty"`
-	ClusterStatus    []*ClusterComponentStatus `json:"clusterStatus,omitempty"`
-	Version          *version.Info             `json:"version,omitempty"`
-	MonitoringStatus *MonitoringStatus         `json:"monitoringStatus,omitempty"`
-	NodeDetail       *NodeDetail               `json:"nodeDetail"`
+	AppHelms         []*AppHelmStatus   `json:"appHelms,omitempty"`
+	Components       []*ComponentStatus `json:"components,omitempty"`
+	Version          *version.Info      `json:"version,omitempty"`
+	MonitoringStatus *MonitoringStatus  `json:"monitoringStatus,omitempty"`
+	NodeDetail       *NodeDetail        `json:"nodeDetail"`
 }
 
-type ClusterComponentStatus struct {
+type ComponentStatus struct {
 	Name       string                  `json:"name"`
 	Conditions []v1.ComponentCondition `json:"conditions,omitempty"`
 }
 
-type AppHelmStatuses struct {
-	Name         string `json:"name,omitempty"`
-	ChartVersion string `json:"chartVersion,omitempty"`
-	RlsName      string `json:"rlsName,omitempty"`
-	RlsStatus    string `json:"rlsStatus,omitempty"`
-	RlsVersion   int32  `json:"rlsVersion,omitempty"`
-	OverrideVa   string `json:"overrideVa,omitempty"`
+type ResourcesObject struct {
+	Group string `json:"group,omitempty"`
+	Kind  string `json:"kind,omitempty"`
+	Name  string `json:"name,omitempty"`
+}
+
+type AppHelmStatus struct {
+	Name         string             `json:"name,omitempty"`
+	ChartVersion string             `json:"chartVersion,omitempty"`
+	RlsName      string             `json:"rlsName,omitempty"`
+	RlsStatus    string             `json:"rlsStatus,omitempty"`
+	RlsVersion   int32              `json:"rlsVersion,omitempty"`
+	OverrideVa   string             `json:"overrideVa,omitempty"`
+	Resources    []*ResourcesObject `json:"resources,omitempty"`
 }
 
 type NodeDetail struct {

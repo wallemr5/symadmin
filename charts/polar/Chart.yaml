@@ -1,0 +1,12 @@
+apiVersion: v1
+appVersion: v1.0.9
+description: This is a template for creating for polar.
+keywords:
+  - log
+  - monitor
+  - polar
+maintainers:
+  - email: kui.xue@dmall.com
+    name: xk
+name: polar
+version: 0.0.2
