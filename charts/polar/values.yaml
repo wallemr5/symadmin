@@ -1,0 +1,34 @@
+
+image:
+  repository: symcn.tencentcloudcr.com/symcn/polar
+  tag: v1.0.9
+  pullPolicy: IfNotPresent
+
+
+# Expose the service to the host network
+hostNetwork: true
+
+resources:
+  limits:
+    cpu: 500m
+    memory: 512Mi
+  requests:
+    cpu: 200m
+    memory: 256Mi
+
+nodeSelector: {}
+
+tolerations: []
+#- key: sym-preserve
+#  operator: Exists
+
+affinity: {}
+#  nodeAffinity:
+#    requiredDuringSchedulingIgnoredDuringExecution:
+#      nodeSelectorTerms:
+#        - matchExpressions:
+#            - key: kubernetes.io/hostname
+#              operator: In
+#              values:
+#                - aks-v16c128g-16534360-vmss000007
+#                - aks-v16c128g-16534360-vmss000008

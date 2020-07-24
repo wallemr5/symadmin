@@ -135,6 +135,7 @@ func GetWatchPredicateForAdvDeploymentSpec() predicate.Funcs {
 			oldObj := e.ObjectOld.(*workloadv1beta1.AdvDeployment)
 			newObj := e.ObjectNew.(*workloadv1beta1.AdvDeployment)
 			if !equality.Semantic.DeepEqual(oldObj.Spec, newObj.Spec) ||
+				!equality.Semantic.DeepEqual(oldObj.GetAnnotations(), newObj.GetAnnotations()) ||
 				oldObj.GetDeletionTimestamp() != newObj.GetDeletionTimestamp() ||
 				oldObj.GetGeneration() != newObj.GetGeneration() {
 				return true

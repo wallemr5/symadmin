@@ -13,6 +13,7 @@ import (
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/fields"
+	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/klog"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -68,11 +69,11 @@ func (m *APIManager) GetPodEvent(c *gin.Context) {
 			Raw:       &metav1.ListOptions{Limit: limit},
 		}
 		if podName != "all" && podName != "" {
-			listOptions.MatchingField("podName", podName)
+			listOptions.FieldSelector = fields.Set{"podName": podName}.AsSelector()
 		}
 		events := &corev1.EventList{}
 
-		err := cluster.Client.List(ctx, listOptions, events)
+		err := cluster.Client.List(ctx, events, listOptions)
 		if err != nil {
 			if apierrors.IsNotFound(err) {
 				continue
@@ -125,9 +126,9 @@ func (m *APIManager) GetPodByIP(c *gin.Context) {
 
 	clusters := m.K8sMgr.GetAll(clusterName)
 	for _, cluster := range clusters {
-		err := cluster.Client.List(ctx, &client.ListOptions{
+		err := cluster.Client.List(ctx, list, &client.ListOptions{
 			FieldSelector: fields.SelectorFromSet(fields.Set{"status.podIP": podIP})},
-			list)
+		)
 		if err != nil {
 			klog.Errorf("get pod from podIP error: %v", err)
 		}
@@ -252,7 +253,7 @@ func (m *APIManager) DeletePodByGroup(c *gin.Context) {
 
 	clusters := m.K8sMgr.GetAll(clusterName)
 	ctx := context.Background()
-	options := make(map[string]string)
+	options := labels.Set{}
 	if group != "" {
 		options["sym-group"] = group
 	}
@@ -265,12 +266,12 @@ func (m *APIManager) DeletePodByGroup(c *gin.Context) {
 	if appName != "all" {
 		options["app"] = appName
 	}
-	listOptions := &client.ListOptions{Namespace: namespace}
-	listOptions.MatchingLabels(options)
+	listOptions := &client.ListOptions{Namespace: namespace, LabelSelector: options.AsSelector()}
+
 	errorPods := []*corev1.Pod{}
 	for _, cluster := range clusters {
 		podList := &corev1.PodList{}
-		err := cluster.Client.List(ctx, listOptions, podList)
+		err := cluster.Client.List(ctx, podList, listOptions)
 		if err != nil {
 			klog.Errorf("get pods error: %v", err)
 			AbortHTTPError(c, GetPodError, "", err)
@@ -301,7 +302,7 @@ func (m *APIManager) getPodListByAppName(clusterName, namespace, appName, group,
 	canaryPods := make([]*model.Pod, 0, 4)
 	result := make(map[string][]*model.Pod)
 
-	options := make(map[string]string)
+	options := labels.Set{}
 	if group != "" {
 		options["sym-group"] = group
 	}
@@ -315,15 +316,16 @@ func (m *APIManager) getPodListByAppName(clusterName, namespace, appName, group,
 		options["app"] = appName
 	}
 
-	listOptions := &client.ListOptions{Namespace: namespace}
-	listOptions.MatchingLabels(options)
+	listOptions := &client.ListOptions{Namespace: namespace, LabelSelector: options.AsSelector()}
 	podList, err := m.Cluster.GetPods(listOptions, clusterName)
 	if err != nil {
 		return nil, err
 	}
 
-	endpointsListOptions := &client.ListOptions{Namespace: namespace}
-	endpointsListOptions.MatchingLabels(map[string]string{"app": appName + "-svc"})
+	lb := labels.Set{
+		"app": appName + "-svc",
+	}
+	endpointsListOptions := &client.ListOptions{Namespace: namespace, LabelSelector: lb.AsSelector()}
 	endpointsList, err := m.Cluster.GetEndpoints(endpointsListOptions, clusterName)
 	if err != nil {
 		return nil, err

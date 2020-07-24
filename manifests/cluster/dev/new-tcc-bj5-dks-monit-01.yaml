@@ -7,7 +7,7 @@ metadata:
   name: tcc-bj5-dks-monit-01
   namespace: default
 spec:
-  symNodeName: 10.13.135.252
+  symNodeName: 10.13.135.243
   pause: false
   meta:
     area: beijing
@@ -15,53 +15,50 @@ spec:
     id: "4"
     clusterType: tke
     clusterIngressHead: monitor
-  helmSpec:
-    maxHistory: 5
-    namespace: kube-system
-    overrideImageSpec: registry.cn-hangzhou.aliyuncs.com/google_containers/tiller:v2.13.1
+    clusterIngressImpl: contour
   apps:
     - name: metrics-server
       repo: dmall
       namespace: monitoring
-    - name: traefik
-      repo: dmall
-      namespace: kube-system
-      chartVersion: 1.86.1
     - name: monitor
       repo: dmall
       namespace: monitoring
       chartName: prometheus-operator
-      chartVersion: 8.7.1
+      chartVersion: 9.1.0
       values:
         custom-resources-config: disable
-        selector-only-system: enable
+        selector-only-system: disable
         lpv-path: /root/prometheus-data
         lpv-size: 20Gi
-        prom-limit-cpu: "1"
-        prom-limit-memory: 2Gi
-        prom-req-cpu: "0.5"
-        prom-req-memory: 1Gi
+        prom-limit-cpu: "2"
+        prom-limit-memory: 4Gi
+        prom-req-cpu: "1"
+        prom-req-memory: 2Gi
         prom-retention: 2d
         lpv-grafana-path: /root/grafana-data
         lpv-grafana-size: 1Gi
         grafana-ing: mg.symphony.dmall.com
         prom-ing: mp.symphony.dmall.com
         alertmanager-ing: ma.symphony.dmall.com
+    - name: contour
+      repo: dmall
+      namespace: projectcontour
+      chartVersion: 1.1.2
     - name: sym-api
       repo: dmall
       namespace: sym-admin
       chartName: sym-api
-      chartVersion: 1.0.5
+      chartVersion: 1.0.17
       values:
         hosts: devapi.sym.dmall.com
-        tag: "v1.0.6-dev6"
+        tag: "v1.1.0-dev2"
     - name: sym-ctl
       repo: dmall
       namespace: sym-admin
       chartName: sym-controller
-      chartVersion : 1.0.5
+      chartVersion : 1.0.17
       values:
-        tag: "v1.0.6-dev6"
+        tag: "v1.1.0-dev2"
         master: "true"
         worker: "true"
         cluster: "false"
@@ -69,3 +66,4 @@ spec:
         leader: "true"
         oldCluster: "false"
         threadiness: "1"
+

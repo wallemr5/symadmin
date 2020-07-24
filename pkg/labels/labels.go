@@ -1,11 +1,8 @@
 package labels
 
 import (
-	"errors"
 	"fmt"
 	"regexp"
-
-	"k8s.io/klog"
 )
 
 // ObservedNamespace ...
@@ -37,6 +34,12 @@ const (
 	ObserveMustLabelDomain      = "lightningDomain0"
 )
 
+const (
+	ClusterAnnotationMonitor     = "k8s.io/monitor"
+	WorkLoadAnnotationHpa        = "hpa.autoscaling.dmall.com/Hpa"
+	WorkLoadAnnotationHpaMetrics = "hpa.autoscaling.dmall.com/Metrics"
+)
+
 // group items
 const (
 	BlueGroup   = "blue"
@@ -62,37 +65,6 @@ func GetLabels(clusterName string) map[string]string {
 // GetCrdLabelSelector ...
 func GetCrdLabelSelector() string {
 	return fmt.Sprintf("%v=%v", LabelCreatedBy, ControllerName)
-}
-
-// MakeHelmReleaseFilter ...
-func MakeHelmReleaseFilter(appName string) string {
-	if appName == "" || appName == "all" {
-		return ""
-	}
-	return fmt.Sprintf("^%s(-gz|-rz).*(-blue|-green|-canary|-svc)$", appName)
-}
-
-// MakeHelmReleaseFilterWithGroup ...
-func MakeHelmReleaseFilterWithGroup(appName, group, zone string) (string, error) {
-	var reg string
-	switch {
-	case appName == "" || appName == "all":
-		reg = ""
-	case group == "" && zone == "":
-		reg = fmt.Sprintf("^%s(-gz|-rz).*(-blue|-green|-canary|-svc)$", appName)
-	case group != "" && zone == "":
-		if x := IsValidGroup(group); !x && group != "" {
-			klog.Errorf("get not valid group: %s", group)
-			err := errors.New("Received incorrect group parameter")
-			return "", err
-		}
-		reg = fmt.Sprintf("^%s(-gz|-rz).*(-%s)$", appName, group)
-	case group == "" && zone != "":
-		reg = fmt.Sprintf("^%s(-%s).*(-blue|-green|-canary|-svc)$", appName, zone)
-	default:
-		reg = fmt.Sprintf("^%s(-%s).*(-%s)$", appName, zone, group)
-	}
-	return reg, nil
 }
 
 // CheckAndGetAppInfo check name format, if throught return app info
@@ -138,4 +110,12 @@ func GetClusterLs() map[string]string {
 	return map[string]string{
 		"ClusterOwner": "sym-admin",
 	}
+}
+
+func GetAnnotationKey(annotation map[string]string, key string) string {
+	if k, ok := annotation[key]; ok {
+		return k
+	}
+
+	return ""
 }

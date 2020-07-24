@@ -5,14 +5,12 @@ import (
 	"errors"
 	"sync"
 
-	helmv2 "gitlab.dmall.com/arch/sym-admin/pkg/helm/v2"
-	"gitlab.dmall.com/arch/sym-admin/pkg/labels"
+	helmv3 "gitlab.dmall.com/arch/sym-admin/pkg/helm/v3"
 	appv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/kubernetes"
-	rlsv2 "k8s.io/helm/pkg/proto/hapi/release"
 	"k8s.io/klog"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
@@ -35,7 +33,7 @@ type BaseCluster interface {
 // CustomeCluster extend the methods of the basic cluster, including some special business methods.
 type CustomeCluster interface {
 	BaseCluster
-	GetHelmRelease(opts map[string]string, clusterNames ...string) ([]*rlsv2.Release, error)
+	GetHelmRelease(opts map[string]string, clusterNames ...string) ([]*helmv3.Release, error)
 }
 
 // GetOriginKubeCli returns the kubecli of the master cluster client if len(clusterNames) == 0, otherwise
@@ -77,7 +75,7 @@ func (m *ClusterManager) GetPods(opts *client.ListOptions, clusterNames ...strin
 
 	for _, cluster := range clusters {
 		podList := &corev1.PodList{}
-		err := cluster.Client.List(ctx, opts, podList)
+		err := cluster.Client.List(ctx, podList, opts)
 		if err != nil {
 			if apierrors.IsNotFound(err) {
 				continue
@@ -100,7 +98,7 @@ func (m *ClusterManager) GetNodes(opts *client.ListOptions, clusterNames ...stri
 
 	for _, cluster := range clusters {
 		nodeList := &corev1.NodeList{}
-		err := cluster.Client.List(ctx, opts, nodeList)
+		err := cluster.Client.List(ctx, nodeList, opts)
 		if err != nil {
 			if apierrors.IsNotFound(err) {
 				continue
@@ -123,7 +121,7 @@ func (m *ClusterManager) GetDeployment(opts *client.ListOptions, clusterNames ..
 
 	for _, cluster := range clusters {
 		deployList := &appv1.DeploymentList{}
-		err := cluster.Client.List(ctx, opts, deployList)
+		err := cluster.Client.List(ctx, deployList, opts)
 		if err != nil {
 			if apierrors.IsNotFound(err) {
 				continue
@@ -146,7 +144,7 @@ func (m *ClusterManager) GetStatefulsets(opts *client.ListOptions, clusterNames 
 
 	for _, cluster := range clusters {
 		staList := &appv1.StatefulSetList{}
-		err := cluster.Client.List(ctx, opts, staList)
+		err := cluster.Client.List(ctx, staList, opts)
 		if err != nil {
 			if apierrors.IsNotFound(err) {
 				continue
@@ -169,7 +167,7 @@ func (m *ClusterManager) GetService(opts *client.ListOptions, clusterNames ...st
 
 	for _, cluster := range clusters {
 		serviceList := &corev1.ServiceList{}
-		err := cluster.Client.List(ctx, opts, serviceList)
+		err := cluster.Client.List(ctx, serviceList, opts)
 		if err != nil {
 			if apierrors.IsNotFound(err) {
 				continue
@@ -192,7 +190,7 @@ func (m *ClusterManager) GetEndpoints(opts *client.ListOptions, clusterNames ...
 
 	for _, cluster := range clusters {
 		endpointsList := &corev1.EndpointsList{}
-		err := cluster.Client.List(ctx, opts, endpointsList)
+		err := cluster.Client.List(ctx, endpointsList, opts)
 		if err != nil {
 			if apierrors.IsNotFound(err) {
 				continue
@@ -215,7 +213,7 @@ func (m *ClusterManager) GetEvent(opts *client.ListOptions, clusterNames ...stri
 
 	for _, cluster := range clusters {
 		eventList := &corev1.EventList{}
-		err := cluster.Client.List(ctx, opts, eventList)
+		err := cluster.Client.List(ctx, eventList, opts)
 		if err != nil {
 			if apierrors.IsNotFound(err) {
 				continue
@@ -237,7 +235,7 @@ func (m *ClusterManager) DeletePods(opts *client.ListOptions, clusterNames ...st
 
 	for _, cluster := range clusters {
 		podList := &corev1.PodList{}
-		err := cluster.Client.List(ctx, opts, podList)
+		err := cluster.Client.List(ctx, podList, opts)
 		if err != nil {
 			if apierrors.IsNotFound(err) {
 				continue
@@ -274,37 +272,14 @@ func (m *ClusterManager) DeletePod(opts types.NamespacedName, clusterNames ...st
 }
 
 // GetHelmRelease ...
-func (m *ClusterManager) GetHelmRelease(opts map[string]string, clusterNames ...string) ([]*rlsv2.Release, error) {
+func (m *ClusterManager) GetHelmRelease(opts map[string]string, clusterNames ...string) ([]*helmv3.Release, error) {
 	clusters := m.GetAll(clusterNames...)
-	result := make([]*rlsv2.Release, 0)
+	result := make([]*helmv3.Release, 0)
 	wg := sync.WaitGroup{}
 	for _, cluster := range clusters {
 		wg.Add(1)
-		go func(wg *sync.WaitGroup, cluster *Cluster, result []*rlsv2.Release) {
-			hClient, err := helmv2.NewClientFromConfig(cluster.RestConfig, cluster.KubeCli, "", nil)
-			if err != nil {
-				klog.Errorf("Initializing a new helm clinet has an error: %+v", err)
-				return
-			}
-			defer hClient.Close()
+		go func(wg *sync.WaitGroup, cluster *Cluster, result []*helmv3.Release) {
 
-			var filter string
-			if opts["releaseName"] != "" {
-				filter = opts["releaseName"]
-			} else {
-				filter, err = labels.MakeHelmReleaseFilterWithGroup(
-					opts["appName"], opts["group"], opts["symZone"])
-				if err != nil {
-					return
-				}
-			}
-
-			response, err := helmv2.ListReleases(filter, hClient)
-			if err != nil || response == nil {
-				klog.Errorf("Can not find release[%s] before deleting it, err: %s", opts["appName"], err)
-				return
-			}
-			result = append(result, response.GetReleases()...)
 			wg.Done()
 		}(&wg, cluster, result)
 	}

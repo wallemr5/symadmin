@@ -21,6 +21,8 @@ import (
 
 	"fmt"
 
+	"context"
+
 	workloadv1beta1 "gitlab.dmall.com/arch/sym-admin/pkg/apis/workload/v1beta1"
 	"gitlab.dmall.com/arch/sym-admin/pkg/healthcheck"
 	k8smanager "gitlab.dmall.com/arch/sym-admin/pkg/k8s/manager"
@@ -125,7 +127,7 @@ func NewDksManager(cli k8smanager.MasterClient, opt *ManagerOption, componentNam
 		dksMgr.K8sMgr.AddPreInit(func() {
 			klog.Infof("preInit manager cluster informer ... ")
 			for _, c := range dksMgr.K8sMgr.GetAll() {
-				advDeployInformer, _ := c.Cache.GetInformer(&workloadv1beta1.AdvDeployment{})
+				advDeployInformer, _ := c.Cache.GetInformer(context.TODO(), &workloadv1beta1.AdvDeployment{})
 				dksMgr.HealthHandler.AddReadinessCheck(fmt.Sprintf("%s_%s", c.Name, "advDeploy_cache_sync"), func() error {
 					if advDeployInformer.HasSynced() {
 						return nil

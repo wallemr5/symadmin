@@ -1,0 +1,110 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: sym-ctl-cluster
+  namespace: sym-admin
+  labels:
+    app.kubernetes.io/name: sym-controller
+    helm.sh/chart: sym-controller-1.1.1
+    app.kubernetes.io/instance: sym-ctl-cluster
+    app.kubernetes.io/managed-by: Helm
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: sym-controller
+      app.kubernetes.io/instance: sym-ctl-cluster
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: sym-controller
+        app.kubernetes.io/instance: sym-ctl-cluster
+    spec:
+      containers:
+        - name: sym-ctl-cluster
+          image: symcn.tencentcloudcr.com/symcn/sym-admin-controller:v1.1.0-dev6
+          imagePullPolicy: IfNotPresent
+          args:
+            - "controller"
+            - "-v"
+            - "3"
+            - "--enable-cluster"
+            - "--enable-leader=false"
+            - "--charts-repo=http://chartmuseum.dmall.com"
+          ports:
+            - name: http
+              containerPort: 8080
+              protocol: TCP
+          livenessProbe:
+            httpGet:
+              path: /live
+              port: http
+            initialDelaySeconds: 10
+            periodSeconds: 30
+          readinessProbe:
+            httpGet:
+              path: /ready
+              port: http
+            initialDelaySeconds: 5
+            periodSeconds: 30
+          resources:
+            limits:
+              cpu: 500m
+              memory: 512Mi
+            requests:
+              cpu: 200m
+              memory: 256Mi
+      serviceAccountName: sym-controller
+      affinity:
+        nodeAffinity:
+          preferredDuringSchedulingIgnoredDuringExecution:
+            - preference:
+                matchExpressions:
+                  - key: sym-preserve
+                    operator: In
+                    values:
+                      - monitor
+              weight: 1
+      tolerations:
+        - key: sym-preserve
+          operator: Exists
+      hostAliases:
+        - hostnames:
+            - cls-ehx4vson.ccs.tencent-cloud.com
+          ip: 10.248.227.74
+        - hostnames:
+            - cls-2ylraskd.ccs.tencent-cloud.com
+          ip: 10.248.227.7
+        - hostnames:
+            - cls-89a4hpb3.ccs.tencent-cloud.com
+          ip: 10.13.135.251
+        - hostnames:
+            - cls-cm580t93.ccs.tencent-cloud.com
+          ip: 10.13.134.9
+        - hostnames:
+            - cls-0snem5sv.ccs.tencent-cloud.com
+          ip: 10.13.133.7
+        - hostnames:
+            - cls-7xq1bq9f.ccs.tencent-cloud.com
+          ip: 10.13.135.12
+        - hostnames:
+            - cls-otdyiqyb.ccs.tencent-cloud.com
+          ip: 10.16.247.78
+        - hostnames:
+            - cls-h5f02nmb.ccs.tencent-cloud.com
+          ip: 10.16.247.11
+        - hostnames:
+            - cls-3yclxq8t.ccs.tencent-cloud.com
+          ip: 10.16.113.12
+        - hostnames:
+            - cls-0snem5sv.ccs.tencent-cloud.com
+          ip: 10.13.133.9
+        - hostnames:
+            - cls-278pwqet.ccs.tencent-cloud.com
+          ip: 10.16.247.131
+        - hostnames:
+            - cls-97rlivuj.ccs.tencent-cloud.com
+          ip: 10.16.113.81
+        - hostnames:
+            - chartmuseum.dmall.com
+          ip: 10.13.135.250

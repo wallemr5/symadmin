@@ -3,16 +3,13 @@ package traefik
 import (
 	"fmt"
 
-	"context"
-
+	"emperror.dev/errors"
 	"github.com/ghodss/yaml"
 	"github.com/go-logr/logr"
 	workloadv1beta1 "gitlab.dmall.com/arch/sym-admin/pkg/apis/workload/v1beta1"
 	"gitlab.dmall.com/arch/sym-admin/pkg/controllers/cluster/common"
-	helmv2 "gitlab.dmall.com/arch/sym-admin/pkg/helm/v2"
+	helmv3 "gitlab.dmall.com/arch/sym-admin/pkg/helm/v3"
 	k8smanager "gitlab.dmall.com/arch/sym-admin/pkg/k8s/manager"
-	corev1 "k8s.io/api/core/v1"
-	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/klog"
 )
 
@@ -20,17 +17,17 @@ type reconciler struct {
 	name        string
 	k           *k8smanager.Cluster
 	obj         *workloadv1beta1.Cluster
-	hClient     *helmv2.Client
+	env         *helmv3.HelmEnv
 	clusterType string
 	urlHead     string
 }
 
-func New(k *k8smanager.Cluster, obj *workloadv1beta1.Cluster, hClient *helmv2.Client) common.ComponentReconciler {
+func New(k *k8smanager.Cluster, obj *workloadv1beta1.Cluster, env *helmv3.HelmEnv) common.ComponentReconciler {
 	r := &reconciler{
-		name:    "traefik",
-		k:       k,
-		hClient: hClient,
-		obj:     obj,
+		name: "traefik",
+		k:    k,
+		obj:  obj,
+		env:  env,
 	}
 
 	if clusterType, ok := r.obj.Spec.Meta[common.ClusterType]; ok {
@@ -48,25 +45,6 @@ func (r *reconciler) Name() string {
 }
 
 func (r *reconciler) makeOverrideTraefikMap() map[string]interface{} {
-	serviceAnnotations := map[string]interface{}{}
-	switch r.clusterType {
-	case "tke":
-		svc := &corev1.Service{}
-		err := r.k.Client.Get(context.TODO(), types.NamespacedName{Name: "kube-user", Namespace: "default"}, svc)
-		if err == nil && svc.Spec.Type == corev1.ServiceTypeLoadBalancer {
-			if va, ok := svc.Annotations["service.kubernetes.io/qcloud-loadbalancer-internal-subnetid"]; ok {
-				klog.Infof("find tke cluster qcloud-loadbalancer-internal-subnetid[%s]", va)
-				serviceAnnotations["service.kubernetes.io/qcloud-loadbalancer-internal-subnetid"] = va
-			}
-		}
-	case "aks":
-		serviceAnnotations["service.beta.kubernetes.io/azure-load-balancer-internal"] = true
-	case "gke":
-		serviceAnnotations["cloud.google.com/load-balancer-type"] = "Internal"
-	case "ack":
-	case "eks":
-	}
-
 	overrideValueMap := map[string]interface{}{
 		"dashboard": map[string]interface{}{
 			"enabled": true,
@@ -78,7 +56,7 @@ func (r *reconciler) makeOverrideTraefikMap() map[string]interface{} {
 			},
 		},
 		"service": map[string]interface{}{
-			"annotations": serviceAnnotations,
+			"annotations": common.GetLbServiceAnnotations(r.clusterType, r.k.Client),
 		},
 		"debug": map[string]interface{}{
 			"enabled": false,
@@ -103,9 +81,13 @@ func (r *reconciler) Reconcile(log logr.Logger, obj interface{}) (interface{}, e
 		return nil, fmt.Errorf("app name or namespace is empty")
 	}
 
-	rlsName, ns, chartUrl := common.BuildHelmInfo(app)
+	env, err := helmv3.NewHelmEnv(r.env, r.k.RawKubeconfig, app.Namespace, r.k.KubeCli)
+	if err != nil {
+		return nil, errors.Wrapf(err, "failed new helm env")
+	}
+
+	rlsName, ns, chartURL := common.BuildHelmInfo(app)
 	var vaByte []byte
-	var err error
 	if app.OverrideValue != "" {
 		vaByte = []byte(app.OverrideValue)
 	} else {
@@ -115,20 +97,13 @@ func (r *reconciler) Reconcile(log logr.Logger, obj interface{}) (interface{}, e
 			klog.Errorf("Marshal overrideValueMap err:%+v", err)
 			return nil, err
 		}
-		klog.Infof("rlsName:%s OverrideValue:\n%s", rlsName, string(vaByte))
 	}
 
-	rls, err := helmv2.ApplyRelease(rlsName, chartUrl, app.ChartVersion, nil, r.hClient, ns, nil, vaByte)
+	klog.V(4).Infof("rlsName:%s OverrideValue:\n%s", rlsName, string(vaByte))
+	rls, err := helmv3.ApplyRelease(env, rlsName, chartURL, app.ChartVersion, nil, ns, vaByte, nil)
 	if err != nil || rls == nil {
 		return nil, err
 	}
 
-	return &workloadv1beta1.AppHelmStatuses{
-		Name:         app.Name,
-		ChartVersion: rls.GetChart().GetMetadata().GetVersion(),
-		RlsName:      rls.Name,
-		RlsVersion:   rls.GetVersion(),
-		RlsStatus:    rls.GetInfo().GetStatus().Code.String(),
-		OverrideVa:   rls.GetConfig().GetRaw(),
-	}, nil
+	return common.ConvertAppHelmReleasePtr(rls), nil
 }

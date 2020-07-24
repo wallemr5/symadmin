@@ -22,9 +22,8 @@ import (
 	"github.com/spf13/cobra"
 	"github.com/spf13/pflag"
 	"k8s.io/klog"
-
-	// ctrl "sigs.k8s.io/controller-runtime"
-	logf "sigs.k8s.io/controller-runtime/pkg/runtime/log"
+	logf "sigs.k8s.io/controller-runtime/pkg/log"
+	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 )
 
 func AddFlags(cmd *cobra.Command) {
@@ -62,7 +61,12 @@ func GetRootCmd(args []string) *cobra.Command {
 	// Make sure that klog logging variables are initialized so that we can
 	// update them from this file.
 	klog.InitFlags(nil)
-	logf.SetLogger(logf.ZapLogger(opt.DevelopmentMode))
+
+	// opts := zap.Options{}
+	// opts.BindFlags(flag.CommandLine)
+	// log := zap.New(zap.UseFlagOptions(&opts))
+	// logf.SetLogger(log)
+	logf.SetLogger(zap.New(zap.UseDevMode(opt.DevelopmentMode)))
 
 	// Make sure klog (used by the client-go dependency) logs to stderr, as it
 	// will try to log to directories that may not exist in the cilium-operator

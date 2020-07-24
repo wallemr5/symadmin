@@ -7,6 +7,7 @@ import (
 
 	"github.com/pkg/errors"
 	"gitlab.dmall.com/arch/sym-admin/pkg/resources/patch"
+	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/meta"
@@ -23,6 +24,12 @@ const (
 	DesiredStateAbsent  DesiredState = "absent"
 )
 
+type Option struct {
+	DesiredState     DesiredState
+	IsRecreate       bool
+	IsIgnoreReplicas bool
+}
+
 func prepareResourceForUpdate(current, desired runtime.Object) {
 	switch desired.(type) {
 	case *corev1.Service:
@@ -31,9 +38,9 @@ func prepareResourceForUpdate(current, desired runtime.Object) {
 	}
 }
 
-func Reconcile(ctx context.Context, c client.Client, desired runtime.Object, desiredState DesiredState, isRecreate bool) (int, error) {
-	if desiredState == "" {
-		desiredState = DesiredStatePresent
+func Reconcile(ctx context.Context, c client.Client, desired runtime.Object, opt Option) (int, error) {
+	if opt.DesiredState == "" {
+		opt.DesiredState = DesiredStatePresent
 	}
 
 	var change int
@@ -49,7 +56,7 @@ func Reconcile(ctx context.Context, c client.Client, desired runtime.Object, des
 		return change, errors.Wrapf(err, "getting resource key[%s]", key)
 	}
 	if apierrors.IsNotFound(err) {
-		if desiredState == DesiredStatePresent {
+		if opt.DesiredState == DesiredStatePresent {
 			if err := patch.DefaultAnnotator.SetLastAppliedAnnotation(desired); err != nil {
 				klog.Errorf("Failed to set last applied annotation key[%s] err: %v", key, err)
 			}
@@ -60,8 +67,12 @@ func Reconcile(ctx context.Context, c client.Client, desired runtime.Object, des
 			change++
 		}
 	} else {
-		if desiredState == DesiredStatePresent {
+		if opt.DesiredState == DesiredStatePresent {
 			var patchResult *patch.PatchResult
+			calcOpts := []patch.CalculateOption{
+				patch.IgnoreStatusFields(),
+			}
+
 			if svcDesired, ok := desired.(*corev1.Service); ok {
 				svcCurrent, _ := current.(*corev1.Service)
 				if !reflect.DeepEqual(svcCurrent.GetLabels(), svcDesired.GetLabels()) {
@@ -69,7 +80,16 @@ func Reconcile(ctx context.Context, c client.Client, desired runtime.Object, des
 					goto Update
 				}
 			}
-			patchResult, err = patch.DefaultPatchMaker.Calculate(current, desired, patch.IgnoreStatusFields())
+
+			if _, ok := desired.(*appsv1.Deployment); ok && opt.IsIgnoreReplicas {
+				calcOpts = append(calcOpts, patch.IgnoreDeployReplicasFields())
+			}
+
+			if _, ok := desired.(*appsv1.StatefulSet); ok && opt.IsIgnoreReplicas {
+				calcOpts = append(calcOpts, patch.IgnoreStsReplicasFields())
+			}
+
+			patchResult, err = patch.DefaultPatchMaker.Calculate(current, desired, calcOpts...)
 			if err != nil {
 				klog.Errorf("could not match object key[%s] err: %v", key, err)
 				return change, err
@@ -86,7 +106,7 @@ func Reconcile(ctx context.Context, c client.Client, desired runtime.Object, des
 				klog.Errorf("Failed to set last applied annotation key[%s] err: %v", key, err)
 			}
 
-			if isRecreate {
+			if opt.IsRecreate {
 				metaAccessor := meta.NewAccessor()
 				currentResourceVersion, err := metaAccessor.ResourceVersion(current)
 				if err != nil {
@@ -147,7 +167,7 @@ func Reconcile(ctx context.Context, c client.Client, desired runtime.Object, des
 				}
 				change++
 			}
-		} else if desiredState == DesiredStateAbsent {
+		} else if opt.DesiredState == DesiredStateAbsent {
 			if err := c.Delete(ctx, current); err != nil {
 				return change, errors.Wrapf(err, "deleting resource key[%s]", key)
 			}

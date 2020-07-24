@@ -9,16 +9,18 @@ import (
 	"io"
 	"math/rand"
 	"net/http"
-	"sigs.k8s.io/controller-runtime/pkg/client"
 	"strconv"
 	"strings"
 	"sync"
 	"time"
 
+	"sigs.k8s.io/controller-runtime/pkg/client"
+
 	"github.com/gin-gonic/gin"
 	"github.com/gorilla/websocket"
 	k8smanager "gitlab.dmall.com/arch/sym-admin/pkg/k8s/manager"
 	core_v1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/tools/remotecommand"
@@ -336,9 +338,9 @@ func (m *APIManager) GetOfflineLogTerminal(c *gin.Context) {
 
 	var podName, containerName string
 
-	options := make(map[string]string)
-
-	options["app"] = "offline-pod-log"
+	lb := labels.Set{
+		"app": "offline-pod-log",
+	}
 
 	hostIP, ok := c.GetQuery("hostIP")
 	if !ok {
@@ -369,11 +371,9 @@ func (m *APIManager) GetOfflineLogTerminal(c *gin.Context) {
 		return
 	}
 
-	listOptions := &client.ListOptions{Namespace: namespace}
-	listOptions.MatchingLabels(options)
+	listOptions := &client.ListOptions{Namespace: namespace, LabelSelector: lb.AsSelector()}
 
 	podList, err := m.Cluster.GetPods(listOptions, clusterName)
-
 	if err != nil {
 		AbortHTTPError(c, ParamInvalidError, "", errors.New("can not get offlineDepoy"))
 		return

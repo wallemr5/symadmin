@@ -23,16 +23,15 @@ import (
 	"gitlab.dmall.com/arch/sym-admin/pkg/apiManager"
 	k8sclient "gitlab.dmall.com/arch/sym-admin/pkg/k8s/client"
 	"k8s.io/klog"
+	logf "sigs.k8s.io/controller-runtime/pkg/log"
 	ctrlmanager "sigs.k8s.io/controller-runtime/pkg/manager"
-	logf "sigs.k8s.io/controller-runtime/pkg/runtime/log"
 	"sigs.k8s.io/controller-runtime/pkg/runtime/signals"
 
-	// ctrl "sigs.k8s.io/controller-runtime"
 	k8smanager "gitlab.dmall.com/arch/sym-admin/pkg/k8s/manager"
 )
 
 var (
-	logger = logf.KBLog.WithName("controller")
+	logger = logf.Log.WithName("controller")
 )
 
 // NewAPICmd ...
@@ -52,9 +51,10 @@ func NewAPICmd(cli *DksCli) *cobra.Command {
 
 			rp := time.Second * 120
 			mgr, err := ctrlmanager.New(cfg, ctrlmanager.Options{
-				Scheme:             k8sclient.GetScheme(),
-				MetricsBindAddress: "0",
-				LeaderElection:     false,
+				Scheme:                 k8sclient.GetScheme(),
+				MetricsBindAddress:     "0",
+				HealthProbeBindAddress: "0",
+				LeaderElection:         false,
 				// Port:               9443,
 				SyncPeriod: &rp,
 			})

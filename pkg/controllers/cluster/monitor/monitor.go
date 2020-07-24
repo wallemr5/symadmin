@@ -5,46 +5,44 @@ import (
 	"fmt"
 	"strings"
 
+	"emperror.dev/errors"
 	"github.com/ghodss/yaml"
 	"github.com/go-logr/logr"
-	"github.com/pkg/errors"
 	workloadv1beta1 "gitlab.dmall.com/arch/sym-admin/pkg/apis/workload/v1beta1"
 	"gitlab.dmall.com/arch/sym-admin/pkg/controllers/cluster/common"
-	"gitlab.dmall.com/arch/sym-admin/pkg/helm/object"
-	helmv2 "gitlab.dmall.com/arch/sym-admin/pkg/helm/v2"
+	"gitlab.dmall.com/arch/sym-admin/pkg/controllers/cluster/utils"
+	helmv3 "gitlab.dmall.com/arch/sym-admin/pkg/helm/v3"
 	k8smanager "gitlab.dmall.com/arch/sym-admin/pkg/k8s/manager"
 	pkgLabels "gitlab.dmall.com/arch/sym-admin/pkg/labels"
 	"gitlab.dmall.com/arch/sym-admin/pkg/resources"
 	corev1 "k8s.io/api/core/v1"
 	storagev1 "k8s.io/api/storage/v1"
-	apiextensionsv1beta1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1beta1"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/klog"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 )
 
 type reconciler struct {
-	name          string
-	mgr           manager.Manager
-	k             *k8smanager.Cluster
-	obj           *workloadv1beta1.Cluster
-	hClient       *helmv2.Client
-	clusterType   string
-	urlHead       string
-	isEnableAlert bool
+	name        string
+	mgr         manager.Manager
+	k           *k8smanager.Cluster
+	obj         *workloadv1beta1.Cluster
+	env         *helmv3.HelmEnv
+	clusterType string
+	urlHead     string
+	ingressImpl string
 }
 
 // New ...
-func New(mgr manager.Manager, k *k8smanager.Cluster, obj *workloadv1beta1.Cluster, hClient *helmv2.Client) common.ComponentReconciler {
+func New(mgr manager.Manager, k *k8smanager.Cluster, obj *workloadv1beta1.Cluster, env *helmv3.HelmEnv) common.ComponentReconciler {
 	r := &reconciler{
-		name:    "monitor",
-		mgr:     mgr,
-		k:       k,
-		hClient: hClient,
-		obj:     obj,
+		name: "monitor",
+		mgr:  mgr,
+		k:    k,
+		obj:  obj,
+		env:  env,
 	}
 
 	if clusterType, ok := r.obj.Spec.Meta[common.ClusterType]; ok {
@@ -55,9 +53,7 @@ func New(mgr manager.Manager, k *k8smanager.Cluster, obj *workloadv1beta1.Cluste
 		r.urlHead = h
 	}
 
-	if _, ok := r.obj.Spec.Meta[common.ClusterAlert]; ok {
-		r.isEnableAlert = true
-	}
+	r.ingressImpl = common.GetIngressImpl(obj.Spec.Meta)
 	return r
 }
 
@@ -175,7 +171,7 @@ func getPromRetention(app *workloadv1beta1.HelmChartSpec) string {
 
 func preInstallMonitoringGetEtcd(k *k8smanager.Cluster) []string {
 	nodes := &corev1.NodeList{}
-	err := k.Client.List(context.TODO(), &client.ListOptions{}, nodes)
+	err := k.Client.List(context.TODO(), nodes, &client.ListOptions{})
 	if err != nil {
 		klog.Errorf("cluster[%s] list nodes err: %+v", k.Name, err)
 		return nil
@@ -195,7 +191,7 @@ func preInstallMonitoringGetEtcd(k *k8smanager.Cluster) []string {
 	return nodeIps
 }
 
-func preInstallLpv(k *k8smanager.Cluster, app *workloadv1beta1.HelmChartSpec) error {
+func preInstallLpv(k *k8smanager.Cluster, app *workloadv1beta1.HelmChartSpec, c *workloadv1beta1.Cluster) error {
 	reclaimPolicy := corev1.PersistentVolumeReclaimDelete
 	volumeBindingMode := storagev1.VolumeBindingWaitForFirstConsumer
 	sc := &storagev1.StorageClass{
@@ -209,9 +205,31 @@ func preInstallLpv(k *k8smanager.Cluster, app *workloadv1beta1.HelmChartSpec) er
 	}
 
 	klog.Infof("start reconcile StorageClasses: %s", sc.Name)
-	_, err := resources.Reconcile(context.TODO(), k.Client, sc, resources.DesiredStatePresent, false)
+	_, err := resources.Reconcile(context.TODO(), k.Client, sc, resources.Option{})
 	if err != nil {
 		return err
+	}
+
+	promPath := getPromPvPath(app)
+	grafanaPath := getGrafanaPvPath(app)
+	if v := pkgLabels.GetAnnotationKey(c.Annotations, pkgLabels.ClusterAnnotationMonitor); v == "" {
+		err = utils.ApplyLauncherPod(k.KubeCli, app.Namespace, c.Spec.SymNodeName, promPath)
+		if err != nil {
+			klog.Errorf("ApplyLauncherPod node: %s path: %s err: %v", c.Spec.SymNodeName, promPath, err)
+			return err
+		}
+		err = utils.ApplyLauncherPod(k.KubeCli, app.Namespace, c.Spec.SymNodeName, grafanaPath)
+		if err != nil {
+			klog.Errorf("ApplyLauncherPod node: %s path: %s err: %v", c.Spec.SymNodeName, grafanaPath, err)
+			return err
+		}
+
+		if c.Annotations == nil {
+			c.Annotations = make(map[string]string)
+		}
+
+		c.Annotations[pkgLabels.ClusterAnnotationMonitor] =
+			fmt.Sprintf("{node: %s, prometheusDir: %s, grafanaDir: %s}", c.Spec.SymNodeName, promPath, grafanaPath)
 	}
 
 	promPv := &corev1.PersistentVolume{
@@ -226,7 +244,7 @@ func preInstallLpv(k *k8smanager.Cluster, app *workloadv1beta1.HelmChartSpec) er
 			},
 			PersistentVolumeSource: corev1.PersistentVolumeSource{
 				Local: &corev1.LocalVolumeSource{
-					Path: getPromPvPath(app),
+					Path: promPath,
 				},
 			},
 			PersistentVolumeReclaimPolicy: corev1.PersistentVolumeReclaimRetain,
@@ -254,7 +272,7 @@ func preInstallLpv(k *k8smanager.Cluster, app *workloadv1beta1.HelmChartSpec) er
 	}
 
 	klog.Infof("start reconcile pv: %s", promPv.Name)
-	_, err = resources.Reconcile(context.TODO(), k.Client, promPv, resources.DesiredStatePresent, false)
+	_, err = resources.Reconcile(context.TODO(), k.Client, promPv, resources.Option{})
 	if err != nil {
 		return err
 	}
@@ -271,7 +289,7 @@ func preInstallLpv(k *k8smanager.Cluster, app *workloadv1beta1.HelmChartSpec) er
 			},
 			PersistentVolumeSource: corev1.PersistentVolumeSource{
 				Local: &corev1.LocalVolumeSource{
-					Path: getGrafanaPvPath(app),
+					Path: grafanaPath,
 				},
 			},
 			PersistentVolumeReclaimPolicy: corev1.PersistentVolumeReclaimRetain,
@@ -299,7 +317,7 @@ func preInstallLpv(k *k8smanager.Cluster, app *workloadv1beta1.HelmChartSpec) er
 	}
 
 	klog.Infof("start reconcile pv: %s", grafanaPv.Name)
-	_, err = resources.Reconcile(context.TODO(), k.Client, grafanaPv, resources.DesiredStatePresent, false)
+	_, err = resources.Reconcile(context.TODO(), k.Client, grafanaPv, resources.Option{})
 	if err != nil {
 		return err
 	}
@@ -307,29 +325,12 @@ func preInstallLpv(k *k8smanager.Cluster, app *workloadv1beta1.HelmChartSpec) er
 	return nil
 }
 
-func reconcileCrd(mgr manager.Manager, k *k8smanager.Cluster, obj *unstructured.Unstructured) error {
-	crd := &apiextensionsv1beta1.CustomResourceDefinition{}
-	err := mgr.GetScheme().Convert(obj, crd, nil)
-	if err != nil {
-		klog.Warningf("convert crd name:%s err: %#v", obj.GetName(), err)
-		return err
-	}
-
-	klog.Infof("start reconcile crd: %s", crd.Name)
-	_, err = resources.Reconcile(context.TODO(), k.Client, crd, resources.DesiredStatePresent, false)
-	if err != nil {
-		return err
-	}
-
-	return nil
-}
-
-func makeOverrideIngress(enabled bool, host string) map[string]interface{} {
+func makeOverrideIngress(enabled bool, ingressImpl string, host string) map[string]interface{} {
 	ing := make(map[string]interface{})
 	if enabled {
 		ing["enabled"] = enabled
 		ing["annotations"] = map[string]interface{}{
-			"kubernetes.io/ingress.class": "traefik",
+			"kubernetes.io/ingress.class": ingressImpl,
 		}
 		ing["hosts"] = []string{host}
 	} else {
@@ -361,7 +362,7 @@ func getIngressName(urlhead string, componentName string, app *workloadv1beta1.H
 	}
 }
 
-func makeAlertManagerConfig(isEnableAlert bool, c *workloadv1beta1.Cluster) map[string]interface{} {
+func makeAlertManagerConfig(c *workloadv1beta1.Cluster) map[string]interface{} {
 	/*
 		   global:
 		     resolve_timeout: 5m
@@ -391,19 +392,23 @@ func makeAlertManagerConfig(isEnableAlert bool, c *workloadv1beta1.Cluster) map[
 		      webhook_configs:
 		        - url: 'http://api.symphony.dmall.com/operator/promAlert'
 	*/
+	var ok bool
+	var webhookURL string
 	ing := make(map[string]interface{})
-	if !isEnableAlert {
+	if webhookURL, ok = c.Spec.Meta[common.ClusterAlert]; !ok {
 		klog.Infof("cluster[%s] not enable alert", c.Name)
 		return ing
 	}
 
-	var webhookURL string
-	if strings.Contains(c.Name, "az-hk") {
-		webhookURL = "http://api.symphony.inner-dmall.com.hk/operator/promAlert"
-	} else {
-		webhookURL = "http://api.symphony.dmall.com/operator/promAlert"
+	if webhookURL == "auto" {
+		if strings.Contains(c.Name, "az-hk") {
+			webhookURL = "http://api.symphony.inner-dmall.com.hk/operator/promAlert"
+		} else {
+			webhookURL = "http://api.symphony.dmall.com/operator/promAlert"
+		}
 	}
 
+	klog.Infof("cluster[%s] alert webhookurl: %s", c.Name, webhookURL)
 	ing["global"] = map[string]interface{}{
 		"resolve_timeout": "5m",
 	}
@@ -436,34 +441,6 @@ func makeAlertManagerConfig(isEnableAlert bool, c *workloadv1beta1.Cluster) map[
 	return ing
 }
 
-func (r *reconciler) preInstallMonitoringCheckCrd(rlsName string, chartName string, chartVersion string) error {
-	chrt, err := helmv2.GetRequestedChart(rlsName, chartName, chartVersion, nil, r.hClient.Env)
-	if err != nil {
-		return fmt.Errorf("loading chart has an error: %v", err)
-	}
-
-	for _, file := range chrt.Files {
-		if strings.HasPrefix(file.TypeUrl, "crds") {
-			orgYaml := object.RemoveNonYAMLLines(string(file.Value))
-			if orgYaml == "" {
-				continue
-			}
-			klog.V(4).Infof("start ation name: %s ... ", file.TypeUrl)
-			o, err := object.ParseYAMLToK8sObject([]byte(orgYaml))
-			if err != nil {
-				return errors.Wrapf(err, "Resource name: %s Failed to parse YAML to a k8s object", file.TypeUrl)
-			}
-
-			err = reconcileCrd(r.mgr, r.k, o.UnstructuredObject())
-			if err != nil {
-				return err
-			}
-		}
-	}
-
-	return nil
-}
-
 func (r *reconciler) buildMonitorValues(app *workloadv1beta1.HelmChartSpec) map[string]interface{} {
 	var (
 		env     string
@@ -478,7 +455,7 @@ func (r *reconciler) buildMonitorValues(app *workloadv1beta1.HelmChartSpec) map[
 		klog.Infof("master etcdips: %+v", etcdips)
 	}
 
-	err := preInstallLpv(r.k, app)
+	err := preInstallLpv(r.k, app, r.obj)
 	if err != nil {
 		return nil
 	}
@@ -490,7 +467,7 @@ func (r *reconciler) buildMonitorValues(app *workloadv1beta1.HelmChartSpec) map[
 	overrideValueMap := map[string]interface{}{
 		"prometheus": map[string]interface{}{
 			"enabled": true,
-			"ingress": makeOverrideIngress(isIngress, getIngressName(r.urlHead, "prometheus", app)),
+			"ingress": makeOverrideIngress(isIngress, r.ingressImpl, getIngressName(r.urlHead, "prometheus", app)),
 			"prometheusSpec": map[string]interface{}{
 				// "image": map[string]interface{}{
 				// 	"repository": RepositoryHub + "prometheus",
@@ -532,7 +509,7 @@ func (r *reconciler) buildMonitorValues(app *workloadv1beta1.HelmChartSpec) map[
 						},
 					},
 				},
-				"additionalScrapeConfigs": builAdditionalScrapeConfigs(),
+				"additionalScrapeConfigs": builAadditionalScrapeConfigs(app),
 			},
 		},
 		"grafana": map[string]interface{}{
@@ -554,11 +531,11 @@ func (r *reconciler) buildMonitorValues(app *workloadv1beta1.HelmChartSpec) map[
 				"storageClassName": common.LocalStorageName,
 				"size":             getGrafanaStorageSize(app),
 			},
-			"ingress": makeOverrideIngress(isIngress, getIngressName(r.urlHead, "grafana", app)),
+			"ingress": makeOverrideIngress(isIngress, r.ingressImpl, getIngressName(r.urlHead, "grafana", app)),
 		},
 		"alertmanager": map[string]interface{}{
 			"enabled": isAlertManagerEnable,
-			"config":  makeAlertManagerConfig(r.isEnableAlert, r.obj),
+			"config":  makeAlertManagerConfig(r.obj),
 			"alertmanagerSpec": map[string]interface{}{
 				// "image": map[string]interface{}{
 				// 	"repository": RepositoryHub + "alertmanager",
@@ -567,7 +544,7 @@ func (r *reconciler) buildMonitorValues(app *workloadv1beta1.HelmChartSpec) map[
 				"affinity":    affinity,
 				"tolerations": tolerations,
 			},
-			"ingress": makeOverrideIngress(isIngress, getIngressName(r.urlHead, "alertmanager", app)),
+			"ingress": makeOverrideIngress(isIngress, r.ingressImpl, getIngressName(r.urlHead, "alertmanager", app)),
 		},
 		"kubeApiServer": map[string]interface{}{
 			"enabled": true,
@@ -646,33 +623,12 @@ func (r *reconciler) buildMonitorValues(app *workloadv1beta1.HelmChartSpec) map[
 		}
 	}
 
-	// default is coredns
-	// isCoreDns := true
-	// c, err := semver.NewConstraint(">= 1.12.0")
-	// if err == nil {
-	// 	v, err := semver.NewVersion(r.obj.Status.Version.GitVersion)
-	// 	if err == nil {
-	// 		if ok := c.Check(v); !ok {
-	// 			isCoreDns = false
-	// 		}
-	// 	}
-	// }
-
-	// if isCoreDns {
 	overrideValueMap["coreDns"] = map[string]interface{}{
 		"enabled": true,
 	}
 	overrideValueMap["kubeDns"] = map[string]interface{}{
 		"enabled": false,
 	}
-	// } else {
-	// 	overrideValueMap["coreDns"] = map[string]interface{}{
-	// 		"enabled": false,
-	// 	}
-	// 	overrideValueMap["kubeDns"] = map[string]interface{}{
-	// 		"enabled": true,
-	// 	}
-	// }
 
 	if isKubeletHTTPS {
 		overrideValueMap["kubelet"] = map[string]interface{}{
@@ -720,6 +676,11 @@ func (r *reconciler) Reconcile(log logr.Logger, obj interface{}) (interface{}, e
 		return nil, fmt.Errorf("app name or namespace is empty")
 	}
 
+	env, err := helmv3.NewHelmEnv(r.env, r.k.RawKubeconfig, app.Namespace, r.k.KubeCli)
+	if err != nil {
+		return nil, errors.Wrapf(err, "failed new helm env")
+	}
+
 	// modify
 	if app.ChartName == "" {
 		app.ChartName = "prometheus-operator"
@@ -728,11 +689,6 @@ func (r *reconciler) Reconcile(log logr.Logger, obj interface{}) (interface{}, e
 	_, ns, chartURL := common.BuildHelmInfo(app)
 	// monitor rls name need add cluster name
 	rlsName := "monitor-" + r.obj.Name
-	// err := r.preInstallMonitoringCheckCrd(rlsName, chartURL, app.ChartVersion)
-	// if err != nil {
-	// 	klog.Errorf("Reconcile crd err: %v", err)
-	// 	return nil, err
-	// }
 
 	va := r.buildMonitorValues(app)
 	vaByte, err := yaml.Marshal(va)
@@ -740,19 +696,12 @@ func (r *reconciler) Reconcile(log logr.Logger, obj interface{}) (interface{}, e
 		klog.Errorf("app[%s] Marshal overrideValueMap err:%+v", app.Name, err)
 		return nil, err
 	}
-	klog.Infof("rlsName:%s OverrideValue:\n%s", rlsName, string(vaByte))
+	klog.V(4).Infof("rlsName:%s OverrideValue:\n%s", rlsName, string(vaByte))
 
-	rls, err := helmv2.ApplyRelease(rlsName, chartURL, app.ChartVersion, nil, r.hClient, ns, nil, vaByte)
+	rls, err := helmv3.ApplyRelease(env, rlsName, chartURL, app.ChartVersion, nil, ns, vaByte, nil)
 	if err != nil || rls == nil {
 		return nil, err
 	}
 
-	return &workloadv1beta1.AppHelmStatuses{
-		Name:         app.Name,
-		ChartVersion: rls.GetChart().GetMetadata().GetVersion(),
-		RlsName:      rls.Name,
-		RlsVersion:   rls.GetVersion(),
-		RlsStatus:    rls.GetInfo().GetStatus().Code.String(),
-		OverrideVa:   rls.GetConfig().GetRaw(),
-	}, nil
+	return common.ConvertAppHelmReleasePtr(rls), nil
 }

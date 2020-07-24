@@ -7,6 +7,7 @@ import (
 	"github.com/goph/emperror"
 	json "github.com/json-iterator/go"
 	"github.com/pkg/errors"
+	v1 "k8s.io/api/apps/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
 )
 
@@ -26,6 +27,70 @@ func IgnoreStatusFields() CalculateOption {
 
 		return current, modified, nil
 	}
+}
+
+func IgnoreDeployReplicasFields() CalculateOption {
+	return func(current, modified []byte) ([]byte, []byte, error) {
+		current, err := deleteDeployReplicasFields(current)
+		if err != nil {
+			return []byte{}, []byte{}, emperror.Wrap(err, "could not delete status field from current byte sequence")
+		}
+
+		modified, err = deleteDeployReplicasFields(modified)
+		if err != nil {
+			return []byte{}, []byte{}, emperror.Wrap(err, "could not delete status field from modified byte sequence")
+		}
+
+		return current, modified, nil
+	}
+}
+
+func deleteDeployReplicasFields(obj []byte) ([]byte, error) {
+	deploy := v1.Deployment{}
+	err := json.Unmarshal(obj, &deploy)
+	if err != nil {
+		return []byte{}, emperror.Wrap(err, "could not unmarshal byte sequence")
+	}
+
+	deploy.Spec.Replicas = nil
+	obj, err = json.ConfigCompatibleWithStandardLibrary.Marshal(deploy)
+	if err != nil {
+		return []byte{}, emperror.Wrap(err, "could not marshal byte sequence")
+	}
+
+	return obj, nil
+}
+
+func IgnoreStsReplicasFields() CalculateOption {
+	return func(current, modified []byte) ([]byte, []byte, error) {
+		current, err := deleteStsReplicasFields(current)
+		if err != nil {
+			return []byte{}, []byte{}, emperror.Wrap(err, "could not delete status field from current byte sequence")
+		}
+
+		modified, err = deleteStsReplicasFields(modified)
+		if err != nil {
+			return []byte{}, []byte{}, emperror.Wrap(err, "could not delete status field from modified byte sequence")
+		}
+
+		return current, modified, nil
+	}
+}
+
+func deleteStsReplicasFields(obj []byte) ([]byte, error) {
+	sts := v1.StatefulSet{}
+	err := json.Unmarshal(obj, &sts)
+	if err != nil {
+		return []byte{}, emperror.Wrap(err, "could not unmarshal byte sequence")
+	}
+
+	sts.Spec.Replicas = nil
+	obj, err = json.ConfigCompatibleWithStandardLibrary.Marshal(sts)
+	if err != nil {
+		return []byte{}, emperror.Wrap(err, "could not marshal byte sequence")
+	}
+
+	return obj, nil
 }
 
 func init() {

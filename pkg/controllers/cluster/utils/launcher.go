@@ -1,7 +1,9 @@
 package utils
 
 import (
+	"context"
 	"fmt"
+
 	"github.com/pkg/errors"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -15,24 +17,27 @@ const (
 	PodName = "launcher"
 )
 
-func makeRootDirMount(rootDir string) (volume corev1.Volume, mount corev1.VolumeMount) {
+func makeRootDirMount(pathDirs string) (volume corev1.Volume, mount corev1.VolumeMount) {
 	mount = corev1.VolumeMount{
 		Name:      "obj-dir",
-		MountPath: rootDir,
+		MountPath: pathDirs,
 	}
+
+	hostType := corev1.HostPathDirectoryOrCreate
 	volume = corev1.Volume{
 		Name: "obj-dir",
 		VolumeSource: corev1.VolumeSource{
 			HostPath: &corev1.HostPathVolumeSource{
-				Path: rootDir,
+				Path: pathDirs,
+				Type: &hostType,
 			},
 		},
 	}
 	return
 }
 
-func buildLauncherPod(ns string, nodeName string, rootDir string, pathDirs string) *corev1.Pod {
-	volume, mount := makeRootDirMount(rootDir)
+func buildLauncherPod(ns string, nodeName string, pathDirs string) *corev1.Pod {
+	volume, mount := makeRootDirMount(pathDirs)
 
 	launchArgs := []string{
 		"-c",
@@ -63,24 +68,24 @@ func buildLauncherPod(ns string, nodeName string, rootDir string, pathDirs strin
 }
 
 func removePod(cli kubernetes.Interface, pod *corev1.Pod) error {
-	err := cli.CoreV1().Pods(pod.Namespace).Delete(pod.Name, &metav1.DeleteOptions{})
+	err := cli.CoreV1().Pods(pod.Namespace).Delete(context.TODO(), pod.Name, metav1.DeleteOptions{})
 	if err != nil {
 		return errors.Wrapf(err, "remove pod: %s", pod.Name)
 	}
 	return nil
 }
 
-// ("sym-admin", "10.13.135.252", "/web", "/web/1234")
-func ApplyLauncherPod(cli kubernetes.Interface, ns string, nodeName string, rootDir string, pathDirs string) error {
-	pod := buildLauncherPod(ns, nodeName, rootDir, pathDirs)
-	_, poderr := cli.CoreV1().Pods(pod.Namespace).Create(pod)
+// ("sym-admin", "10.13.135.252", "/web/1234")
+func ApplyLauncherPod(cli kubernetes.Interface, ns string, nodeName string, pathDirs string) error {
+	pod := buildLauncherPod(ns, nodeName, pathDirs)
+	_, poderr := cli.CoreV1().Pods(pod.Namespace).Create(context.TODO(), pod, metav1.CreateOptions{})
 	if poderr != nil {
 		klog.Errorf("err: %v", poderr)
 		return poderr
 	}
 
 	err := retry.RetryOnConflict(retry.DefaultRetry, func() error {
-		obj, getErr := cli.CoreV1().Pods(pod.Namespace).Get(pod.Name, metav1.GetOptions{})
+		obj, getErr := cli.CoreV1().Pods(pod.Namespace).Get(context.TODO(), pod.Name, metav1.GetOptions{})
 		if getErr != nil {
 			klog.Errorf("get launcher pod err: %v", getErr)
 			return getErr

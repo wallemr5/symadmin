@@ -79,7 +79,7 @@ func (m *APIManager) HandleLogs(c *gin.Context) {
 		Resource("pods").
 		SubResource("log").
 		VersionedParams(logOptions, scheme.ParameterCodec).
-		Stream()
+		Stream(context.TODO())
 	if err != nil {
 		klog.Errorf("get pod log error: %v", err)
 		AbortHTTPError(c, GetPodLogsError, "", err)

@@ -1,4 +1,4 @@
-VERSION ?= v1.0.10
+VERSION ?= v1.1.0-dev6
 # Image URL to use all building/pushing image targets
 IMG_REG ?= symcn.tencentcloudcr.com/symcn
 IMG_CTL := $(IMG_REG)/sym-admin-controller
@@ -11,7 +11,7 @@ KUBECONFIG ?= "./manifests/kubeconfig.yaml"
 # This repo's root import path (under GOPATH).
 ROOT := gitlab.dmall.com/arch/sym-admin
 
-GO_VERSION := 1.14.2
+GO_VERSION := 1.14.6
 ARCH     ?= $(shell go env GOARCH)
 BUILD_DATE = $(shell date +'%Y-%m-%dT%H:%M:%SZ')
 COMMIT    = $(shell git rev-parse --short HEAD)
@@ -61,7 +61,7 @@ manifests: controller-gen
 
 # Speed up Go module downloads in CI
 set-goproxy:
-	go env -w GOPROXY=https://goproxy.cn,direct
+	go env -w GOPROXY=https://goproxy.io,direct
 
 # Run go fmt against code
 fmt:
@@ -98,7 +98,7 @@ build-api:
 docker-push: docker-push-controller docker-push-api
 
 # Push the docker image
-docker-push-controller: docker-build-controller
+docker-push-controller:
 	docker build -t ${IMG_CTL}:${VERSION} -f ./docker/Dockerfile-ctl .
 	docker push ${IMG_CTL}:${VERSION}
 
@@ -148,7 +148,7 @@ ifeq (, $(shell which controller-gen))
 	CONTROLLER_GEN_TMP_DIR=$$(mktemp -d) ;\
 	cd $$CONTROLLER_GEN_TMP_DIR ;\
 	go mod init tmp ;\
-	go get sigs.k8s.io/controller-tools/cmd/controller-gen@v0.2.4 ;\
+	go get sigs.k8s.io/controller-tools/cmd/controller-gen@v0.3.0 ;\
 	rm -rf $$CONTROLLER_GEN_TMP_DIR ;\
 	}
 CONTROLLER_GEN=$(GOBIN)/controller-gen
