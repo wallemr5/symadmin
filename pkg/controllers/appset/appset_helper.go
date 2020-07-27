@@ -293,7 +293,7 @@ func buildAdvDeployment(app *workloadv1beta1.AppSet, clusterTopology *workloadv1
 	}
 
 	if app.Spec.ServiceName != nil {
-		svcName := *app.Spec.ServiceName
+		svcName := formatToDNS1123(*app.Spec.ServiceName)
 		obj.Spec.ServiceName = &svcName
 	}
 

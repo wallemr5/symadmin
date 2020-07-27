@@ -213,7 +213,8 @@ func getMapKey(target map[string]string, key string) string {
 }
 
 func formatToDNS1123(name string) string {
-	return strings.ToLower(strings.ReplaceAll(name, ".", "-"))
+	target := strings.Trim(name, " \n\r")
+	return strings.ToLower(strings.ReplaceAll(target, ".", "-"))
 }
 
 func makeAdvDeploymentLabel(clusterSpec *workloadv1beta1.TargetCluster, app *workloadv1beta1.AppSet) map[string]string {
