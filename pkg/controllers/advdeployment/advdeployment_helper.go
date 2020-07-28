@@ -72,16 +72,6 @@ func ConvertToSvc(mgr manager.Manager, obj *unstructured.Unstructured) (*corev1.
 		return nil, err
 	}
 
-	if svc.Labels != nil {
-		if v, ok := svc.Labels["lightningDomain0"]; ok {
-			formatDomain := common.FormatToDNS1123(v)
-			if formatDomain != v {
-				klog.Infof("svc name: %s format domain %s ==> %s", svc.Name, v, formatDomain)
-				svc.Labels["lightningDomain0"] = formatDomain
-			}
-		}
-	}
-
 	return &svc, nil
 }
 

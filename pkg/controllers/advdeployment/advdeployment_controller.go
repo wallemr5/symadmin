@@ -18,7 +18,6 @@ package advdeployment
 
 import (
 	"context"
-	"k8s.io/api/autoscaling/v2beta2"
 	"time"
 
 	"fmt"
@@ -108,11 +107,12 @@ func Add(mgr manager.Manager, cMgr *pkgmanager.DksManager) error {
 		return err
 	}
 
-	err = ctl.Watch(&source.Kind{Type: &v2beta2.HorizontalPodAutoscaler{}}, &handler.EnqueueRequestForOwner{OwnerType: &workloadv1beta1.AdvDeployment{}, IsController: true})
-	if err != nil {
-		r.Log.Error(err, "Watching HPA has an error")
-		return err
-	}
+	// err = ctl.Watch(&source.Kind{Type: &v2beta2.HorizontalPodAutoscaler{}}, &handler.EnqueueRequestForOwner{OwnerType: &workloadv1beta1.AdvDeployment{}, IsController: true})
+	// if err != nil {
+	// 	r.Log.Error(err, "Watching HPA has an error")
+	// 	return err
+	// }
+
 	// only trigger Service sync
 	_, _ = mgr.GetCache().GetInformer(context.TODO(), &corev1.Service{})
 	return nil
