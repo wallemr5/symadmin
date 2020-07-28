@@ -4,8 +4,9 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/pkg/errors"
+	"emperror.dev/errors"
 	workloadv1beta1 "gitlab.dmall.com/arch/sym-admin/pkg/apis/workload/v1beta1"
+	"gitlab.dmall.com/arch/sym-admin/pkg/controllers/common"
 	"gitlab.dmall.com/arch/sym-admin/pkg/customctrl"
 	k8smanager "gitlab.dmall.com/arch/sym-admin/pkg/k8s/manager"
 	"gitlab.dmall.com/arch/sym-admin/pkg/labels"
@@ -245,13 +246,13 @@ func (r *AppSetReconciler) DeleteUnuseAdvDeployment(ctx context.Context, req cus
 
 	client, err := r.DksMgr.K8sMgr.Get(delCluster)
 	if err != nil {
-		klog.Errorf("%s: delete unexpect info, get cluster[%s] client fail:%+v", req.NamespacedName, delCluster, err)
+		klog.Errorf("%s: delete unexpect info, get cluster[%s] client err: %+v", req.NamespacedName, delCluster, err)
 		return false, err
 	}
 	return deleteByCluster(ctx, client, req)
 }
 
-// ApplySpec spec handler
+// ApplySpec
 func (r *AppSetReconciler) ApplySpec(ctx context.Context, req customctrl.CustomRequest, app *workloadv1beta1.AppSet) (int, error) {
 	var changed int
 
@@ -264,13 +265,13 @@ func (r *AppSetReconciler) ApplySpec(ctx context.Context, req customctrl.CustomR
 		newObjAdv := buildAdvDeployment(app, v, r.DksMgr.Opt.Debug)
 		isChanged, err := resources.Reconcile(ctx, c.Client, newObjAdv, resources.Option{})
 		if err != nil {
-			return 0, errors.Wrapf(err, "failed apply advDeploy cluster[%s]", v.Name)
+			return 0, err
 		}
 
 		if isChanged > 0 {
 			changed++
 		}
-		klog.V(4).Infof("[%s/%s] apply AdvDeployment by cluster[%s] successfully",
+		klog.V(5).Infof("[%s/%s] apply AdvDeployment by cluster[%s] successfully",
 			req.NamespacedName.Namespace, req.NamespacedName.Name, v.Name)
 	}
 
@@ -293,7 +294,7 @@ func buildAdvDeployment(app *workloadv1beta1.AppSet, clusterTopology *workloadv1
 	}
 
 	if app.Spec.ServiceName != nil {
-		svcName := formatToDNS1123(*app.Spec.ServiceName)
+		svcName := common.FormatToDNS1123(*app.Spec.ServiceName)
 		obj.Spec.ServiceName = &svcName
 	}
 

@@ -238,10 +238,10 @@ func (r *AppSetReconciler) CustomReconcile(ctx context.Context, req customctrl.C
 		}, nil
 	}
 
-	klog.V(4).Infof("%s/%s start aggregate status ... ", req.Namespace, req.Name)
+	klog.V(5).Infof("%s/%s start aggregate status ... ", req.Namespace, req.Name)
 	status, _, err := r.ApplyStatus(ctx, req, app)
 	if err != nil {
-		logger.Error(err, "update AppSet.Status fail")
+		logger.Error(err, "update AppSet Status fail")
 		return reconcile.Result{}, err
 	}
 

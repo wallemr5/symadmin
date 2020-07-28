@@ -7,14 +7,12 @@ import (
 	workloadv1beta1 "gitlab.dmall.com/arch/sym-admin/pkg/apis/workload/v1beta1"
 	"gitlab.dmall.com/arch/sym-admin/pkg/controllers/common"
 	"gitlab.dmall.com/arch/sym-admin/pkg/helm/object"
-	pkgLabels "gitlab.dmall.com/arch/sym-admin/pkg/labels"
 	"gitlab.dmall.com/arch/sym-admin/pkg/resources"
 	"k8s.io/api/autoscaling/v2beta2"
 	v1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/klog"
-	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
@@ -23,60 +21,46 @@ import (
 const targetAverageUtilization = "AverageUtilization"
 const targetAverageValue = "AverageValue"
 
-func BuildHorizontalPodAutoscaler(advDeploy *workloadv1beta1.AdvDeployment, object *object.K8sObject, apiVersion string, currentReplicas int32, mgr manager.Manager) (*v2beta2.HorizontalPodAutoscaler, resources.DesiredState) {
-	hpa := &v2beta2.HorizontalPodAutoscaler{}
-	objectkey := client.ObjectKey{Name: object.Name, Namespace: object.Namespace}
-	ctx := context.TODO()
-	if err := mgr.GetClient().Get(ctx, objectkey, hpa); err == nil {
-		if hpa.Annotations[pkgLabels.WorkLoadAnnotationHpa] == advDeploy.Annotations[pkgLabels.WorkLoadAnnotationHpa] &&
-			hpa.Annotations[pkgLabels.WorkLoadAnnotationHpaMetrics] == advDeploy.Annotations[pkgLabels.WorkLoadAnnotationHpaMetrics] {
-			return nil, resources.DesiredStatePresent
-		}
-	}
+func GetDefautlCpuMetricValue() *int32 {
 	var defautlMetricValue int32
 	defautlMetricValue = 70
-	hpaLabels := make(map[string]string)
-	hpaLabels["app"] = advDeploy.Name
-	hpaLabels["app.kubernetes.io/instance"] = object.Name
-	klog.Info("starting building hpa")
-	hpa = &v2beta2.HorizontalPodAutoscaler{
-		TypeMeta: metav1.TypeMeta{
-			Kind:       "HorizontalPodAutoscaler",
-			APIVersion: "autoscaling/v2beta2",
-		},
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      object.Name,
-			Namespace: object.Namespace,
-			Labels:    hpaLabels,
-		},
-		Spec: v2beta2.HorizontalPodAutoscalerSpec{
-			ScaleTargetRef: v2beta2.CrossVersionObjectReference{
-				APIVersion: apiVersion,
-				Kind:       object.Kind,
-				Name:       object.Name,
+
+	return &defautlMetricValue
+}
+
+func GetDefautlMemMetricValue() *int32 {
+	var defautlMetricValue int32
+	defautlMetricValue = 70
+
+	return &defautlMetricValue
+}
+
+func ApplyHorizontalPodAutoscaler(mgr manager.Manager, advDeploy *workloadv1beta1.AdvDeployment, object *object.K8sObject, apiVersion string, currentReplicas int32) error {
+	isEnable := common.GetHpaSpecEnable(advDeploy.Annotations)
+	if !isEnable {
+		klog.V(5).Infof("not found hapspec annotations or hpa disable")
+		hpa := &v2beta2.HorizontalPodAutoscaler{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      object.Name,
+				Namespace: object.Namespace,
 			},
-		},
+		}
+		_, _ = resources.Reconcile(context.TODO(), mgr.GetClient(), hpa, resources.Option{DesiredState: resources.DesiredStateAbsent})
+		return nil
 	}
 
-	hpaspec := common.GetHpaSpecObj(advDeploy.Annotations)
-	if hpaspec == nil || !hpaspec.Enable {
-		klog.Infof("not found hapspec annotations or hpa disable")
-		return hpa, resources.DesiredStateAbsent
-	}
-	hpa.Spec.MaxReplicas = currentReplicas * 2
-	hpa.Spec.MinReplicas = &currentReplicas
 	metrics := parseMetrics(advDeploy.Annotations, object.Name)
 	klog.Info("number of metrics: ", len(metrics))
 
 	if len(metrics) == 0 {
-		klog.Infof("create default metrics value")
+		klog.V(5).Infof("create default metrics value")
 		defaultCpuMetric := &v2beta2.MetricSpec{
 			Type: v2beta2.ResourceMetricSourceType,
 			Resource: &v2beta2.ResourceMetricSource{
 				Name: "cpu",
 				Target: v2beta2.MetricTarget{
 					Type:               v2beta2.UtilizationMetricType,
-					AverageUtilization: &defautlMetricValue,
+					AverageUtilization: GetDefautlCpuMetricValue(),
 				},
 			},
 		}
@@ -86,17 +70,46 @@ func BuildHorizontalPodAutoscaler(advDeploy *workloadv1beta1.AdvDeployment, obje
 				Name: "memory",
 				Target: v2beta2.MetricTarget{
 					Type:               v2beta2.UtilizationMetricType,
-					AverageUtilization: &defautlMetricValue,
+					AverageUtilization: GetDefautlMemMetricValue(),
 				},
 			},
 		}
 		metrics = append(metrics, *defaultMemMetric, *defaultCpuMetric)
 	}
 
-	hpa.Spec.Metrics = metrics
-	hpa.SetAnnotations(advDeploy.Annotations)
+	hpa := &v2beta2.HorizontalPodAutoscaler{
+		TypeMeta: metav1.TypeMeta{
+			Kind:       "HorizontalPodAutoscaler",
+			APIVersion: "autoscaling/v2beta2",
+		},
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      object.Name,
+			Namespace: object.Namespace,
+			Labels: map[string]string{
+				"app":                        advDeploy.Name,
+				"app.kubernetes.io/instance": object.Name,
+			},
+			Annotations: advDeploy.Annotations,
+		},
+		Spec: v2beta2.HorizontalPodAutoscalerSpec{
+			ScaleTargetRef: v2beta2.CrossVersionObjectReference{
+				APIVersion: apiVersion,
+				Kind:       object.Kind,
+				Name:       object.Name,
+			},
+			Metrics:     metrics,
+			MinReplicas: &currentReplicas,
+			MaxReplicas: currentReplicas * 2,
+		},
+	}
+
 	controllerutil.SetControllerReference(advDeploy, hpa, mgr.GetScheme())
-	return hpa, resources.DesiredStatePresent
+	klog.V(5).Infof("starting apply hpa name: %s", hpa.Name)
+	_, err := resources.Reconcile(context.TODO(), mgr.GetClient(), hpa, resources.Option{DesiredState: resources.DesiredStatePresent})
+	if err != nil {
+		klog.Errorf("apply hpa name: %s, err: %+v", hpa.Name, err)
+	}
+	return nil
 }
 
 func parseMetrics(annotations map[string]string, objectName string) []v2beta2.MetricSpec {

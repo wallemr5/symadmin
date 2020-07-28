@@ -3,6 +3,8 @@ package common
 import (
 	"encoding/json"
 
+	"strings"
+
 	pkgLabels "gitlab.dmall.com/arch/sym-admin/pkg/labels"
 	"k8s.io/klog"
 )
@@ -82,4 +84,9 @@ func GetHpaMetricObj(m map[string]string) []*HpaMetric {
 		return nil
 	}
 	return metrics
+}
+
+func FormatToDNS1123(name string) string {
+	target := strings.Trim(name, " \n\r")
+	return strings.ToLower(strings.ReplaceAll(target, ".", "-"))
 }

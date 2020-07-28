@@ -19,7 +19,7 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
 
-	"github.com/pkg/errors"
+	"emperror.dev/errors"
 	"gitlab.dmall.com/arch/sym-admin/pkg/controllers/common"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	"k8s.io/client-go/util/retry"
@@ -70,6 +70,16 @@ func ConvertToSvc(mgr manager.Manager, obj *unstructured.Unstructured) (*corev1.
 	err := mgr.GetScheme().Convert(obj, &svc, nil)
 	if err != nil {
 		return nil, err
+	}
+
+	if svc.Labels != nil {
+		if v, ok := svc.Labels["lightningDomain0"]; ok {
+			formatDomain := common.FormatToDNS1123(v)
+			if formatDomain != v {
+				klog.Infof("svc name: %s format domain %s ==> %s", svc.Name, v, formatDomain)
+				svc.Labels["lightningDomain0"] = formatDomain
+			}
+		}
 	}
 
 	return &svc, nil
@@ -148,14 +158,15 @@ func (r *AdvDeploymentReconciler) ApplyResources(ctx context.Context, advDeploy 
 	ownerRes := make([]string, 0)
 	isHpaEnable := common.GetHpaSpecEnable(advDeploy.Annotations)
 	for _, obj := range objects {
+		yml := obj.YAMLDebugString()
+		klog.V(5).Infof("kind: %s, Name: %s/%s, obj:\n%s", obj.Kind, obj.Namespace, obj.Name, yml)
 		switch obj.Kind {
 		case ServiceKind:
 			svc, err := ConvertToSvc(r.Mgr, obj.UnstructuredObject())
 			if err != nil {
-				klog.Errorf("failed convert kind: %s, Name: %s/%s, err: %v, obj:\n%s",
-					obj.Kind, obj.Namespace, obj.Name, err, obj.YAMLDebugString())
+				klog.Errorf("failed convert kind: %s, Name: %s/%s, err: %v", obj.Kind, obj.Namespace, obj.Name, err)
 				return nil, isChanged, errors.Wrapf(err, "failed convert kind: %s Name: %s/%s, obj:\n%s",
-					obj.Kind, obj.Namespace, obj.Name, obj.YAMLDebugString())
+					obj.Kind, obj.Namespace, obj.Name, yml)
 			}
 
 			ownerRes = append(ownerRes, GetFormattedName(ServiceKind, svc))
@@ -170,10 +181,9 @@ func (r *AdvDeploymentReconciler) ApplyResources(ctx context.Context, advDeploy 
 		case DeploymentKind:
 			deploy, err := ConvertToDeployment(r.Mgr, obj.UnstructuredObject())
 			if err != nil {
-				klog.Errorf("failed convert kind: %s, Name: %s/%s, err: %v, obj:\n%s",
-					obj.Kind, obj.Namespace, obj.Name, err, obj.YAMLDebugString())
+				klog.Errorf("failed convert kind: %s, Name: %s/%s, err: %v", obj.Kind, obj.Namespace, obj.Name, err)
 				return nil, isChanged, errors.Wrapf(err, "failed convert kind: %s Name: %s/%s, obj:\n%s",
-					obj.Kind, obj.Namespace, obj.Name, obj.YAMLDebugString())
+					obj.Kind, obj.Namespace, obj.Name, yml)
 			}
 			ownerRes = append(ownerRes, GetFormattedName(DeploymentKind, deploy))
 			change, err := resources.Reconcile(ctx, r.Client, deploy, resources.Option{IsRecreate: r.Opt.Debug, IsIgnoreReplicas: isHpaEnable})
@@ -182,20 +192,16 @@ func (r *AdvDeploymentReconciler) ApplyResources(ctx context.Context, advDeploy 
 				return nil, isChanged, errors.Wrapf(err, "reconcile advDeploy: %s deployment: %s", advDeploy.Name, obj.Name)
 			}
 
-			hpa, desirestate := BuildHorizontalPodAutoscaler(advDeploy, obj, "apps/v1", *deploy.Spec.Replicas, r.Mgr)
-			if hpa != nil {
-				_, _ = resources.Reconcile(ctx, r.Client, hpa, resources.Option{DesiredState: desirestate, IsRecreate: r.Opt.Debug})
-			}
+			_ = ApplyHorizontalPodAutoscaler(r.Mgr, advDeploy, obj, "apps/v1", *deploy.Spec.Replicas)
 			if change > 0 {
 				isChanged++
 			}
 		case StatefulSetKind:
 			sta, err := ConvertToStatefulSet(r.Mgr, obj.UnstructuredObject())
 			if err != nil {
-				klog.Errorf("failed convert kind: %s, Name: %s/%s, err: %v, obj:\n%s",
-					obj.Kind, obj.Namespace, obj.Name, err, obj.YAMLDebugString())
+				klog.Errorf("failed convert kind: %s, Name: %s/%s, err: %v", obj.Kind, obj.Namespace, obj.Name, err)
 				return nil, isChanged, errors.Wrapf(err, "failed convert kind: %s Name: %s/%s, obj:\n%s",
-					obj.Kind, obj.Namespace, obj.Name, obj.YAMLDebugString())
+					obj.Kind, obj.Namespace, obj.Name, yml)
 			}
 			ownerRes = append(ownerRes, GetFormattedName(StatefulSetKind, sta))
 			change, err := resources.Reconcile(ctx, r.Client, sta, resources.Option{IsRecreate: r.Opt.Debug, IsIgnoreReplicas: isHpaEnable})
@@ -203,8 +209,8 @@ func (r *AdvDeploymentReconciler) ApplyResources(ctx context.Context, advDeploy 
 				klog.Errorf("statefulset name: %s err: %v", sta.Name, err)
 				return nil, isChanged, errors.Wrapf(err, "reconcile advDeploy: %s statefulset: %s", advDeploy.Name, obj.Name)
 			}
-			hpa, desirestate := BuildHorizontalPodAutoscaler(advDeploy, obj, "apps/v1", *sta.Spec.Replicas, r.Mgr)
-			_, _ = resources.Reconcile(ctx, r.Client, hpa, resources.Option{DesiredState: desirestate, IsRecreate: r.Opt.Debug})
+
+			_ = ApplyHorizontalPodAutoscaler(r.Mgr, advDeploy, obj, "apps/v1", *sta.Spec.Replicas)
 			if change > 0 {
 				isChanged++
 			}

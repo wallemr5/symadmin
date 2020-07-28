@@ -26,6 +26,7 @@ import (
 
 	"github.com/ghodss/yaml"
 	workloadv1beta1 "gitlab.dmall.com/arch/sym-admin/pkg/apis/workload/v1beta1"
+	"gitlab.dmall.com/arch/sym-admin/pkg/controllers/common"
 	k8smanager "gitlab.dmall.com/arch/sym-admin/pkg/k8s/manager"
 	"gitlab.dmall.com/arch/sym-admin/pkg/labels"
 	pkgLabels "gitlab.dmall.com/arch/sym-admin/pkg/labels"
@@ -212,16 +213,11 @@ func getMapKey(target map[string]string, key string) string {
 	return "null"
 }
 
-func formatToDNS1123(name string) string {
-	target := strings.Trim(name, " \n\r")
-	return strings.ToLower(strings.ReplaceAll(target, ".", "-"))
-}
-
 func makeAdvDeploymentLabel(clusterSpec *workloadv1beta1.TargetCluster, app *workloadv1beta1.AppSet) map[string]string {
 	lb := map[string]string{}
 
 	if app.Spec.ServiceName != nil && len(*app.Spec.ServiceName) > 0 {
-		lb["lightningDomain0"] = formatToDNS1123(*app.Spec.ServiceName)
+		lb["lightningDomain0"] = common.FormatToDNS1123(*app.Spec.ServiceName)
 	}
 
 	clusterName := getMapKey(clusterSpec.Mata, labels.ObserveMustLabelClusterName)

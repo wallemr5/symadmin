@@ -5,7 +5,7 @@ import (
 
 	"reflect"
 
-	"github.com/pkg/errors"
+	"emperror.dev/errors"
 	"gitlab.dmall.com/arch/sym-admin/pkg/resources/patch"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
@@ -94,10 +94,10 @@ func Reconcile(ctx context.Context, c client.Client, desired runtime.Object, opt
 				klog.Errorf("could not match object key[%s] err: %v", key, err)
 				return change, err
 			} else if patchResult.IsEmpty() {
-				klog.V(4).Infof("resource key[%s] unchanged is in sync", key)
+				klog.V(5).Infof("resource key[%s] unchanged is in sync", key)
 				return change, nil
 			} else {
-				klog.V(2).Infof("resource key[%s] diffs patch: %s", key, string(patchResult.Patch))
+				klog.V(5).Infof("resource key[%s] diffs patch: %s", key, string(patchResult.Patch))
 			}
 
 		Update:
