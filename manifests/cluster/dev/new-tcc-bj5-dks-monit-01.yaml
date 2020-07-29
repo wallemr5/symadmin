@@ -5,17 +5,16 @@ metadata:
     clusterName: tcc-bj5-dks-monit-01
     createdBy: sym-controller
   name: tcc-bj5-dks-monit-01
-  namespace: default
+  namespace: sym-admin
 spec:
   symNodeName: 10.13.135.243
   pause: false
   meta:
     area: beijing
-    az: BJ5
-    id: "4"
+    az: bj5
     clusterType: tke
     clusterIngressHead: monitor
-    clusterIngressImpl: contour
+#    clusterIngressImpl: contour
   apps:
     - name: metrics-server
       repo: dmall
@@ -43,7 +42,7 @@ spec:
     - name: contour
       repo: dmall
       namespace: projectcontour
-      chartVersion: 1.1.2
+      chartVersion: 1.1.4
     - name: sym-api
       repo: dmall
       namespace: sym-admin
@@ -51,19 +50,19 @@ spec:
       chartVersion: 1.0.17
       values:
         hosts: devapi.sym.dmall.com
-        tag: "v1.1.0-dev2"
+        tag: "v1.1.0-dev11"
     - name: sym-ctl
       repo: dmall
       namespace: sym-admin
       chartName: sym-controller
-      chartVersion : 1.0.17
+      chartVersion : 1.0.18
       values:
-        tag: "v1.1.0-dev2"
+        tag: "v1.1.0-dev11"
         master: "true"
         worker: "true"
+        offlinepod: "true"
         cluster: "false"
         reCreate: "true"
         leader: "true"
-        oldCluster: "false"
         threadiness: "1"
 

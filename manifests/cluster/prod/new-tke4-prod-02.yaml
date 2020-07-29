@@ -14,7 +14,7 @@ spec:
     az: bj5
     clusterType: tke
     clusterAlert: "auto"
-    clusterIngressHead: tke2
+    clusterIngressHead: tkeprod
     clusterIngressImpl: contour
   apps:
     - name: monitor
@@ -38,7 +38,7 @@ spec:
         #     alertmanager-ing: a.symphony.dmall.com
     - name: node-problem-detector
       repo: dmall
-      chartVersion: 1.5.2
+      chartVersion: 1.7.10
       namespace: monitoring
     - name: contour
       repo: dmall

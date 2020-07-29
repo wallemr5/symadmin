@@ -55,7 +55,7 @@ func NewControllerCmd(cli *DksCli) *cobra.Command {
 				HealthProbeBindAddress:  "0",
 				LeaderElection:          opt.EnableLeaderElection,
 				LeaderElectionNamespace: opt.LeaderElectionNamespace,
-				LeaderElectionID:        "sym-admin-controller",
+				LeaderElectionID:        "sym-controller-election-helper",
 				// Port:               9443,
 				SyncPeriod: &opt.ResyncPeriod,
 			})

@@ -239,7 +239,6 @@ func (r *Reconciler) UpdateCluster(ctx context.Context, obj *workloadv1beta1.Clu
 
 	newobj := obj.DeepCopy()
 	err := retry.RetryOnConflict(retry.DefaultRetry, func() error {
-		_ = r.Client.Update(ctx, newobj)
 		updateErr := r.Client.Status().Update(ctx, newobj)
 		if updateErr == nil {
 			klog.V(3).Infof("===> Cluster: [%s/%s] updated successfully", newobj.Namespace, newobj.Name)
@@ -256,6 +255,8 @@ func (r *Reconciler) UpdateCluster(ctx context.Context, obj *workloadv1beta1.Clu
 		return updateErr
 	})
 
+	newobj.Annotations = obj.Annotations
+	_ = r.Client.Update(ctx, newobj)
 	return newobj, err
 }
 
@@ -296,6 +297,11 @@ func (r *Reconciler) reconcileComponent(ctx context.Context, kcli *k8smanager.Cl
 		info, rerr := phase.Reconcile(r.Log, app)
 		if rerr != nil {
 			klog.Errorf("app: %s Reconcile err: %#v", app.Name, rerr)
+			appHelms = append(appHelms, &workloadv1beta1.AppHelmStatus{
+				Name:         app.Name,
+				ChartVersion: app.ChartVersion,
+				RlsStatus:    rerr.Error(),
+			})
 			continue
 		}
 

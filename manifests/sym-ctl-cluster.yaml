@@ -22,7 +22,7 @@ spec:
     spec:
       containers:
         - name: sym-ctl-cluster
-          image: symcn.tencentcloudcr.com/symcn/sym-admin-controller:v1.1.0-dev7
+          image: symcn.tencentcloudcr.com/symcn/sym-admin-controller:v1.1.0-dev11
           imagePullPolicy: IfNotPresent
           args:
             - "controller"
@@ -32,6 +32,7 @@ spec:
             - "--enable-worker=false"
             - "--enable-master=false"
             - "--enable-leader=false"
+            - "--enable-offlinepod=false"
             - "--charts-repo=http://chartmuseum.dmall.com"
           ports:
             - name: http
@@ -107,6 +108,9 @@ spec:
         - hostnames:
             - cls-97rlivuj.ccs.tencent-cloud.com
           ip: 10.16.113.81
+        - hostnames:
+            - cls-olr5zskb.ccs.tencent-cloud.com
+          ip: 10.13.134.64
         - hostnames:
             - chartmuseum.dmall.com
           ip: 10.13.135.250

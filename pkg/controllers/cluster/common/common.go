@@ -199,14 +199,14 @@ func BuildHelmInfo(app *workloadv1beta1.HelmChartSpec) (rlsName string, ns strin
 }
 
 func ConvertAppHelmReleasePtr(rls *helmv3.Release) *workloadv1beta1.AppHelmStatus {
-	objs := make([]*workloadv1beta1.ResourcesObject, 0, len(rls.ReleaseResources))
-	for _, res := range rls.ReleaseResources {
-		objs = append(objs, &workloadv1beta1.ResourcesObject{
-			Group: res.Group,
-			Kind:  res.Kind,
-			Name:  res.Name,
-		})
-	}
+	// objs := make([]*workloadv1beta1.ResourcesObject, 0, len(rls.ReleaseResources))
+	// for _, res := range rls.ReleaseResources {
+	// 	objs = append(objs, &workloadv1beta1.ResourcesObject{
+	// 		Group: res.Group,
+	// 		Kind:  res.Kind,
+	// 		Name:  res.Name,
+	// 	})
+	// }
 
 	ret := &workloadv1beta1.AppHelmStatus{
 		Name:         rls.ChartName,
@@ -214,7 +214,7 @@ func ConvertAppHelmReleasePtr(rls *helmv3.Release) *workloadv1beta1.AppHelmStatu
 		RlsName:      rls.ReleaseName,
 		RlsStatus:    rls.ReleaseInfo.Status,
 		RlsVersion:   rls.ReleaseVersion,
-		Resources:    objs,
+		// Resources:    objs,
 	}
 
 	return ret
