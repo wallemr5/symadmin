@@ -108,6 +108,9 @@ spec:
         - containerPort: 8002
           name: metrics
           protocol: TCP
+        - containerPort: 9001
+          name: admin
+          protocol: TCP
 
         {{- if .Values.envoy.readinessProbe.enabled }}
         readinessProbe:
