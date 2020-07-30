@@ -2,9 +2,9 @@ apiVersion: workload.dmall.com/v1beta1
 kind: Cluster
 metadata:
   labels:
-    clusterName: tke4-prod-02
+    clusterName: tcc-bj5-dks-01
     createdBy: sym-controller
-  name: tke4-prod-02
+  name: tcc-bj5-dks-01
   namespace: default
 spec:
   symNodeName: 10.13.134.96
