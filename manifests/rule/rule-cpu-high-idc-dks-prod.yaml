@@ -1,0 +1,92 @@
+apiVersion: monitoring.coreos.com/v1
+kind: PrometheusRule
+metadata:
+  labels:
+    app: prometheus-operator
+    release: monitor-idc-ks-prod
+  name: monitor-idc-ks-prod-sym-cpu
+  namespace: monitoring
+spec:
+  groups:
+    - name: sym-cpu
+      rules:
+        #        - alert: sym-cpu-high
+        #          annotations:
+        #            message: 'cpu high, {{ $labels.node }}/{{ $labels.namespace }}/{{ $labels.pod_name }}  over {{ printf "%.2f" $value }} for 5m. ref: http://idcg.symphony.dmall.com/d/1/symphony-pods-all.'
+        #          expr: sum by (node, namespace, pod_name, container_name) (rate(container_cpu_usage_seconds_total{job="kubelet", image!="",container_name!="POD"}[2m])) > 1.0
+        #          for: 5m
+        #          labels:
+        #            severity: warning
+        - alert: sym-CPUThrottlingHigh
+          annotations:
+            message: '{{ printf "%0.0f" $value }}% throttling of CPU in namespace
+                               {{ $labels.namespace }} for container {{ $labels.container }} in pod {{ $labels.pod }}.'
+            runbook_url: https://github.com/kubernetes-monitoring/kubernetes-mixin/tree/master/runbook.md#alert-name-cputhrottlinghigh
+            value: '{{ $value }}'
+          expr: |-
+            100 * sum(increase(container_cpu_cfs_throttled_periods_total{container!="", }[5m])) by (container, pod, namespace)
+              /
+            sum(increase(container_cpu_cfs_periods_total{}[5m])) by (container, pod, namespace)
+              > 25
+          for: 15m
+          labels:
+            severity: warning
+        - alert: sym-KubePodCrashLooping
+          annotations:
+            message: Pod {{ $labels.namespace }}/{{ $labels.pod }} ({{ $labels.container }}) is restarting {{ printf "%.2f" $value }} times / 5 minutes.
+            runbook_url: https://github.com/kubernetes-monitoring/kubernetes-mixin/tree/master/runbook.md#alert-name-kubepodcrashlooping
+            value: '{{ $value }}'
+          expr: rate(kube_pod_container_status_restarts_total{job="kube-state-metrics"}[15m]) * 60 * 5 > 0
+          for: 15m
+          labels:
+            severity: critical
+        - alert: sym-KubePodNotReady
+          annotations:
+            message: Pod {{ $labels.namespace }}/{{ $labels.pod }} has been in a non-ready state for longer than 15 minutes.
+            runbook_url: https://github.com/kubernetes-monitoring/kubernetes-mixin/tree/master/runbook.md#alert-name-kubepodnotready
+            value: '{{ $value }}'
+          expr: sum by (namespace, pod) (kube_pod_status_phase{job="kube-state-metrics", phase=~"Failed|Pending|Unknown"}) > 0
+          for: 15m
+          labels:
+            severity: critical
+        - alert: sym-KubeDeploymentReplicasMismatch
+          annotations:
+            message: Deployment {{ $labels.namespace }}/{{ $labels.deployment }} has not matched the expected number of replicas for longer than 15 minutes.
+            runbook_url: https://github.com/kubernetes-monitoring/kubernetes-mixin/tree/master/runbook.md#alert-name-kubedeploymentreplicasmismatch
+            value: '{{ $value }}'
+          expr: |-
+            kube_deployment_spec_replicas{job="kube-state-metrics"}
+              !=
+            kube_deployment_status_replicas_available{job="kube-state-metrics"}
+          for: 15m
+          labels:
+            severity: critical
+        - alert: sym-KubeStatefulSetReplicasMismatch
+          annotations:
+            message: StatefulSet {{ $labels.namespace }}/{{ $labels.statefulset }} has not matched the expected number of replicas for longer than 15 minutes.
+            runbook_url: https://github.com/kubernetes-monitoring/kubernetes-mixin/tree/master/runbook.md#alert-name-kubestatefulsetreplicasmismatch
+            value: '{{ $value }}'
+          expr: |-
+            kube_statefulset_status_replicas_ready{job="kube-state-metrics"}
+              !=
+            kube_statefulset_status_replicas{job="kube-state-metrics"}
+          for: 15m
+          labels:
+            severity: critical
+        - alert: sym-NodeMaxCpuCore
+          annotations:
+            message: 'max cpu core usage over {{ $value | humanizePercentage }} on node {{ $labels.instance }}, some application  cpu usage maybe overload.'
+            value: '{{ $value }}'
+          expr: max by (instance) (sum by (cpu,instance) (irate(node_cpu_seconds_total{job="node-exporter", mode!="idle"}[1m]))) > 0.4
+          for: 10m
+          labels:
+            severity: warning
+        - alert: sym-PodMemoryUsage
+          annotations:
+            message: 'Pod {{ $labels.pod_name }} memory usage over 98%'
+            value: '{{ $value }}'
+          expr: max by (pod_name,node,container_name,namespace) (container_memory_rss{job="kubelet", container_name!="POD",container_name!="",namespace=~"dmall-inner|dmall-outer"}) / max by (pod_name,node,container_name,namespace) (container_spec_memory_limit_bytes {container_name!="POD",container_name!="",namespace=~"dmall-inner|dmall-outer"}) * 100 > 98
+          for: 1h
+          labels:
+            severity: warning
+
