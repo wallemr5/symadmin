@@ -13,12 +13,36 @@ type ClusterStatus struct {
 
 // ContainerStatus ...
 type ContainerStatus struct {
-	Name         string                           `json:"name,omitempty"`
-	Ready        bool                             `json:"ready,omitempty"`
-	RestartCount int32                            `json:"restartCount,omitempty"`
-	Image        string                           `json:"image,omitempty"`
-	ContainerID  string                           `json:"containerId,omitempty"`
-	LastState    *corev1.ContainerStateTerminated `json:"lastState,omitempty"`
+	Name         string                    `json:"name,omitempty"`
+	Ready        bool                      `json:"ready,omitempty"`
+	RestartCount int32                     `json:"restartCount,omitempty"`
+	Image        string                    `json:"image,omitempty"`
+	ContainerID  string                    `json:"containerId,omitempty"`
+	LastState    *ContainerStateTerminated `json:"lastState,omitempty"`
+}
+
+// ContainerStateTerminated is a terminated state of a container.
+type ContainerStateTerminated struct {
+	// Exit status from the last termination of the container
+	ExitCode int32 `json:"exitCode" protobuf:"varint,1,opt,name=exitCode"`
+	// Signal from the last termination of the container
+	// +optional
+	Signal int32 `json:"signal,omitempty" protobuf:"varint,2,opt,name=signal"`
+	// (brief) reason from the last termination of the container
+	// +optional
+	Reason string `json:"reason,omitempty" protobuf:"bytes,3,opt,name=reason"`
+	// Message regarding the last termination of the container
+	// +optional
+	Message string `json:"message,omitempty" protobuf:"bytes,4,opt,name=message"`
+	// Time at which previous execution of the container started
+	// +optional
+	StartedAt string `json:"startedAt,omitempty" protobuf:"bytes,5,opt,name=startedAt"`
+	// Time at which the container last terminated
+	// +optional
+	FinishedAt string `json:"finishedAt,omitempty" protobuf:"bytes,6,opt,name=finishedAt"`
+	// Container's ID in the format 'docker://<container_id>'
+	// +optional
+	ContainerID string `json:"containerID,omitempty" protobuf:"bytes,7,opt,name=containerID"`
 }
 
 // Pod ...
@@ -66,7 +90,7 @@ type NodeProjects struct {
 	Projects    []*Project `json:"projects,omitempty"`
 }
 
-// Endpoints ...
+// Endpoint ...
 type Endpoint struct {
 	ClusterCode       string            `json:"clusterCode,omitempty"`
 	Name              string            `json:"name,omitempty"`
@@ -131,11 +155,13 @@ type DeploymentStatInfo struct {
 	OK                  bool  `json:"ok"`
 }
 
+// EndpointsOfCluster ...
 type EndpointsOfCluster struct {
 	ClusterName string      `json:"clusterCode,omitempty"`
 	Endpoint    []*Endpoint `json:"endpoint,omitempty"`
 }
 
+// PodOfCluster ...
 type PodOfCluster struct {
 	ClusterName string `json:"clusterName,omitempty"`
 	Pods        []*Pod `json:"pods"`
@@ -155,6 +181,7 @@ type Event struct {
 	Reason      string `json:"reason,omitempty"`
 }
 
+// OfflinePod ...
 type OfflinePod struct {
 	Name        string            `json:"name,omitempty"`
 	ClusterName string            `json:"clusterCode,omitempty"`
