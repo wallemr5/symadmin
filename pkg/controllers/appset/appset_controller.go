@@ -135,12 +135,13 @@ func NewAppSetController(mgr manager.Manager, cMgr *pkgmanager.DksManager) (*App
 			newObj := cur.(*workloadv1beta1.AppSet)
 			oldObj := old.(*workloadv1beta1.AppSet)
 			if equality.Semantic.DeepEqual(oldObj.Spec, newObj.Spec) &&
-				oldObj.GetDeletionTimestamp() == newObj.GetDeletionTimestamp() &&
-				oldObj.GetGeneration() == newObj.GetGeneration() {
+				!utils.IsObjectMetaChange(cur, old) {
 				return
 			}
+
 			customImpl.Enqueue(cur)
 		},
+
 		DeleteFunc: customImpl.Enqueue,
 	})
 

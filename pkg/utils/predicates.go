@@ -1,8 +1,12 @@
 package utils
 
 import (
+	"reflect"
+	"strings"
+
 	workloadv1beta1 "gitlab.dmall.com/arch/sym-admin/pkg/apis/workload/v1beta1"
 	"k8s.io/apimachinery/pkg/api/equality"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/util/workqueue"
 	"k8s.io/klog"
@@ -135,9 +139,7 @@ func GetWatchPredicateForAdvDeploymentSpec() predicate.Funcs {
 			oldObj := e.ObjectOld.(*workloadv1beta1.AdvDeployment)
 			newObj := e.ObjectNew.(*workloadv1beta1.AdvDeployment)
 			if !equality.Semantic.DeepEqual(oldObj.Spec, newObj.Spec) ||
-				!equality.Semantic.DeepEqual(oldObj.GetAnnotations(), newObj.GetAnnotations()) ||
-				oldObj.GetDeletionTimestamp() != newObj.GetDeletionTimestamp() ||
-				oldObj.GetGeneration() != newObj.GetGeneration() {
+				IsObjectMetaChange(e.ObjectNew, e.ObjectOld) {
 				return true
 			}
 			return false
@@ -157,8 +159,7 @@ func GetWatchPredicateForClusterSpec() predicate.Funcs {
 			oldObj := e.ObjectOld.(*workloadv1beta1.Cluster)
 			newObj := e.ObjectNew.(*workloadv1beta1.Cluster)
 			if !equality.Semantic.DeepEqual(oldObj.Spec, newObj.Spec) ||
-				oldObj.GetDeletionTimestamp() != newObj.GetDeletionTimestamp() ||
-				oldObj.GetGeneration() != newObj.GetGeneration() {
+				IsObjectMetaChange(e.ObjectNew, e.ObjectOld) {
 				return true
 			}
 			return false
@@ -178,11 +179,49 @@ func GetWatchPredicateForAppetSpec() predicate.Funcs {
 			oldObj := e.ObjectOld.(*workloadv1beta1.AppSet)
 			newObj := e.ObjectNew.(*workloadv1beta1.AppSet)
 			if !equality.Semantic.DeepEqual(oldObj.Spec, newObj.Spec) ||
-				oldObj.GetDeletionTimestamp() != newObj.GetDeletionTimestamp() ||
-				oldObj.GetGeneration() != newObj.GetGeneration() {
+				IsObjectMetaChange(e.ObjectNew, e.ObjectOld) {
 				return true
 			}
 			return false
 		},
 	}
+}
+
+func IsObjectMetaChange(n, c interface{}) bool {
+	newObj, ok := n.(metav1.Object)
+	if !ok {
+		return false
+	}
+
+	currObj, ok := c.(metav1.Object)
+	if !ok {
+		return false
+	}
+
+	if !reflect.DeepEqual(newObj.GetLabels(), currObj.GetLabels()) {
+		klog.V(4).Infof("obj name: %s annotations changed, new: %+v, curr: %+v",
+			newObj.GetName(), newObj.GetLabels(), currObj.GetLabels())
+		return true
+	}
+
+	currAnnotations := map[string]string{}
+	newAnnotations := newObj.GetAnnotations()
+	if newAnnotations == nil {
+		newAnnotations = map[string]string{}
+	}
+
+	for k, v := range currObj.GetAnnotations() {
+		if strings.Contains(k, "last-applied") {
+			continue
+		}
+		currAnnotations[k] = v
+	}
+
+	if !reflect.DeepEqual(newAnnotations, currAnnotations) {
+		klog.V(4).Infof("obj name: %s annotations changed, new: %+v, curr: %+v",
+			newObj.GetName(), newAnnotations, currAnnotations)
+		return true
+	}
+
+	return false
 }

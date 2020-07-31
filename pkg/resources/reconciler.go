@@ -3,10 +3,9 @@ package resources
 import (
 	"context"
 
-	"reflect"
-
 	"emperror.dev/errors"
 	"gitlab.dmall.com/arch/sym-admin/pkg/resources/patch"
+	"gitlab.dmall.com/arch/sym-admin/pkg/utils"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
@@ -73,12 +72,8 @@ func Reconcile(ctx context.Context, c client.Client, desired runtime.Object, opt
 				patch.IgnoreStatusFields(),
 			}
 
-			if svcDesired, ok := desired.(*corev1.Service); ok {
-				svcCurrent, _ := current.(*corev1.Service)
-				if !reflect.DeepEqual(svcCurrent.GetLabels(), svcDesired.GetLabels()) {
-					klog.Infof("type svc name[%s] labels not same", svcDesired.Name)
-					goto Update
-				}
+			if utils.IsObjectMetaChange(desired, current) {
+				goto Update
 			}
 
 			if _, ok := desired.(*appsv1.Deployment); ok && opt.IsIgnoreReplicas {
