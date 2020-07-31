@@ -365,14 +365,17 @@ func (m *APIManager) getPodListByAppName(clusterName, namespace, appName, group,
 
 		for _, containerStatus := range pod.Status.ContainerStatuses {
 			apiPod.RestartCount += containerStatus.RestartCount
-			t := containerStatus.LastTerminationState.Terminated
-			apiPod.Containers = append(apiPod.Containers, &model.ContainerStatus{
+			c := &model.ContainerStatus{
 				Name:         containerStatus.Name,
 				Ready:        containerStatus.Ready,
 				RestartCount: containerStatus.RestartCount,
 				Image:        containerStatus.Image,
 				ContainerID:  containerStatus.ContainerID,
-				LastState: &model.ContainerStateTerminated{
+			}
+			if containerStatus.LastTerminationState.Terminated != nil {
+				apiPod.HasLastState = true
+				t := containerStatus.LastTerminationState.Terminated
+				c.LastState = &model.ContainerStateTerminated{
 					ExitCode:    t.ExitCode,
 					Signal:      t.Signal,
 					Reason:      t.Reason,
@@ -380,10 +383,9 @@ func (m *APIManager) getPodListByAppName(clusterName, namespace, appName, group,
 					StartedAt:   formatTime(t.StartedAt.String()),
 					FinishedAt:  formatTime(t.FinishedAt.String()),
 					ContainerID: t.ContainerID,
-				}})
-			if containerStatus.LastTerminationState.Terminated != nil {
-				apiPod.HasLastState = true
+				}
 			}
+			apiPod.Containers = append(apiPod.Containers, c)
 		}
 		switch apiPod.Group {
 		case "blue":
