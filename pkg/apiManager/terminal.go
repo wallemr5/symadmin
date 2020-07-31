@@ -25,6 +25,7 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/tools/remotecommand"
 	"k8s.io/klog"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 var wsMap sync.Map
@@ -73,7 +74,7 @@ func (m *APIManager) GetTerminal(c *gin.Context) {
 	isStdout, _ := strconv.ParseBool(c.DefaultQuery("stdout", "true"))
 	isStderr, _ := strconv.ParseBool(c.DefaultQuery("stderr", "true"))
 	once, _ := strconv.ParseBool(c.DefaultQuery("once", "false"))
-	cmd := strings.Fields(c.Query("cmd"))
+	cmd := c.QueryArray("cmd")
 
 	podName, ok := c.GetQuery("pod")
 	if !ok {
@@ -326,6 +327,7 @@ func (m *APIManager) GetFiles(c *gin.Context) {
 	})
 }
 
+// GetOfflineLogTerminal ...
 func (m *APIManager) GetOfflineLogTerminal(c *gin.Context) {
 	clusterName := c.Param("name")
 	namespace := "sym-admin"
