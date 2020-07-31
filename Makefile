@@ -1,4 +1,4 @@
-VERSION ?= v1.1.0-dev11
+VERSION ?= v1.1.0-dev12
 # Image URL to use all building/pushing image targets
 IMG_REG ?= symcn.tencentcloudcr.com/symcn
 IMG_CTL := $(IMG_REG)/sym-admin-controller
@@ -108,36 +108,36 @@ docker-push-api:
 
 # Install operator with helm
 helm-master:
-	helm upgrade --install sym-ctl --namespace sym-admin --set image.tag=${VERSION},image.worker=false,image.master=true ./chart/sym-controller
+	helm upgrade --install --force sym-ctl --namespace sym-admin --set image.tag=${VERSION},image.worker=false,image.master=true ./charts/sym-controller
 
 helm-master-worker:
-	helm upgrade --install sym-ctl --namespace sym-admin --set image.tag=${VERSION},image.worker=true,image.master=true ./chart/sym-controller
+	helm upgrade --install --force sym-ctl --namespace sym-admin --set image.tag=${VERSION},image.worker=true,image.master=true ./charts/sym-controller
 
 helm-worker:
-	helm upgrade --install sym-ctl --namespace sym-admin --set image.tag=${VERSION},image.worker=true,image.master=false ./chart/sym-controller
+	helm upgrade --install --force sym-ctl --namespace sym-admin --set image.tag=${VERSION},image.worker=true,image.master=false ./charts/sym-controller
 
 helm-api:
-	helm upgrade --install sym-api --namespace sym-admin --set image.tag=${VERSION} ./chart/sym-api
+	helm upgrade --install --force sym-api --namespace sym-admin --set image.tag=${VERSION} ./charts/sym-api
 
 helm-cluster:
-	helm upgrade --install sym-ctl-cluster --namespace sym-admin --set image.tag=${VERSION},image.cluster=true,image.worker=false,image.master=false,image.leader=false,image.threadiness=1,rbac.name=sym-controller-cluster ./chart/sym-controller
+	helm upgrade --install --force sym-ctl-cluster --namespace sym-admin --set image.tag=${VERSION},image.cluster=true,image.worker=false,image.master=false,image.leader=false,image.threadiness=1,rbac.name=sym-controller-cluster ./charts/sym-controller
 
 helm-test:
-	helm upgrade --kubeconfig ${KUBECONFIG} --kube-context test-tke-gz-bj5-bus-01 --install sym-ctl --namespace sym-admin --set image.tag=${VERSION},image.worker=true,image.repos="https://kubernetes-charts.storage.googleapis.com",image.master=true,image.reCreate=true,image.threadiness=1,resources.limits.cpu=1,resources.requests.cpu="500m" ./chart/sym-controller
-	helm upgrade --kubeconfig ${KUBECONFIG} --kube-context dev-tke-gz-bj5-glb --install sym-ctl --namespace sym-admin  --set image.tag=${VERSION},image.repos="https://kubernetes-charts.storage.googleapis.com",image.worker=true,image.master=true,image.reCreate=true,image.threadiness=1,resources.limits.cpu=1,resources.requests.cpu="500m" ./chart/sym-controller
-	helm upgrade --kubeconfig ${KUBECONFIG} --kube-context cn-tke-bj5-test-01 --install sym-ctl --namespace sym-admin  --set image.tag=${VERSION},image.worker=true,image.master=true,image.reCreate=true,image.repos="https://kubernetes-charts.storage.googleapis.com",image.threadiness=1,resources.limits.cpu=1,resources.requests.cpu="500m" ./chart/sym-controller
-	helm upgrade --kubeconfig ${KUBECONFIG} --kube-context dev-tke-bj5-monit-01 --install sym-ctl --namespace sym-admin  --set image.tag=${VERSION},image.worker=true,image.master=true,image.reCreate=true,image.repos="https://kubernetes-charts.storage.googleapis.com",image.threadiness=1,resources.limits.cpu=1,resources.requests.cpu="500m" ./chart/sym-controller
-	helm upgrade --kubeconfig ${KUBECONFIG} --kube-context test-tke-rz-bj5-bus-01 --install sym-ctl --namespace sym-admin  --set image.tag=${VERSION},image.worker=true,image.master=false,image.reCreate=true,image.repos="https://kubernetes-charts.storage.googleapis.com",image.threadiness=1,resources.limits.cpu=1,resources.requests.cpu="500m" ./chart/sym-controller
-	helm upgrade --kubeconfig ${KUBECONFIG} --kube-context test-tke-rz-cd-bus-01 --install sym-ctl --namespace sym-admin  --set image.tag=${VERSION},image.worker=true,image.repos="https://kubernetes-charts.storage.googleapis.com",image.master=false,image.reCreate=true,image.threadiness=1,resources.limits.cpu=1,resources.requests.cpu="500m" ./chart/sym-controller
-	helm upgrade --kubeconfig ${KUBECONFIG} --kube-context cn-tke-cd-test-01 --install sym-ctl --namespace sym-admin  --set image.tag=${VERSION},image.worker=true,image.repos="https://kubernetes-charts.storage.googleapis.com",image.master=false,image.reCreate=true,image.threadiness=1,resources.limits.cpu=1,resources.requests.cpu="500m" ./chart/sym-controller
-	helm upgrade --kubeconfig ${KUBECONFIG} --kube-context dev-tke-bj5-test-01 --install sym-ctl --namespace sym-admin  --set image.tag=${VERSION},image.repos="https://kubernetes-charts.storage.googleapis.com",image.worker=true,image.master=false,image.reCreate=true,image.threadiness=1,resources.limits.cpu=1,resources.requests.cpu="500m" ./chart/sym-controller
-	helm upgrade --kubeconfig ${KUBECONFIG} --kube-context dev-tke-rz-cd-glb --install sym-ctl --namespace sym-admin  --set image.tag=${VERSION},image.worker=true,image.repos="https://kubernetes-charts.storage.googleapis.com",image.master=false,image.reCreate=true,image.threadiness=1,resources.limits.cpu=1,resources.requests.cpu="500m" ./chart/sym-controller
-	helm upgrade --kubeconfig ${KUBECONFIG} --kube-context cls-0doi9yrf-context-default --install sym-ctl --namespace sym-admin  --set image.tag=${VERSION},image.worker=true,image.repos="https://kubernetes-charts.storage.googleapis.com",image.master=false,image.reCreate=true,image.threadiness=1,resources.limits.cpu=1,resources.requests.cpu="500m" ./chart/sym-controller
-	helm upgrade --kubeconfig ${KUBECONFIG} --kube-context test-tke-gz-bj5-bus-01 --install sym-api --namespace sym-admin --set image.tag=${VERSION},ingress.hosts[0].host=testapi.sym.dmall.com,ingress.hosts[0].paths[0]=/,resources.limits.cpu=1,resources.requests.cpu="500m",replicaCount=1 ./chart/sym-api
-	helm upgrade --kubeconfig ${KUBECONFIG} --kube-context cn-tke-bj5-test-01 --install sym-api --namespace sym-admin --set image.tag=${VERSION},ingress.hosts[0].host=testapi-djj.sym.dmall.com,ingress.hosts[0].paths[0]=/,resources.limits.cpu=1,resources.requests.cpu="500m",replicaCount=1  ./chart/sym-api
-	helm upgrade --kubeconfig ${KUBECONFIG} --kube-context dev-tke-bj5-monit-01 --install sym-api --namespace sym-admin --set image.tag=${VERSION},ingress.hosts[0].host=devapi.sym.dmall.com,ingress.hosts[0].paths[0]=/,resources.limits.cpu=1,resources.requests.cpu="500m",replicaCount=1 ./chart/sym-api
-	helm upgrade --kubeconfig ${KUBECONFIG} --kube-context dev-tke-gz-bj5-glb --install sym-api --namespace sym-admin --set image.tag=${VERSION},ingress.hosts[0].host=testapi-glb.sym.dmall.com,ingress.hosts[0].paths[0]=/,resources.limits.cpu=1,resources.requests.cpu="500m",replicaCount=1 ./chart/sym-api
-	helm upgrade --kubeconfig ${KUBECONFIG} --kube-context cls-0doi9yrf-context-default --install sym-api --namespace sym-admin --set image.tag=${VERSION},ingress.hosts[0].host=testapi-glb.sym.dmall.com,ingress.hosts[0].paths[0]=/,resources.limits.cpu=1,resources.requests.cpu="500m",replicaCount=1 ./chart/sym-api
+	helm upgrade --kubeconfig ${KUBECONFIG} --kube-context test-tke-gz-bj5-bus-01 --install --force sym-ctl --namespace sym-admin --set image.tag=${VERSION},image.worker=true,image.repos="https://kubernetes-charts.storage.googleapis.com",image.master=true,image.reCreate=true,image.threadiness=1,resources.limits.cpu=1,resources.requests.cpu="500m" ./charts/sym-controller
+	helm upgrade --kubeconfig ${KUBECONFIG} --kube-context dev-tke-gz-bj5-glb --install --force sym-ctl --namespace sym-admin  --set image.tag=${VERSION},image.repos="https://kubernetes-charts.storage.googleapis.com",image.worker=true,image.master=true,image.reCreate=true,image.threadiness=1,resources.limits.cpu=1,resources.requests.cpu="500m" ./charts/sym-controller
+	helm upgrade --kubeconfig ${KUBECONFIG} --kube-context cn-tke-bj5-test-01 --install --force sym-ctl --namespace sym-admin  --set image.tag=${VERSION},image.worker=true,image.master=true,image.reCreate=true,image.repos="https://kubernetes-charts.storage.googleapis.com",image.threadiness=1,resources.limits.cpu=1,resources.requests.cpu="500m" ./charts/sym-controller
+	# helm upgrade --kubeconfig ${KUBECONFIG} --kube-context dev-tke-bj5-monit-01 --install --force sym-ctl --namespace sym-admin  --set image.tag=${VERSION},image.worker=true,image.master=true,image.reCreate=true,image.repos="https://kubernetes-charts.storage.googleapis.com",image.threadiness=1,resources.limits.cpu=1,resources.requests.cpu="500m" ./charts/sym-controller
+	helm upgrade --kubeconfig ${KUBECONFIG} --kube-context test-tke-rz-bj5-bus-01 --install --force sym-ctl --namespace sym-admin  --set image.tag=${VERSION},image.worker=true,image.master=false,image.reCreate=true,image.repos="https://kubernetes-charts.storage.googleapis.com",image.threadiness=1,resources.limits.cpu=1,resources.requests.cpu="500m" ./charts/sym-controller
+	helm upgrade --kubeconfig ${KUBECONFIG} --kube-context test-tke-rz-cd-bus-01 --install --force sym-ctl --namespace sym-admin  --set image.tag=${VERSION},image.worker=true,image.repos="https://kubernetes-charts.storage.googleapis.com",image.master=false,image.reCreate=true,image.threadiness=1,resources.limits.cpu=1,resources.requests.cpu="500m" ./charts/sym-controller
+	helm upgrade --kubeconfig ${KUBECONFIG} --kube-context cn-tke-cd-test-01 --install --force sym-ctl --namespace sym-admin  --set image.tag=${VERSION},image.worker=true,image.repos="https://kubernetes-charts.storage.googleapis.com",image.master=false,image.reCreate=true,image.threadiness=1,resources.limits.cpu=1,resources.requests.cpu="500m" ./charts/sym-controller
+	helm upgrade --kubeconfig ${KUBECONFIG} --kube-context dev-tke-bj5-test-01 --install --force sym-ctl --namespace sym-admin  --set image.tag=${VERSION},image.repos="https://kubernetes-charts.storage.googleapis.com",image.worker=true,image.master=false,image.reCreate=true,image.threadiness=1,resources.limits.cpu=1,resources.requests.cpu="500m" ./charts/sym-controller
+	helm upgrade --kubeconfig ${KUBECONFIG} --kube-context dev-tke-rz-cd-glb --install --force sym-ctl --namespace sym-admin  --set image.tag=${VERSION},image.worker=true,image.repos="https://kubernetes-charts.storage.googleapis.com",image.master=false,image.reCreate=true,image.threadiness=1,resources.limits.cpu=1,resources.requests.cpu="500m" ./charts/sym-controller
+	# helm upgrade --kubeconfig ${KUBECONFIG} --kube-context cls-0doi9yrf-context-default --install --force sym-ctl --namespace sym-admin  --set image.tag=${VERSION},image.worker=true,image.repos="https://kubernetes-charts.storage.googleapis.com",image.master=false,image.reCreate=true,image.threadiness=1,resources.limits.cpu=1,resources.requests.cpu="500m" ./charts/sym-controller
+	helm upgrade --kubeconfig ${KUBECONFIG} --kube-context test-tke-gz-bj5-bus-01 --install --force sym-api --namespace sym-admin --set image.tag=${VERSION},ingress.hosts[0].host=testapi.sym.dmall.com,ingress.hosts[0].paths[0]=/,resources.limits.cpu=1,resources.requests.cpu="500m",replicaCount=1 ./charts/sym-api
+	helm upgrade --kubeconfig ${KUBECONFIG} --kube-context cn-tke-bj5-test-01 --install --force sym-api --namespace sym-admin --set image.tag=${VERSION},ingress.hosts[0].host=testapi-djj.sym.dmall.com,ingress.hosts[0].paths[0]=/,resources.limits.cpu=1,resources.requests.cpu="500m",replicaCount=1  ./charts/sym-api
+	# helm upgrade --kubeconfig ${KUBECONFIG} --kube-context dev-tke-bj5-monit-01 --install --force sym-api --namespace sym-admin --set image.tag=${VERSION},ingress.hosts[0].host=devapi.sym.dmall.com,ingress.hosts[0].paths[0]=/,resources.limits.cpu=1,resources.requests.cpu="500m",replicaCount=1 ./charts/sym-api
+	helm upgrade --kubeconfig ${KUBECONFIG} --kube-context dev-tke-gz-bj5-glb --install --force sym-api --namespace sym-admin --set image.tag=${VERSION},ingress.hosts[0].host=testapi-glb.sym.dmall.com,ingress.hosts[0].paths[0]=/,resources.limits.cpu=1,resources.requests.cpu="500m",replicaCount=1 ./charts/sym-api
+	# helm upgrade --kubeconfig ${KUBECONFIG} --kube-context cls-0doi9yrf-context-default --install --force sym-api --namespace sym-admin --set image.tag=${VERSION},ingress.hosts[0].host=testapi-glb.sym.dmall.com,ingress.hosts[0].paths[0]=/,resources.limits.cpu=1,resources.requests.cpu="500m",replicaCount=1 ./charts/sym-api
 
 # find or download controller-gen
 # download controller-gen if necessary
