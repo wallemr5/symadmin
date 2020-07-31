@@ -205,16 +205,19 @@ func IsObjectMetaChange(n, c interface{}) bool {
 	}
 
 	currAnnotations := map[string]string{}
-	newAnnotations := newObj.GetAnnotations()
-	if newAnnotations == nil {
-		newAnnotations = map[string]string{}
-	}
-
 	for k, v := range currObj.GetAnnotations() {
 		if strings.Contains(k, "last-applied") {
 			continue
 		}
 		currAnnotations[k] = v
+	}
+
+	newAnnotations := map[string]string{}
+	for k, v := range newObj.GetAnnotations() {
+		if strings.Contains(k, "last-applied") {
+			continue
+		}
+		newAnnotations[k] = v
 	}
 
 	if !reflect.DeepEqual(newAnnotations, currAnnotations) {
