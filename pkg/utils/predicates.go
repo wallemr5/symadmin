@@ -2,9 +2,9 @@ package utils
 
 import (
 	"reflect"
-	"strings"
 
 	workloadv1beta1 "gitlab.dmall.com/arch/sym-admin/pkg/apis/workload/v1beta1"
+	pkgLabels "gitlab.dmall.com/arch/sym-admin/pkg/labels"
 	"k8s.io/apimachinery/pkg/api/equality"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
@@ -18,7 +18,7 @@ import (
 
 // isObserveNamespaces
 func isObserveNamespaces(ns string) bool {
-	for _, obvNs := range ObservedNamespace {
+	for _, obvNs := range pkgLabels.ObservedNamespace {
 		if obvNs == ns {
 			return true
 		}
@@ -28,23 +28,22 @@ func isObserveNamespaces(ns string) bool {
 
 // isObserveApp
 func isObserveApp(labels map[string]string) bool {
-	if _, ok := labels[ObserveMustLabelAppName]; !ok {
+	if _, ok := labels[pkgLabels.ObserveMustLabelAppName]; !ok {
 		return false
 	}
 
-	if _, ok := labels[ObserveMustLabelClusterName]; !ok {
+	if _, ok := labels[pkgLabels.ObserveMustLabelClusterName]; !ok {
 		return false
 	}
 	return true
 }
 
 func getObserveApp(labels map[string]string) string {
-	if _, ok := labels[ObserveMustLabelClusterName]; !ok {
+	if _, ok := labels[pkgLabels.ObserveMustLabelClusterName]; !ok {
 		return ""
 	}
 
-	if va, ok := labels[ObserveMustLabelAppName]; ok {
-		klog.V(5).Infof("Observe label app:%s", va)
+	if va, ok := labels[pkgLabels.ObserveMustLabelAppName]; ok {
 		return va
 	}
 
@@ -187,6 +186,15 @@ func GetWatchPredicateForAppetSpec() predicate.Funcs {
 	}
 }
 
+func isObserveKnownKey(obvKey string) bool {
+	for _, key := range pkgLabels.AnnotationsKnownKey {
+		if obvKey == key {
+			return true
+		}
+	}
+	return false
+}
+
 func IsObjectMetaChange(n, c interface{}) bool {
 	newObj, ok := n.(metav1.Object)
 	if !ok {
@@ -199,14 +207,14 @@ func IsObjectMetaChange(n, c interface{}) bool {
 	}
 
 	if !reflect.DeepEqual(newObj.GetLabels(), currObj.GetLabels()) {
-		klog.V(4).Infof("obj name: %s annotations changed, new: %+v, curr: %+v",
+		klog.V(4).Infof("obj name: %s labels changed, new: %+v, curr: %+v",
 			newObj.GetName(), newObj.GetLabels(), currObj.GetLabels())
 		return true
 	}
 
 	currAnnotations := map[string]string{}
 	for k, v := range currObj.GetAnnotations() {
-		if strings.Contains(k, "last-applied") {
+		if !isObserveKnownKey(k) {
 			continue
 		}
 		currAnnotations[k] = v
@@ -214,7 +222,7 @@ func IsObjectMetaChange(n, c interface{}) bool {
 
 	newAnnotations := map[string]string{}
 	for k, v := range newObj.GetAnnotations() {
-		if strings.Contains(k, "last-applied") {
+		if !isObserveKnownKey(k) {
 			continue
 		}
 		newAnnotations[k] = v

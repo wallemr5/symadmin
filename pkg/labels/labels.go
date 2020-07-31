@@ -5,13 +5,6 @@ import (
 	"regexp"
 )
 
-// ObservedNamespace ...
-var ObservedNamespace = []string{
-	"default",
-	"dmall-inner",
-	"dmall-outer",
-}
-
 // labels
 const (
 	LabelCreatedBy      = "createdBy"
@@ -26,12 +19,13 @@ const (
 
 // observe must labels
 const (
-	ObserveMustLabelClusterName = "sym-cluster-info"
-	ObserveMustLabelLdcName     = "sym-ldc"
-	ObserveMustLabelGroupName   = "sym-group"
-	ObserveMustLabelAppName     = "app"
-	ObserveMustLabelVersion     = "version"
-	ObserveMustLabelDomain      = "lightningDomain0"
+	ObserveMustLabelClusterName      = "sym-cluster-info"
+	ObserveMustLabelAppName          = "app"
+	ObserveMustLabelVersion          = "version"
+	ObserveMustLabelReleaseName      = "release"
+	ObserveMustLabelLdcName          = "sym-ldc"
+	ObserveMustLabelLightningDomain0 = "lightningDomain0"
+	ObserveMustLabelGroupName        = "sym-group"
 )
 
 const (
@@ -53,6 +47,19 @@ const (
 	ControllerName           = "sym-controller"
 	ControllerFinalizersName = "sym-admin-finalizers"
 )
+
+// ObservedNamespace ...
+var ObservedNamespace = []string{
+	"default",
+	"dmall-inner",
+	"dmall-outer",
+}
+
+var AnnotationsKnownKey = []string{
+	ClusterAnnotationMonitor,
+	WorkLoadAnnotationHpa,
+	WorkLoadAnnotationHpaMetrics,
+}
 
 // GetLabels ...
 func GetLabels(clusterName string) map[string]string {

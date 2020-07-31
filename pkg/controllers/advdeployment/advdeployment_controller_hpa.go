@@ -89,7 +89,6 @@ func ApplyHorizontalPodAutoscaler(mgr manager.Manager, advDeploy *workloadv1beta
 				"app":                        advDeploy.Name,
 				"app.kubernetes.io/instance": object.Name,
 			},
-			Annotations: advDeploy.Annotations,
 		},
 		Spec: v2beta2.HorizontalPodAutoscalerSpec{
 			ScaleTargetRef: v2beta2.CrossVersionObjectReference{
