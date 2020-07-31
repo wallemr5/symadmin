@@ -14,8 +14,6 @@ import (
 	"sync"
 	"time"
 
-	"sigs.k8s.io/controller-runtime/pkg/client"
-
 	"github.com/gin-gonic/gin"
 	"github.com/gorilla/websocket"
 	k8smanager "gitlab.dmall.com/arch/sym-admin/pkg/k8s/manager"
