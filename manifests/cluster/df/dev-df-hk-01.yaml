@@ -1,0 +1,44 @@
+chartVersion: 1.86.1
+apiVersion: workload.dmall.com/v1beta1
+kind: Cluster
+metadata:
+  labels:
+    clusterName: dev-df-hk-01
+    createdBy: sym-controller
+  name: dev-df-hk-01
+  namespace: sym-admin
+spec:
+  symNodeName: 10.248.224.157
+  pause: false
+  meta:
+    area: hongkong
+    az: hk
+    id: "4"
+    clusterType: tke
+    clusterIngressHead: monitor
+  helmSpec:
+    maxHistory: 5
+    namespace: kube-system
+    overrideImageSpec: registry.cn-hangzhou.aliyuncs.com/google_containers/tiller:v2.13.1
+  apps:
+    - name: metrics-server
+      repo: dmall
+      namespace: monitoring
+    - name: traefik
+      repo: dmall
+      namespace: kube-system
+      chartVersion: 1.86.1
+    - name: monitor
+      repo: dmall
+      namespace: monitoring
+      chartName: prometheus-operator
+      chartVersion: 8.7.1
+      values:
+        custom-resources-config: disable
+        selector-only-system: enable
+        lpv-path: /root/prometheus-data
+        lpv-size: 20Gi
+        prom-limit-cpu: "1"
+        prom-limit-memory: 2Gi
+        prom-req-cpu: "0.5"
+        prom-req-memory: 1Gi

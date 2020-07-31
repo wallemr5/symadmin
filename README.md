@@ -239,6 +239,7 @@ conventional-changelog -p angular -i CHANGELOG.md -s -p
 | test-tke-rz-cd-bus-01  | 测试 | 业务测试单元化成都 RZ 集群 | cls-3yclxq8t |  10.16.113.12 |              |
 | dev-tke-gz-bj5-glb     | 开发 | 业务开发集群 GZ            | cls-2ylraskd |  10.248.227.7 | 高老板测试用 |
 | dev-tke-rz-cd-glb      | 开发 | 业务开发集群 RZ            | cls-ehx4vson | 10.248.227.74 | 高老板测试用 |
+| dev-df-hk-01          | df/开发 | df开发集群             | cls-0doi9yrf | 10.248.224.193| df开发集群 |
 
 集群 hosts 如下：
 
@@ -254,4 +255,5 @@ conventional-changelog -p angular -i CHANGELOG.md -s -p
 10.16.70.8 cls-glojus0v.ccs.tencent-cloud.com
 10.248.227.7 cls-2ylraskd.ccs.tencent-cloud.com
 10.248.227.74 cls-ehx4vson.ccs.tencent-cloud.com
+10.248.224.193 cls-0doi9yrf.ccs.tencent-cloud.com 
 ```
