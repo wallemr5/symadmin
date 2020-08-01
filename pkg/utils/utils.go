@@ -10,22 +10,6 @@ import (
 	"k8s.io/apimachinery/pkg/util/intstr"
 )
 
-var ObservedNamespace = []string{
-	"default",
-	"dmall-inner",
-	"dmall-outer",
-}
-
-const (
-	ObserveMustLabelClusterName      = "sym-cluster-info"
-	ObserveMustLabelAppName          = "app"
-	ObserveMustLabelVersion          = "version"
-	ObserveMustLabelReleaseName      = "release"
-	ObserveMustLabelLdcName          = "sym-ldc"
-	ObserveMustLabelLightningDomain0 = "lightningDomain0"
-	ObserveMustLabelGroupName        = "sym-group"
-)
-
 func StrPointer(s string) *string {
 	return &s
 }

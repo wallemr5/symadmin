@@ -21,6 +21,7 @@ import (
 
 	"emperror.dev/errors"
 	"gitlab.dmall.com/arch/sym-admin/pkg/controllers/common"
+	pkgLabels "gitlab.dmall.com/arch/sym-admin/pkg/labels"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	"k8s.io/client-go/util/retry"
 	"k8s.io/klog"
@@ -47,21 +48,21 @@ func GetFormattedName(kind string, object Object) string {
 func FillWorkloadSelectorLabel(labels map[string]string) map[string]string {
 	lb := make(map[string]string)
 
-	if va, ok := labels[utils.ObserveMustLabelAppName]; !ok {
-		lb[utils.ObserveMustLabelAppName] = va
+	if va, ok := labels[pkgLabels.ObserveMustLabelAppName]; !ok {
+		lb[pkgLabels.ObserveMustLabelAppName] = va
 	}
 
-	if vg, ok := labels[utils.ObserveMustLabelGroupName]; !ok {
-		lb[utils.ObserveMustLabelGroupName] = vg
-		lb[utils.ObserveMustLabelVersion] = vg
+	if vg, ok := labels[pkgLabels.ObserveMustLabelGroupName]; !ok {
+		lb[pkgLabels.ObserveMustLabelGroupName] = vg
+		lb[pkgLabels.ObserveMustLabelVersion] = vg
 	}
 
 	return lb
 }
 
 func ConvertToLabel(labels map[string]string) {
-	if vg, ok := labels[utils.ObserveMustLabelGroupName]; !ok {
-		labels[utils.ObserveMustLabelVersion] = vg
+	if vg, ok := labels[pkgLabels.ObserveMustLabelGroupName]; !ok {
+		labels[pkgLabels.ObserveMustLabelVersion] = vg
 	}
 }
 
@@ -221,7 +222,7 @@ func GetAffinity(advDeploy *workloadv1beta1.AdvDeployment) *corev1.Affinity {
 					PodAffinityTerm: corev1.PodAffinityTerm{
 						LabelSelector: &metav1.LabelSelector{
 							MatchLabels: map[string]string{
-								utils.ObserveMustLabelAppName: advDeploy.Name,
+								pkgLabels.ObserveMustLabelAppName: advDeploy.Name,
 							},
 						},
 						Namespaces:  []string{advDeploy.Namespace},
