@@ -155,7 +155,7 @@ func (r *AdvDeploymentReconciler) ApplyResources(ctx context.Context, advDeploy 
 		case ServiceKind:
 			svc, err := ConvertToSvc(r.Mgr, obj.UnstructuredObject())
 			if err != nil {
-				klog.Errorf("failed convert kind: %s, Name: %s/%s, err: %v", obj.Kind, obj.Namespace, obj.Name, err)
+				klog.Errorf("failed convert kind: %s, Name: %s/%s, err: %+v", obj.Kind, obj.Namespace, obj.Name, err)
 				return nil, isChanged, errors.Wrapf(err, "failed convert kind: %s Name: %s/%s, obj:\n%s",
 					obj.Kind, obj.Namespace, obj.Name, yml)
 			}
@@ -163,7 +163,7 @@ func (r *AdvDeploymentReconciler) ApplyResources(ctx context.Context, advDeploy 
 			ownerRes = append(ownerRes, GetFormattedName(ServiceKind, svc))
 			change, err := resources.Reconcile(ctx, r.Client, svc, resources.Option{IsRecreate: r.Opt.Debug})
 			if err != nil {
-				klog.Errorf("svc name: %s err: %v", svc.Name, err)
+				klog.Errorf("svc name: %s err: %+v", svc.Name, err)
 				return nil, isChanged, errors.Wrapf(err, "reconcile advDeploy: %s svc: %s", advDeploy.Name, obj.Name)
 			}
 			if change > 0 {
@@ -179,7 +179,7 @@ func (r *AdvDeploymentReconciler) ApplyResources(ctx context.Context, advDeploy 
 			ownerRes = append(ownerRes, GetFormattedName(DeploymentKind, deploy))
 			change, err := resources.Reconcile(ctx, r.Client, deploy, resources.Option{IsRecreate: r.Opt.Debug, IsIgnoreReplicas: isHpaEnable})
 			if err != nil {
-				klog.Errorf("deployment name: %s err: %v", deploy.Name, err)
+				klog.Errorf("deployment name: %s err: %+v", deploy.Name, err)
 				return nil, isChanged, errors.Wrapf(err, "reconcile advDeploy: %s deployment: %s", advDeploy.Name, obj.Name)
 			}
 
@@ -190,14 +190,14 @@ func (r *AdvDeploymentReconciler) ApplyResources(ctx context.Context, advDeploy 
 		case StatefulSetKind:
 			sta, err := ConvertToStatefulSet(r.Mgr, obj.UnstructuredObject())
 			if err != nil {
-				klog.Errorf("failed convert kind: %s, Name: %s/%s, err: %v", obj.Kind, obj.Namespace, obj.Name, err)
+				klog.Errorf("failed convert kind: %s, Name: %s/%s, err: %+v", obj.Kind, obj.Namespace, obj.Name, err)
 				return nil, isChanged, errors.Wrapf(err, "failed convert kind: %s Name: %s/%s, obj:\n%s",
 					obj.Kind, obj.Namespace, obj.Name, yml)
 			}
 			ownerRes = append(ownerRes, GetFormattedName(StatefulSetKind, sta))
 			change, err := resources.Reconcile(ctx, r.Client, sta, resources.Option{IsRecreate: r.Opt.Debug, IsIgnoreReplicas: isHpaEnable})
 			if err != nil {
-				klog.Errorf("statefulset name: %s err: %v", sta.Name, err)
+				klog.Errorf("statefulset name: %s err: %+v", sta.Name, err)
 				return nil, isChanged, errors.Wrapf(err, "reconcile advDeploy: %s statefulset: %s", advDeploy.Name, obj.Name)
 			}
 

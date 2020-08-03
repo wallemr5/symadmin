@@ -384,11 +384,11 @@ func (c *Impl) processNextWorkItem() bool {
 		diffTime := time.Since(startTime)
 		var logLevel klog.Level
 		if diffTime > 1*time.Second {
-			logLevel = 1
-		} else if diffTime > 100*time.Millisecond {
 			logLevel = 2
-		} else {
+		} else if diffTime > 100*time.Millisecond {
 			logLevel = 4
+		} else {
+			logLevel = 5
 		}
 		klog.V(logLevel).Infof("name:%s Reconcile succeeded. Time taken: %v. key: %v", c.Name, diffTime, req)
 	}()

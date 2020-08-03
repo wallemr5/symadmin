@@ -88,5 +88,5 @@ func GetHpaMetricObj(m map[string]string) []*HpaMetric {
 
 func FormatToDNS1123(name string) string {
 	target := strings.Trim(name, " \n\r")
-	return strings.ToLower(strings.ReplaceAll(target, ".", "-"))
+	return target
 }

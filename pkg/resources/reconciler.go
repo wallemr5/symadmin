@@ -47,22 +47,23 @@ func Reconcile(ctx context.Context, c client.Client, desired runtime.Object, opt
 
 	key, err := client.ObjectKeyFromObject(current)
 	if err != nil {
-		return change, errors.Wrapf(err, "copy key[%s]", key)
+		return change, err
 	}
 
+	name := key.String()
 	err = c.Get(ctx, key, current)
 	if err != nil && !apierrors.IsNotFound(err) {
-		return change, errors.Wrapf(err, "getting resource key[%s]", key)
+		return change, errors.Wrapf(err, "getting resource name: %s", name)
 	}
 	if apierrors.IsNotFound(err) {
 		if opt.DesiredState == DesiredStatePresent {
 			if err := patch.DefaultAnnotator.SetLastAppliedAnnotation(desired); err != nil {
-				klog.Errorf("Failed to set last applied annotation key[%s] err: %v", key, err)
+				klog.Errorf("failed to set last applied annotation name: %s err: %+v", name, err)
 			}
 			if err := c.Create(ctx, desired); err != nil {
-				return change, errors.Wrapf(err, "creating resource failed key[%s]", key)
+				return change, errors.Wrapf(err, "creating resource failed name: %s", name)
 			}
-			klog.Infof("resource key[%s] created", key)
+			klog.Infof("resource name: %s created", name)
 			change++
 		}
 	} else {
@@ -72,7 +73,7 @@ func Reconcile(ctx context.Context, c client.Client, desired runtime.Object, opt
 				patch.IgnoreStatusFields(),
 			}
 
-			if utils.IsObjectMetaChange(desired, current) {
+			if utils.IsObjectLabelsChange(desired, current) {
 				goto Update
 			}
 
@@ -86,26 +87,26 @@ func Reconcile(ctx context.Context, c client.Client, desired runtime.Object, opt
 
 			patchResult, err = patch.DefaultPatchMaker.Calculate(current, desired, calcOpts...)
 			if err != nil {
-				klog.Errorf("could not match object key[%s] err: %v", key, err)
+				klog.Errorf("could not match object name: %s err: %+v", name, err)
 				return change, err
 			} else if patchResult.IsEmpty() {
-				klog.V(5).Infof("resource key[%s] unchanged is in sync", key)
+				klog.V(5).Infof("resource name: %s unchanged is in sync", name)
 				return change, nil
 			} else {
-				klog.V(5).Infof("resource key[%s] diffs patch: %s", key, string(patchResult.Patch))
+				klog.V(4).Infof("resource name: %s diffs patch: %s", name, string(patchResult.Patch))
 			}
 
 		Update:
 			// Need to set this before resourceversion is set, as it would constantly change otherwise
 			if err := patch.DefaultAnnotator.SetLastAppliedAnnotation(desired); err != nil {
-				klog.Errorf("Failed to set last applied annotation key[%s] err: %v", key, err)
+				klog.Errorf("Failed to set last applied annotation name: %s err: %+v", name, err)
 			}
 
 			if opt.IsRecreate {
 				metaAccessor := meta.NewAccessor()
 				currentResourceVersion, err := metaAccessor.ResourceVersion(current)
 				if err != nil {
-					klog.Errorf("key[%s] metaAccessor err: %v", key, err)
+					klog.Errorf("name: %s metaAccessor err: %+v", name, err)
 					return change, nil
 				}
 
@@ -113,28 +114,28 @@ func Reconcile(ctx context.Context, c client.Client, desired runtime.Object, opt
 				prepareResourceForUpdate(current, desired)
 				if err := c.Update(ctx, desired); err != nil {
 					if apierrors.IsConflict(err) || apierrors.IsInvalid(err) {
-						klog.Infof("resource key[%s] needs to be re-created err: %v", key, err)
+						klog.Infof("resource name: %s needs to be re-created err: %+v", name, err)
 						err := c.Delete(ctx, current)
 						if err != nil {
-							return change, errors.Wrapf(err, "could not delete resource key[%s]", key)
+							return change, errors.Wrapf(err, "could not delete resource name: %s", name)
 						}
-						klog.Infof("resource key[%s] deleted", key)
+						klog.Infof("resource name: %s deleted", name)
 						if err := c.Create(ctx, desired); err != nil {
-							return change, errors.Wrapf(err, "creating resource key[%s]", key)
+							return change, errors.Wrapf(err, "creating resource name: %s", name)
 						}
-						klog.Infof("resource key[%s] created", key)
+						klog.Infof("resource name: %s recreated", name)
 						change++
 						return change, nil
 					}
-					return change, errors.Wrapf(err, "updating resource key[%s]", key)
+					return change, errors.Wrapf(err, "updating resource name: %s", name)
 				}
-				klog.Infof("resource key:%s updated", key)
+				klog.Infof("resource name: %s updated", name)
 			} else {
 				metaAccessor := meta.NewAccessor()
 				retryErr := retry.RetryOnConflict(retry.DefaultRetry, func() error {
 					currentResourceVersion, err := metaAccessor.ResourceVersion(current)
 					if err != nil {
-						klog.Errorf("key[%s] metaAccessor err: %v", key, err)
+						klog.Errorf("name: %s metaAccessor err: %+v", name, err)
 						return err
 					}
 
@@ -143,30 +144,30 @@ func Reconcile(ctx context.Context, c client.Client, desired runtime.Object, opt
 
 					updateErr := c.Update(ctx, desired)
 					if updateErr == nil {
-						klog.V(2).Infof("Updating resource key[%s] successfully", key)
+						klog.V(4).Infof("updating resource name: %s successfully", name)
 						return nil
 					}
 
 					// Get object again when updating is failed.
 					getErr := c.Get(ctx, key, current)
 					if getErr != nil {
-						return errors.Wrapf(err, "updated get resource key[%s]", key)
+						return errors.Wrapf(err, "updated get resource name: %s", name)
 					}
 
 					return updateErr
 				})
 
 				if retryErr != nil {
-					klog.Errorf("key[%s] retryErr: %v", key, retryErr)
-					return change, errors.Errorf("key[%s] only update err: %v, please check", key, retryErr)
+					klog.Errorf("name: %s retryErr: %+v", name, retryErr)
+					return change, errors.Errorf("name: %s only update err: %+v, please check", name, retryErr)
 				}
 				change++
 			}
 		} else if opt.DesiredState == DesiredStateAbsent {
 			if err := c.Delete(ctx, current); err != nil {
-				return change, errors.Wrapf(err, "deleting resource key[%s]", key)
+				return change, errors.Wrapf(err, "deleting resource name: %s", name)
 			}
-			klog.Infof("resource key[%s] deleted successfully", key)
+			klog.Infof("resource name: %s deleted successfully", name)
 			change++
 		}
 	}

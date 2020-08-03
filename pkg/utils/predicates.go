@@ -206,8 +206,14 @@ func IsObjectMetaChange(n, c interface{}) bool {
 		return false
 	}
 
+	if !reflect.DeepEqual(newObj.GetFinalizers(), currObj.GetFinalizers()) {
+		klog.V(4).Infof("name: %s finalizers changed, new: %+v, curr: %+v",
+			newObj.GetName(), newObj.GetFinalizers(), currObj.GetFinalizers())
+		return true
+	}
+
 	if !reflect.DeepEqual(newObj.GetLabels(), currObj.GetLabels()) {
-		klog.V(4).Infof("obj name: %s labels changed, new: %+v, curr: %+v",
+		klog.V(4).Infof("name: %s labels changed, new: %+v, curr: %+v",
 			newObj.GetName(), newObj.GetLabels(), currObj.GetLabels())
 		return true
 	}
@@ -229,8 +235,28 @@ func IsObjectMetaChange(n, c interface{}) bool {
 	}
 
 	if !reflect.DeepEqual(newAnnotations, currAnnotations) {
-		klog.V(4).Infof("obj name: %s annotations changed, new: %+v, curr: %+v",
+		klog.V(4).Infof("name: %s annotations changed, new: %+v, curr: %+v",
 			newObj.GetName(), newAnnotations, currAnnotations)
+		return true
+	}
+
+	return false
+}
+
+func IsObjectLabelsChange(n, c interface{}) bool {
+	newObj, ok := n.(metav1.Object)
+	if !ok {
+		return false
+	}
+
+	currObj, ok := c.(metav1.Object)
+	if !ok {
+		return false
+	}
+
+	if !reflect.DeepEqual(newObj.GetLabels(), currObj.GetLabels()) {
+		klog.V(4).Infof("name: %s labels changed, new: %+v, curr: %+v",
+			newObj.GetName(), newObj.GetLabels(), currObj.GetLabels())
 		return true
 	}
 

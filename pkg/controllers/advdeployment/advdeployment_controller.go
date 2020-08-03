@@ -148,11 +148,11 @@ func (r *AdvDeploymentReconciler) Reconcile(req ctrl.Request) (ctrl.Result, erro
 		diffTime := time.Since(startTime)
 		var logLevel klog.Level
 		if diffTime > 1*time.Second {
-			logLevel = 1
-		} else if diffTime > 100*time.Millisecond {
 			logLevel = 2
-		} else {
+		} else if diffTime > 100*time.Millisecond {
 			logLevel = 4
+		} else {
+			logLevel = 5
 		}
 		klog.V(logLevel).Infof("##### [%s] reconciling is finished. time taken: %v. ", req.NamespacedName, diffTime)
 	}()

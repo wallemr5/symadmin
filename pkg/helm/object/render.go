@@ -291,12 +291,12 @@ func GetCapabilities(getter genericclioptions.RESTClientGetter) (*chartutil.Capa
 func RenderTemplate(chartPackage []byte, rlsName, ns string, overrideValue string) (K8sObjects, error) {
 	chrt, err := GetRequestedChart(chartPackage)
 	if err != nil {
-		return nil, fmt.Errorf("loading chart has an error: %v", err)
+		return nil, fmt.Errorf("loading chart has an error: %+v", err)
 	}
 
 	overrideValues, err := chartutil.ReadValues([]byte(overrideValue))
 	if err != nil {
-		return nil, fmt.Errorf("ReadValues has an error: %v", err)
+		return nil, fmt.Errorf("ReadValues has an error: %+v", err)
 	}
 
 	options := chartutil.ReleaseOptions{
@@ -314,7 +314,7 @@ func RenderTemplate(chartPackage []byte, rlsName, ns string, overrideValue strin
 
 	renderedTemplates, err := engine.Render(chrt, chrtValues)
 	if err != nil {
-		klog.Errorf("render err: %v", err)
+		klog.Errorf("render err: %+v", err)
 		return nil, err
 	}
 
@@ -350,7 +350,7 @@ func Render(fs http.FileSystem, rlsName, ns, chartName string, overrideValue str
 
 	overrideValues, err := chartutil.ReadValues([]byte(overrideValue))
 	if err != nil {
-		return nil, fmt.Errorf("ReadValues has an error: %v", err)
+		return nil, fmt.Errorf("ReadValues has an error: %+v", err)
 	}
 
 	options := chartutil.ReleaseOptions{
@@ -368,7 +368,7 @@ func Render(fs http.FileSystem, rlsName, ns, chartName string, overrideValue str
 
 	renderedTemplates, err := engine.Render(chrt, chrtValues)
 	if err != nil {
-		klog.Errorf("render err: %v", err)
+		klog.Errorf("render err: %+v", err)
 		return nil, err
 	}
 

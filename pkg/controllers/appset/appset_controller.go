@@ -205,7 +205,7 @@ func (r *AppSetReconciler) CustomReconcile(ctx context.Context, req customctrl.C
 		if apierrors.IsNotFound(err) {
 			return reconcile.Result{}, nil
 		}
-		logger.Error(err, "failed to get AppSet")
+		logger.Error(err, "failed to get appSet")
 		return reconcile.Result{}, err
 	}
 
@@ -216,13 +216,19 @@ func (r *AppSetReconciler) CustomReconcile(ctx context.Context, req customctrl.C
 
 	// add finalizers
 	if !utils.ContainsString(app.ObjectMeta.Finalizers, labels.ControllerFinalizersName) {
-		klog.V(2).Infof("%s set finalizers: %s", req.NamespacedName, labels.ControllerFinalizersName)
+		klog.V(2).Infof("%s set finalizers: %s", req.NamespacedName.String(), labels.ControllerFinalizersName)
 
 		if app.ObjectMeta.Finalizers == nil {
 			app.ObjectMeta.Finalizers = []string{}
 		}
 		app.ObjectMeta.Finalizers = append(app.ObjectMeta.Finalizers, labels.ControllerFinalizersName)
-		return reconcile.Result{}, r.Client.Update(ctx, app)
+		err := r.Client.Update(ctx, app)
+		if err != nil {
+			klog.Errorf("name: %s set finalizers err: %+v", req.NamespacedName.String(), err)
+			return reconcile.Result{}, err
+		}
+
+		return reconcile.Result{}, nil
 	}
 
 	isChanged, err := r.ApplySpec(ctx, req, app)
@@ -239,7 +245,7 @@ func (r *AppSetReconciler) CustomReconcile(ctx context.Context, req customctrl.C
 		}, nil
 	}
 
-	klog.V(5).Infof("%s/%s start aggregate status ... ", req.Namespace, req.Name)
+	klog.V(5).Infof("%s start aggregate status ... ", req.NamespacedName.String())
 	status, _, err := r.ApplyStatus(ctx, req, app)
 	if err != nil {
 		logger.Error(err, "update AppSet Status fail")
