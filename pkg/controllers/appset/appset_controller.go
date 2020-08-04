@@ -248,7 +248,7 @@ func (r *AppSetReconciler) CustomReconcile(ctx context.Context, req customctrl.C
 	klog.V(5).Infof("%s start aggregate status ... ", req.NamespacedName.String())
 	status, _, err := r.ApplyStatus(ctx, req, app)
 	if err != nil {
-		logger.Error(err, "update AppSet Status fail")
+		logger.Error(err, "update appSet status failed")
 		return reconcile.Result{}, err
 	}
 

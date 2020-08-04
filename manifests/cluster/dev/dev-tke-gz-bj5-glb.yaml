@@ -2,10 +2,10 @@ apiVersion: workload.dmall.com/v1beta1
 kind: Cluster
 metadata:
   labels:
-    clusterName: dev-tke-gz-bj5-glb
+    clusterName: tcc-gz01-dev
     createdBy: sym-controller
-  name: dev-tke-gz-bj5-glb
-  namespace: default
+  name: tcc-gz01-dev
+  namespace: sym-admin
 spec:
   symNodeName: 10.248.227.14
   pause: false
@@ -13,11 +13,7 @@ spec:
     area: beijing
     az: BJ
     clusterType: tke
-    clusterIngressHead: dks-test-glb
-#  helmSpec:
-#    maxHistory: 5
-#    namespace: kube-system
-#    overrideImageSpec: registry.cn-hangzhou.aliyuncs.com/google_containers/tiller:v2.13.1
+    clusterIngressHead: dev-gz-bj
   apps:
 #    - name: metrics-server
 #      repo: dmall
@@ -29,7 +25,7 @@ spec:
     - name: contour
       repo: dmall
       namespace: projectcontour
-      chartVersion: 1.1.2
+      chartVersion: 1.1.4
     - name: monitor
       repo: dmall
       namespace: monitoring

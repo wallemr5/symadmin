@@ -77,12 +77,25 @@ func Reconcile(ctx context.Context, c client.Client, desired runtime.Object, opt
 				goto Update
 			}
 
-			if _, ok := desired.(*appsv1.Deployment); ok && opt.IsIgnoreReplicas {
-				calcOpts = append(calcOpts, patch.IgnoreDeployReplicasFields())
-			}
-
-			if _, ok := desired.(*appsv1.StatefulSet); ok && opt.IsIgnoreReplicas {
-				calcOpts = append(calcOpts, patch.IgnoreStsReplicasFields())
+			if opt.IsIgnoreReplicas {
+				switch desired.(type) {
+				case *appsv1.Deployment:
+					desiredDeploy := desired.(*appsv1.Deployment)
+					currentDeploy := current.(*appsv1.Deployment)
+					desiredReplicas := utils.GetWorkloadReplicas(desiredDeploy.Spec.Replicas)
+					currentReplicas := utils.GetWorkloadReplicas(currentDeploy.Spec.Replicas)
+					if desiredReplicas != 0 && currentReplicas > desiredReplicas {
+						calcOpts = append(calcOpts, patch.IgnoreDeployReplicasFields())
+					}
+				case *appsv1.StatefulSet:
+					desiredSta := desired.(*appsv1.StatefulSet)
+					currentSta := current.(*appsv1.StatefulSet)
+					desiredReplicas := utils.GetWorkloadReplicas(desiredSta.Spec.Replicas)
+					currentReplicas := utils.GetWorkloadReplicas(currentSta.Spec.Replicas)
+					if desiredReplicas != 0 && currentReplicas > desiredReplicas {
+						calcOpts = append(calcOpts, patch.IgnoreStsReplicasFields())
+					}
+				}
 			}
 
 			patchResult, err = patch.DefaultPatchMaker.Calculate(current, desired, calcOpts...)
@@ -90,7 +103,7 @@ func Reconcile(ctx context.Context, c client.Client, desired runtime.Object, opt
 				klog.Errorf("could not match object name: %s err: %+v", name, err)
 				return change, err
 			} else if patchResult.IsEmpty() {
-				klog.V(5).Infof("resource name: %s unchanged is in sync", name)
+				klog.V(4).Infof("resource name: %s unchanged is in sync", name)
 				return change, nil
 			} else {
 				klog.V(4).Infof("resource name: %s diffs patch: %s", name, string(patchResult.Patch))

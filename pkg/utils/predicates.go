@@ -262,3 +262,11 @@ func IsObjectLabelsChange(n, c interface{}) bool {
 
 	return false
 }
+
+func GetWorkloadReplicas(replicas *int32) int32 {
+	if replicas == nil {
+		return 1
+	}
+
+	return *replicas
+}

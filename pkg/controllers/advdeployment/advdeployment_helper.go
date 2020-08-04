@@ -183,7 +183,7 @@ func (r *AdvDeploymentReconciler) ApplyResources(ctx context.Context, advDeploy 
 				return nil, isChanged, errors.Wrapf(err, "reconcile advDeploy: %s deployment: %s", advDeploy.Name, obj.Name)
 			}
 
-			_ = ApplyHorizontalPodAutoscaler(r.Mgr, advDeploy, obj, "apps/v1", *deploy.Spec.Replicas)
+			_ = ApplyHorizontalPodAutoscaler(r.Mgr, advDeploy, obj, "apps/v1", utils.GetWorkloadReplicas(deploy.Spec.Replicas))
 			if change > 0 {
 				isChanged++
 			}
@@ -201,7 +201,7 @@ func (r *AdvDeploymentReconciler) ApplyResources(ctx context.Context, advDeploy 
 				return nil, isChanged, errors.Wrapf(err, "reconcile advDeploy: %s statefulset: %s", advDeploy.Name, obj.Name)
 			}
 
-			_ = ApplyHorizontalPodAutoscaler(r.Mgr, advDeploy, obj, "apps/v1", *sta.Spec.Replicas)
+			_ = ApplyHorizontalPodAutoscaler(r.Mgr, advDeploy, obj, "apps/v1", utils.GetWorkloadReplicas(sta.Spec.Replicas))
 			if change > 0 {
 				isChanged++
 			}
@@ -490,12 +490,7 @@ func (r *AdvDeploymentReconciler) updateStatus(ctx context.Context, advDeploy *w
 			obj.Status.ObservedGeneration = obj.ObjectMeta.Generation - 1
 		}
 
-		if r.Opt.OldCluster {
-			updateErr = r.Client.Update(ctx, obj)
-		} else {
-			updateErr = r.Client.Status().Update(ctx, obj)
-		}
-
+		updateErr = r.Client.Status().Update(ctx, obj)
 		if updateErr == nil {
 			klog.V(3).Infof("Updating the status of advDeploy[%s] successfully", advDeploy.Name)
 			return nil

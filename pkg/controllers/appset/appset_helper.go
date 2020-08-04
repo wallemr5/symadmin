@@ -131,13 +131,13 @@ func (r *AppSetReconciler) applyStatus(ctx context.Context, req customctrl.Custo
 
 		updateErr := r.Client.Status().Update(ctx, app)
 		if updateErr == nil {
-			klog.V(4).Infof("%s update status[%s] successfully", req.NamespacedName.String(), app.Status.AggrStatus.Status)
+			klog.V(5).Infof("%s update status[%s] successfully", req.NamespacedName.String(), app.Status.AggrStatus.Status)
 			return nil
 		}
 
 		getErr := r.Client.Get(ctx, req.NamespacedName, app)
 		if getErr != nil {
-			klog.Errorf("name: %s update get AppSet failed, err: %+v", req.NamespacedName.String(), getErr)
+			klog.Errorf("name: %s update get appSet failed, err: %+v", req.NamespacedName.String(), getErr)
 			return getErr
 		}
 
@@ -264,8 +264,7 @@ func applyAdvDeployment(ctx context.Context, c *k8smanager.Cluster, req customct
 			return true, nil
 		}
 
-		klog.Errorf("%s get ddvDeployment by cluster: %s failed, err: %+v",
-			req.NamespacedName.String(), c.GetName(), err)
+		klog.Errorf("%s get ddvDeployment by cluster: %s failed, err: %+v", name, c.GetName(), err)
 		return false, err
 	}
 

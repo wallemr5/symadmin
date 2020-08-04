@@ -2,31 +2,26 @@ apiVersion: workload.dmall.com/v1beta1
 kind: Cluster
 metadata:
   labels:
-    clusterName: dev-tke-rz-cd-glb
+    clusterName: tcc-rz01-dev
     createdBy: sym-controller
-  name: dev-tke-rz-cd-glb
-  namespace: default
+  name: tcc-rz01-dev
+  namespace: sym-admin
 spec:
   symNodeName: 10.248.227.69
   pause: false
   meta:
     area: chengdu
     az: CD
-#    id: "1"
     clusterType: tke
-    clusterIngressHead: dks-test-glb
-#  helmSpec:
-#    maxHistory: 5
-#    namespace: kube-system
-#    overrideImageSpec: registry.cn-hangzhou.aliyuncs.com/google_containers/tiller:v2.13.1
+    clusterIngressHead: dev-rz-cd
   apps:
 #    - name: metrics-server
 #      repo: dmall
 #      namespace: monitoring
-#    - name: traefik
-#      repo: dmall
-#      namespace: kube-system
-#      chartVersion: 1.86.1
+    - name: contour
+      repo: dmall
+      namespace: projectcontour
+      chartVersion: 1.1.4
     - name: monitor
       repo: dmall
       namespace: monitoring
@@ -45,17 +40,3 @@ spec:
         prom-retention: 2d
         lpv-grafana-path: /root/grafana-data
         lpv-grafana-size: 1Gi
-    - name: sym-ctl
-      repo: dmall
-      namespace: sym-admin
-      chartName: sym-controller
-      chartVersion : 1.0.18
-      values:
-        tag: "v1.1.0-dev6"
-        master: "false"
-        worker: "true"
-        cluster: "false"
-        reCreate: "true"
-        leader: "true"
-        oldCluster: "false"
-        threadiness: "1"

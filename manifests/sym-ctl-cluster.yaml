@@ -22,7 +22,7 @@ spec:
     spec:
       containers:
         - name: sym-ctl-cluster
-          image: symcn.tencentcloudcr.com/symcn/sym-admin-controller:v1.1.0-dev11
+          image: symcn.tencentcloudcr.com/symcn/sym-admin-controller:v1.1.0-dev15-2
           imagePullPolicy: IfNotPresent
           args:
             - "controller"

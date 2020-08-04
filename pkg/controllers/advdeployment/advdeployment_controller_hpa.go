@@ -4,6 +4,7 @@ import (
 	"context"
 	"strconv"
 
+	"emperror.dev/errors"
 	workloadv1beta1 "gitlab.dmall.com/arch/sym-admin/pkg/apis/workload/v1beta1"
 	"gitlab.dmall.com/arch/sym-admin/pkg/controllers/common"
 	"gitlab.dmall.com/arch/sym-admin/pkg/helm/object"
@@ -14,6 +15,13 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/klog"
 
+	"gitlab.dmall.com/arch/sym-admin/pkg/utils"
+	"k8s.io/apimachinery/pkg/api/equality"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
+	"k8s.io/apimachinery/pkg/api/meta"
+	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/client-go/util/retry"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 )
@@ -35,10 +43,79 @@ func GetDefautlMemMetricValue() *int32 {
 	return &defautlMetricValue
 }
 
+func isHpaChanged(new, old *v2beta2.HorizontalPodAutoscaler) bool {
+	if utils.IsObjectMetaChange(new, old) {
+		return true
+	}
+
+	if !equality.Semantic.DeepEqual(new.Spec, old.Spec) {
+		return true
+	}
+	return false
+}
+
+func applyHpa(cli client.Client, hpa *v2beta2.HorizontalPodAutoscaler) error {
+	key := types.NamespacedName{
+		Name:      hpa.Name,
+		Namespace: hpa.Namespace,
+	}
+	name := key.String()
+	ctx := context.TODO()
+	current := &v2beta2.HorizontalPodAutoscaler{}
+	err := cli.Get(ctx, key, current)
+	if err != nil {
+		if apierrors.IsNotFound(err) {
+			err = cli.Create(ctx, hpa)
+			if err != nil {
+				klog.Errorf("%s create hpa failed, err: %+v", name, err)
+				return errors.Wrapf(err, "%s create hpa failed", name)
+			}
+			klog.V(4).Infof("%s create hpa successfully", name)
+			return nil
+		}
+
+		klog.Errorf("%s get hpa failed, err: %+v", name, err)
+		return err
+	}
+
+	if isHpaChanged(hpa, current) {
+		metaAccessor := meta.NewAccessor()
+		err := retry.RetryOnConflict(retry.DefaultRetry, func() error {
+			currentResourceVersion, err := metaAccessor.ResourceVersion(current)
+			if err != nil {
+				klog.Errorf("name: %s metaAccessor err: %+v", name, err)
+				return err
+			}
+
+			metaAccessor.SetResourceVersion(hpa, currentResourceVersion)
+			updateErr := cli.Update(ctx, hpa)
+			if updateErr == nil {
+				klog.V(5).Infof("%s update hpa successfully", name)
+				return nil
+			}
+
+			getErr := cli.Get(ctx, key, current)
+			if getErr != nil {
+				klog.Errorf("%s get hpa failed, err: %+v", name, getErr)
+			}
+			return updateErr
+		})
+
+		if err != nil {
+			klog.Warningf("%s update hpa, err: %+v", name, err)
+			return err
+		}
+
+		return nil
+	}
+
+	return nil
+}
+
 func ApplyHorizontalPodAutoscaler(mgr manager.Manager, advDeploy *workloadv1beta1.AdvDeployment, object *object.K8sObject, apiVersion string, currentReplicas int32) error {
 	isEnable := common.GetHpaSpecEnable(advDeploy.Annotations)
-	if !isEnable {
-		klog.V(5).Infof("not found hapspec annotations or hpa disable")
+	if !isEnable || currentReplicas == 0 {
+		klog.V(5).Infof("hpa not enable or obj name: %s replicas is zero", object.Name)
 		hpa := &v2beta2.HorizontalPodAutoscaler{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      object.Name,
@@ -103,8 +180,9 @@ func ApplyHorizontalPodAutoscaler(mgr manager.Manager, advDeploy *workloadv1beta
 	}
 
 	controllerutil.SetControllerReference(advDeploy, hpa, mgr.GetScheme())
-	klog.V(5).Infof("starting apply hpa name: %s", hpa.Name)
-	_, err := resources.Reconcile(context.TODO(), mgr.GetClient(), hpa, resources.Option{DesiredState: resources.DesiredStatePresent})
+	klog.V(4).Infof("starting apply hpa name: %s minReplicas: %d maxReplicas: %d",
+		hpa.Name, *hpa.Spec.MinReplicas, hpa.Spec.MaxReplicas)
+	err := applyHpa(mgr.GetClient(), hpa)
 	if err != nil {
 		klog.Errorf("apply hpa name: %s, err: %+v", hpa.Name, err)
 	}

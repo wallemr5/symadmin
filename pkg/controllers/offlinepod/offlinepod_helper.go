@@ -99,7 +99,7 @@ func NewOfflinepodReconciler(mgr manager.Manager, cMgr *pkgmanager.DksManager) (
 					return
 				}
 
-				if len(pod.Status.HostIP) == 0 {
+				if len(pod.Status.HostIP) == 0 || len(pod.Status.PodIP) == 0 {
 					return
 				}
 

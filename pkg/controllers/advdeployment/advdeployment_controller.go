@@ -137,10 +137,8 @@ func (r *AdvDeploymentReconciler) DeployTypeCheck(advDeploy *workloadv1beta1.Adv
 // +kubebuilder:rbac:groups=workload.dmall.com,resources=advdeployments/status,verbs=get;update;patch
 
 func (r *AdvDeploymentReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error) {
-	klog.V(3).Infof("##### [%s] start to reconcile.", req.NamespacedName)
-
 	ctx := context.Background()
-	logger := r.Log.WithValues("key", req.NamespacedName)
+	logger := r.Log.WithValues("key", req.NamespacedName.String())
 
 	// Calculating how long did the reconciling process take
 	startTime := time.Now()
@@ -154,7 +152,7 @@ func (r *AdvDeploymentReconciler) Reconcile(req ctrl.Request) (ctrl.Result, erro
 		} else {
 			logLevel = 5
 		}
-		klog.V(logLevel).Infof("##### [%s] reconciling is finished. time taken: %v. ", req.NamespacedName, diffTime)
+		klog.V(logLevel).Infof("##### [%s] reconciling is finished. time taken: %v. ", req.NamespacedName.String(), diffTime)
 	}()
 
 	// At first, find the advDeployment with its namespaced name.
@@ -162,7 +160,7 @@ func (r *AdvDeploymentReconciler) Reconcile(req ctrl.Request) (ctrl.Result, erro
 	err := r.Client.Get(ctx, req.NamespacedName, advDeploy)
 	if err != nil {
 		if apierrors.IsNotFound(err) {
-			klog.V(3).Infof("Can not find any advDeploy with name [%s], don't care about it.", req.NamespacedName)
+			klog.V(3).Infof("not find any advDeploy with name: %s, skip", req.NamespacedName.String())
 			return reconcile.Result{}, nil
 		}
 

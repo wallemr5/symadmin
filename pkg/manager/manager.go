@@ -50,7 +50,6 @@ type ManagerOption struct {
 	WorkerEnabled           bool
 	ClusterEnabled          bool
 	OfflinePodEnabled       bool
-	OldCluster              bool
 	Debug                   bool
 	Recover                 bool
 }
@@ -78,7 +77,6 @@ func DefaultManagerOption() *ManagerOption {
 		WorkerEnabled:           false,
 		ClusterEnabled:          false,
 		OfflinePodEnabled:       false,
-		OldCluster:              false,
 		Debug:                   false,
 		Recover:                 false,
 		DmallChartRepo:          "",
