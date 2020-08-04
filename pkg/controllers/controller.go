@@ -4,6 +4,7 @@ import (
 	"gitlab.dmall.com/arch/sym-admin/pkg/controllers/advdeployment"
 	"gitlab.dmall.com/arch/sym-admin/pkg/controllers/appset"
 	"gitlab.dmall.com/arch/sym-admin/pkg/controllers/cluster"
+	"gitlab.dmall.com/arch/sym-admin/pkg/controllers/eventexporter"
 	"gitlab.dmall.com/arch/sym-admin/pkg/controllers/offlinepod"
 	pkgmanager "gitlab.dmall.com/arch/sym-admin/pkg/manager"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
@@ -32,6 +33,10 @@ func AddToManager(m manager.Manager, dksMgr *pkgmanager.DksManager) error {
 
 		if dksMgr.Opt.OfflinePodEnabled {
 			AddToManagerWithCMFuncs = append(AddToManagerWithCMFuncs, offlinepod.Add)
+		}
+
+		if dksMgr.Opt.EventEnabled {
+			AddToManagerWithCMFuncs = append(AddToManagerWithCMFuncs, eventexporter.Add)
 		}
 	}
 

@@ -60,8 +60,8 @@ func (c *DksCli) GetK8sConfig() (*rest.Config, error) {
 
 	// Adjust our client's rate limits based on the number of controllers we are running.
 	if cfg.QPS == 0.0 {
-		cfg.QPS = 40.0
-		cfg.Burst = 60
+		cfg.QPS = 100.0
+		cfg.Burst = 200
 	}
 
 	return cfg, nil

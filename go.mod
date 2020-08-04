@@ -6,6 +6,8 @@ require (
 	contrib.go.opencensus.io/exporter/prometheus v0.2.0
 	emperror.dev/errors v0.7.0
 	github.com/DeanThompson/ginpprof v0.0.0-20190408063150-3be636683586
+	github.com/Masterminds/semver v1.5.0 // indirect
+	github.com/Masterminds/sprig v2.22.0+incompatible
 	github.com/cenkalti/backoff v2.2.1+incompatible // indirect
 	github.com/ghodss/yaml v1.0.0
 	github.com/gin-gonic/gin v1.6.3
@@ -13,15 +15,18 @@ require (
 	github.com/gofrs/uuid v3.3.0+incompatible
 	github.com/goph/emperror v0.17.2
 	github.com/gorilla/websocket v1.4.2
+	github.com/hashicorp/golang-lru v0.5.4
 	github.com/json-iterator/go v1.1.10
 	github.com/lestrrat-go/backoff v1.0.0
 	github.com/pkg/errors v0.9.1
 	github.com/prometheus/client_golang v1.7.1
+	github.com/prometheus/common v0.10.0
 	github.com/shurcooL/httpfs v0.0.0-20190707220628-8d4bc4ba7749 // indirect
 	github.com/shurcooL/vfsgen v0.0.0-20200627165143-92b8a710ab6c
 	github.com/spf13/cobra v1.0.0
 	github.com/spf13/pflag v1.0.5
 	go.opencensus.io v0.22.4
+	gopkg.in/natefinch/lumberjack.v2 v2.0.0
 	gopkg.in/yaml.v2 v2.3.0
 	helm.sh/helm/v3 v3.2.4
 	k8s.io/api v0.18.5

@@ -38,6 +38,7 @@ type ManagerOption struct {
 	Features           []string
 	Repos              map[string]string
 	DmallChartRepo     string
+	AlertEndpoint      string
 
 	// use expose /metrics, /read, /live, /pprof.
 	HTTPAddr                string
@@ -50,6 +51,7 @@ type ManagerOption struct {
 	WorkerEnabled           bool
 	ClusterEnabled          bool
 	OfflinePodEnabled       bool
+	EventEnabled            bool
 	Debug                   bool
 	Recover                 bool
 }
@@ -77,6 +79,7 @@ func DefaultManagerOption() *ManagerOption {
 		WorkerEnabled:           false,
 		ClusterEnabled:          false,
 		OfflinePodEnabled:       false,
+		EventEnabled:            false,
 		Debug:                   false,
 		Recover:                 false,
 		DmallChartRepo:          "",
