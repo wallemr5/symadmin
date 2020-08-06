@@ -11,9 +11,9 @@ import (
 )
 
 type WebhookConfig struct {
-	Endpoint string                 `json:"endpoint,omitempty",yaml:"endpoint"`
-	Layout   map[string]interface{} `json:"layout,omitempty",yaml:"layout"`
-	Headers  map[string]string      `json:"headers,omitempty",yaml:"headers"`
+	Endpoint string                 `json:"endpoint,omitempty" yaml:"endpoint"`
+	Layout   map[string]interface{} `json:"layout,omitempty" yaml:"layout"`
+	Headers  map[string]string      `json:"headers,omitempty" yaml:"headers"`
 }
 
 func NewWebhook(cfg *WebhookConfig) (Sink, error) {

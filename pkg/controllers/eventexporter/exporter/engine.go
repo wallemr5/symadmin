@@ -9,9 +9,9 @@ import (
 
 // Config allows configuration
 type Config struct {
-	Namespace string                 `json:"namespace,omitempty",yaml:"namespace"`
-	Route     Route                  `json:"route,omitempty",yaml:"route"`
-	Receivers []sinks.ReceiverConfig `json:"receivers,omitempty",yaml:"receivers"`
+	Namespace string                 `json:"namespace,omitempty" yaml:"namespace"`
+	Route     Route                  `json:"route,omitempty" yaml:"route"`
+	Receivers []sinks.ReceiverConfig `json:"receivers,omitempty" yaml:"receivers"`
 }
 
 // Engine is responsible for initializing the receivers from sinks

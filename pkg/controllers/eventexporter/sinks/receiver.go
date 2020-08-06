@@ -6,11 +6,11 @@ import (
 
 // Receiver allows receiving
 type ReceiverConfig struct {
-	Name         string              `json:"name,omitempty",yaml:"name"`
-	InMemory     *InMemoryConfig     `json:"inMemory,omitempty",yaml:"inMemory"`
-	File         *FileConfig         `json:"file,omitempty",yaml:"file"`
-	Webhook      *WebhookConfig      `json:"webhook,omitempty",yaml:"webhook"`
-	AlertManager *AlertManagerConfig `json:"alertManager,omitempty",yaml:"alertManager"`
+	Name         string              `json:"name,omitempty" yaml:"name"`
+	InMemory     *InMemoryConfig     `json:"inMemory,omitempty" yaml:"inMemory"`
+	File         *FileConfig         `json:"file,omitempty" yaml:"file"`
+	Webhook      *WebhookConfig      `json:"webhook,omitempty" yaml:"webhook"`
+	AlertManager *AlertManagerConfig `json:"alertManager,omitempty" yaml:"alertManager"`
 }
 
 func (r *ReceiverConfig) Validate() error {

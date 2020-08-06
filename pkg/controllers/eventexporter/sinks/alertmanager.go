@@ -17,8 +17,8 @@ import (
 )
 
 type AlertManagerConfig struct {
-	Endpoint string            `json:"endpoint,omitempty",yaml:"endpoint"`
-	Headers  map[string]string `json:"headers,omitempty",yaml:"headers"`
+	Endpoint string            `json:"endpoint,omitempty" yaml:"endpoint"`
+	Headers  map[string]string `json:"headers,omitempty" yaml:"headers"`
 }
 
 func NewAlertManager(cfg *AlertManagerConfig) (Sink, error) {

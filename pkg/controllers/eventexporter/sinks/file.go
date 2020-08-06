@@ -10,11 +10,11 @@ import (
 )
 
 type FileConfig struct {
-	Path       string                 `json:"path,omitempty",yaml:"path"`
-	Layout     map[string]interface{} `json:"layout,omitempty",yaml:"layout"`
-	MaxSize    int                    `json:"maxsize,omitempty",yaml:"maxsize"`
-	MaxAge     int                    `json:"maxage,omitempty",yaml:"maxage"`
-	MaxBackups int                    `json:"maxbackups,omitempty",yaml:"maxbackups"`
+	Path       string                 `json:"path,omitempty" yaml:"path"`
+	Layout     map[string]interface{} `json:"layout,omitempty" yaml:"layout"`
+	MaxSize    int                    `json:"maxsize,omitempty" yaml:"maxsize"`
+	MaxAge     int                    `json:"maxage,omitempty" yaml:"maxage"`
+	MaxBackups int                    `json:"maxbackups,omitempty" yaml:"maxbackups"`
 }
 
 func (f *FileConfig) Validate() error {
