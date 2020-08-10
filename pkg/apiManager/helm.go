@@ -65,7 +65,7 @@ func (m *APIManager) LintHelmTemplate(c *gin.Context) {
 
 	chartByte, err := ioutil.ReadAll(chartPkg)
 	if err != nil {
-		klog.Errorf("read chart file error: +v", err)
+		klog.Errorf("read chart file error: %+v", err)
 		c.IndentedJSON(http.StatusBadRequest, gin.H{
 			"success": false,
 			"message": err.Error(),
