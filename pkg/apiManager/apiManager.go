@@ -216,6 +216,12 @@ func (m *APIManager) Routes() []*router.Route {
 		},
 		{
 			Method:  "POST",
+			Path:    "/api/linthelm",
+			Handler: m.LintHelmTemplate,
+			Desc:    GetHelmReleaseInfoDesc,
+		},
+		{
+			Method:  "POST",
 			Path:    "/api/cluster/:name/namespace/:namespace/app/:appName/restart",
 			Handler: m.DeletePodByGroup,
 			Desc:    DeletePodByGroupDesc,
