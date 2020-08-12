@@ -2,6 +2,7 @@ apiVersion: {{ include "deployment_api_version" . }}
 kind: Deployment
 metadata:
   name: {{ include "api.fullname" . }}
+  namespace: {{ .Release.Namespace }}
   labels:
     app.kubernetes.io/name: {{ include "api.name" . }}
     helm.sh/chart: {{ include "api.chart" . }}

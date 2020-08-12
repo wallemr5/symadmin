@@ -13,6 +13,9 @@ import (
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	k8syaml "k8s.io/apimachinery/pkg/util/yaml"
 
+	k8sclient "gitlab.dmall.com/arch/sym-admin/pkg/k8s/client"
+	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/runtime/serializer/json"
 	"k8s.io/klog"
 )
 
@@ -215,10 +218,9 @@ func ParseK8sObjectsFromYAMLManifest(manifest string) (K8sObjects, error) {
 			}
 		}
 	}
+
 	yamls = append(yamls, b.String())
-
 	var objects K8sObjects
-
 	for _, yml := range yamls {
 		yml = RemoveNonYAMLLines(yml)
 		if yml == "" {
@@ -354,4 +356,51 @@ func writeStringSafe(sb io.StringWriter, s string) {
 	if err != nil {
 		klog.Error(err.Error())
 	}
+}
+
+func LoadObjs(f io.Reader) ([]runtime.Object, error) {
+	var b bytes.Buffer
+
+	var yamls []string
+
+	scanner := bufio.NewScanner(f)
+	for scanner.Scan() {
+		line := scanner.Text()
+		if line == "---" {
+			yamls = append(yamls, b.String())
+			b.Reset()
+		} else {
+			if _, err := b.WriteString(line); err != nil {
+				return nil, err
+			}
+			if _, err := b.WriteString("\n"); err != nil {
+				return nil, err
+			}
+		}
+	}
+	if s := strings.TrimSpace(b.String()); s != "" {
+		yamls = append(yamls, s)
+	}
+
+	objs := make([]runtime.Object, 0)
+	for _, yml := range yamls {
+		yml = RemoveNonYAMLLines(yml)
+		if yml == "" {
+			continue
+		}
+
+		s := json.NewSerializerWithOptions(json.DefaultMetaFactory,
+			k8sclient.GetScheme(), k8sclient.GetScheme(), json.SerializerOptions{Yaml: true})
+
+		obj, _, err := s.Decode([]byte(yml), nil, nil)
+		if err != nil {
+			klog.Errorf("failed to parse yaml to a k8s object: %+v, yml: \n%s", err, yml)
+			continue
+		}
+
+		objs = append(objs, obj)
+
+	}
+
+	return objs, nil
 }

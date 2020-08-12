@@ -24,7 +24,6 @@ apiVersion: {{ include "rbac_api_version" . }}
 kind: ClusterRoleBinding
 metadata:
   name: {{- printf " %s-rolebinding\n" .Values.rbac.name | trunc 63 }}
-  namespace: {{ .Values.rbac.namespace }}
 subjects:
 - kind: ServiceAccount
   name: {{ .Values.rbac.name }}

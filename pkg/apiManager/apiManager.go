@@ -336,6 +336,11 @@ func (m *APIManager) Routes() []*router.Route {
 			Path:    "/api/cluster/:name/offlineWorkloadPod/terminal",
 			Handler: m.GetOfflineLogTerminal,
 		},
+		{
+			Method:  "GET",
+			Path:    "/api/lintLocalTemplate/",
+			Handler: m.LintLocalTemplate,
+		},
 	}
 
 	routes = append(routes, apiRoutes...)

@@ -1,14 +1,195 @@
 package apiManager
 
 import (
+	"context"
+	"fmt"
 	"io/ioutil"
 	"net/http"
 	"strings"
 
+	"time"
+
 	"github.com/gin-gonic/gin"
 	"gitlab.dmall.com/arch/sym-admin/pkg/apiManager/model"
 	"gitlab.dmall.com/arch/sym-admin/pkg/helm/object"
+	k8sclient "gitlab.dmall.com/arch/sym-admin/pkg/k8s/client"
+	"gitlab.dmall.com/arch/sym-admin/pkg/resources"
+	"gitlab.dmall.com/arch/sym-admin/pkg/utils"
+	appsv1 "k8s.io/api/apps/v1"
+	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/runtime/serializer/json"
+	"k8s.io/client-go/util/retry"
 	"k8s.io/klog"
+	"sigs.k8s.io/controller-runtime/pkg/client"
+)
+
+const (
+	objTemp = `
+---
+# Source: sym-api/templates/service.yaml
+apiVersion: v1
+kind: Service
+metadata:
+  name: test-sym-api
+  namespace: sym-admin
+  labels:
+    app.kubernetes.io/name: sym-api
+    helm.sh/chart: sym-api-1.0.17
+    app.kubernetes.io/instance: test-sym-api
+    app.kubernetes.io/managed-by: Helm
+spec:
+  type: ClusterIP
+  ports:
+    - name: http
+      port: 8080
+      targetPort: 8080
+      protocol: TCP
+  selector:
+    app.kubernetes.io/name: sym-api
+    app.kubernetes.io/instance: test-sym-api
+---
+# Source: sym-api/templates/deployment.yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: test-sym-api
+  namespace: sym-admin
+  labels:
+    app.kubernetes.io/name: sym-api
+    helm.sh/chart: sym-api-1.0.17
+    app.kubernetes.io/instance: test-sym-api
+    app.kubernetes.io/managed-by: Helm
+spec:
+  replicas: 4
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: sym-api
+      app.kubernetes.io/instance: test-sym-api
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: sym-api
+        app.kubernetes.io/instance: test-sym-api
+    spec:
+      containers:
+        - name: sym-api
+          image: "symcn.tencentcloudcr.com/symcn/sym-admin-api:v1.0.10"
+          imagePullPolicy: IfNotPresent
+          args:
+          - "api"
+          - "-v"
+          - "4"
+          ports:
+            - name: http
+              containerPort: 8080
+              protocol: TCP
+          livenessProbe:
+            httpGet:
+              path: /ready
+              port: http
+            initialDelaySeconds: 5
+            periodSeconds: 30
+          readinessProbe:
+            httpGet:
+              path: /ready
+              port: http
+            initialDelaySeconds: 5
+            periodSeconds: 30
+          resources:
+            limits:
+              cpu: 3
+              memory: 1Gi
+            requests:
+              cpu: 1
+              memory: 256Mi
+      imagePullSecrets:
+        - name: tencenthubkey
+      serviceAccountName: sym-api
+      affinity:
+        podAntiAffinity:
+          preferredDuringSchedulingIgnoredDuringExecution:
+          - podAffinityTerm:
+              labelSelector:
+                matchExpressions:
+                - key: app.kubernetes.io/name
+                  operator: In
+                  values:
+                  - sym-api
+              topologyKey: kubernetes.io/hostname
+            weight: 100
+      hostAliases:
+        - hostnames:
+          - cls-89a4hpb3.ccs.tencent-cloud.com
+          ip: 10.13.135.251
+        - hostnames:
+          - cls-cm580t93.ccs.tencent-cloud.com
+          ip: 10.13.134.9
+        - hostnames:
+          - cls-0snem5sv.ccs.tencent-cloud.com
+          ip: 10.13.133.7
+        - hostnames:
+          - cls-7xq1bq9f.ccs.tencent-cloud.com
+          ip: 10.13.135.12
+        - hostnames:
+          - cls-otdyiqyb.ccs.tencent-cloud.com
+          ip: 10.16.247.78
+        - hostnames:
+          - cls-h5f02nmb.ccs.tencent-cloud.com
+          ip: 10.16.247.11
+        - hostnames:
+          - cls-3yclxq8t.ccs.tencent-cloud.com
+          ip: 10.16.113.12
+        - hostnames:
+          - cls-0snem5sv.ccs.tencent-cloud.com
+          ip: 10.13.133.9
+        - hostnames:
+          - cls-278pwqet.ccs.tencent-cloud.com
+          ip: 10.16.247.131
+        - hostnames:
+          - cls-97rlivuj.ccs.tencent-cloud.com
+          ip: 10.16.113.81
+        - hostnames:
+          - cls-azg4i2et.ccs.tencent-cloud.com
+          ip: 10.13.133.134
+        - hostnames:
+          - cls-glojus0v.ccs.tencent-cloud.com
+          ip: 10.16.70.8
+        - hostnames:
+          - cls-2ylraskd.ccs.tencent-cloud.com
+          ip: 10.248.227.7
+        - hostnames:
+          - cls-ehx4vson.ccs.tencent-cloud.com
+          ip: 10.248.227.74
+        - hostnames:
+          - cls-0doi9yrf.ccs.tencent-cloud.com
+          ip: 10.248.224.193
+        - hostnames:
+          - chartmuseum.dmall.com
+          ip: 10.13.135.250
+---
+# Source: sym-api/templates/ingress.yaml
+apiVersion: extensions/v1beta1
+kind: Ingress
+metadata:
+  name: test-sym-api
+  namespace: sym-admin
+  labels:
+    app.kubernetes.io/name: sym-api
+    helm.sh/chart: sym-api-1.0.17
+    app.kubernetes.io/instance: test-sym-api
+    app.kubernetes.io/managed-by: Helm
+  annotations:
+    kubernetes.io/ingress.class: traefik
+spec:
+  rules:
+    - host: "devapi.sym.dmall.com"
+      http:
+        paths:
+          - path: /
+            backend:
+              serviceName: test-sym-api
+              servicePort: http
+`
 )
 
 // GetHelmReleases ...
@@ -46,6 +227,99 @@ func (m *APIManager) GetHelmReleaseInfo(c *gin.Context) {
 	})
 }
 
+type LintObjResult struct {
+	Kind           string `json:"kind,omitempty"`
+	Name           string `json:"name,omitempty"`
+	Namespace      string `json:"namespace,omitempty"`
+	Message        string `json:"message,omitempty"`
+	runtime.Object `json:"object,omitempty"`
+}
+
+func lintK8sObj(c client.Client, objs object.K8sObjects) ([]*LintObjResult, bool) {
+	isSuccess := true
+	ctx := context.TODO()
+	resObjs := make([]*LintObjResult, 0, len(objs))
+	s := json.NewSerializerWithOptions(json.DefaultMetaFactory,
+		k8sclient.GetScheme(), k8sclient.GetScheme(), json.SerializerOptions{Yaml: true})
+	for _, obj := range objs {
+		valueStr := obj.YAMLDebugString()
+		orgObj, _, err := s.Decode(utils.String2bytes(valueStr), nil, nil)
+		if err != nil {
+			resObjs = append(resObjs, &LintObjResult{
+				Kind:      obj.Kind,
+				Name:      obj.Name,
+				Namespace: obj.Namespace,
+				Object:    obj.UnstructuredObject(),
+				Message:   fmt.Sprintf("failed to parse yaml to k8s object err: %+v", err),
+			})
+			isSuccess = false
+			continue
+		}
+
+		convertObj := orgObj.DeepCopyObject()
+		switch convertObj.(type) {
+		case *appsv1.Deployment:
+			deploy := convertObj.(*appsv1.Deployment)
+			deploy.Spec.Replicas = utils.IntPointer(0)
+		case *appsv1.StatefulSet:
+			sta := convertObj.(*appsv1.StatefulSet)
+			sta.Spec.Replicas = utils.IntPointer(0)
+		}
+
+		_, err = resources.Reconcile(ctx, c, convertObj, resources.Option{DesiredState: resources.DesiredStatePresent})
+		if err != nil {
+			klog.Errorf("failed dry run reconcile cluster err: %+v, yml: \n%s", err, valueStr)
+			resObjs = append(resObjs, &LintObjResult{
+				Kind:      obj.Kind,
+				Name:      obj.Name,
+				Namespace: obj.Namespace,
+				Object:    obj.UnstructuredObject(),
+				Message:   fmt.Sprintf("failed dry run reconcile cluster err: %+v", err),
+			})
+			isSuccess = false
+			continue
+		}
+
+		_ = retry.RetryOnConflict(retry.DefaultRetry, func() error {
+			time.Sleep(10 * time.Millisecond)
+			_, err = resources.Reconcile(ctx, c, convertObj, resources.Option{DesiredState: resources.DesiredStateAbsent})
+			if err != nil {
+				klog.Errorf("failed to delete err: %+v, yml: \n%s", err, valueStr)
+				return err
+			}
+			return nil
+		})
+
+		resObjs = append(resObjs, &LintObjResult{
+			Kind:      obj.Kind,
+			Name:      obj.Name,
+			Namespace: obj.Namespace,
+			Object:    orgObj,
+			Message:   "success",
+		})
+	}
+	return resObjs, isSuccess
+}
+
+// LintLocalTemplate ...
+func (m *APIManager) LintLocalTemplate(c *gin.Context) {
+	objs, err := object.ParseK8sObjectsFromYAMLManifest(objTemp)
+	if err != nil {
+		klog.Errorf("failed parse k8s obj error: %+v", err)
+		c.IndentedJSON(http.StatusBadRequest, gin.H{
+			"success": false,
+			"message": fmt.Sprintf("failed parse k8s obj error: %+v", err),
+		})
+		return
+	}
+
+	resObjs, isSuccess := lintK8sObj(m.K8sMgr.MasterClient.GetClient(), objs)
+	c.IndentedJSON(http.StatusOK, gin.H{
+		"success": isSuccess,
+		"objs":    resObjs,
+	})
+}
+
 // LintHelmTemplate ...
 func (m *APIManager) LintHelmTemplate(c *gin.Context) {
 	rlsName := c.PostForm("rlsName")
@@ -56,7 +330,7 @@ func (m *APIManager) LintHelmTemplate(c *gin.Context) {
 		klog.Errorf("upload chart file error: %+v", err)
 		c.IndentedJSON(http.StatusBadRequest, gin.H{
 			"success": false,
-			"message": err.Error(),
+			"message": fmt.Sprintf("upload chart file error: %+v", err),
 		})
 		return
 	}
@@ -68,22 +342,24 @@ func (m *APIManager) LintHelmTemplate(c *gin.Context) {
 		klog.Errorf("read chart file error: %+v", err)
 		c.IndentedJSON(http.StatusBadRequest, gin.H{
 			"success": false,
-			"message": err.Error(),
+			"message": fmt.Sprintf("read chart file error: %+v", err),
 		})
 	}
 
-	_, err = object.RenderTemplate(chartByte, rlsName, ns, overrideValue)
+	objs, err := object.RenderTemplate(chartByte, rlsName, ns, overrideValue)
 	if err != nil {
 		klog.Errorf("lint helm template error: %+v", err)
 		c.IndentedJSON(http.StatusBadRequest, gin.H{
 			"success": false,
-			"message": err.Error(),
+			"message": fmt.Sprintf("lint helm template error: %+v", err),
 		})
 		return
 	}
+
+	resObjs, isSuccess := lintK8sObj(m.K8sMgr.MasterClient.GetClient(), objs)
 	c.IndentedJSON(http.StatusOK, gin.H{
-		"success": true,
-		"message": nil,
+		"success": isSuccess,
+		"objs":    resObjs,
 	})
 }
 
