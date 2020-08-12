@@ -2,18 +2,13 @@ package offlinepod
 
 import (
 	"context"
-
 	"fmt"
-
-	pkgmanager "gitlab.dmall.com/arch/sym-admin/pkg/manager"
-	"sigs.k8s.io/controller-runtime/pkg/manager"
-
-	"encoding/json"
-
 	"time"
 
+	json "github.com/json-iterator/go"
 	"gitlab.dmall.com/arch/sym-admin/pkg/apiManager/model"
 	workloadv1beta1 "gitlab.dmall.com/arch/sym-admin/pkg/apis/workload/v1beta1"
+	pkgmanager "gitlab.dmall.com/arch/sym-admin/pkg/manager"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/equality"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
@@ -21,6 +16,7 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/klog"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
+	"sigs.k8s.io/controller-runtime/pkg/manager"
 )
 
 func Add(mgr manager.Manager, cMgr *pkgmanager.DksManager) error {
@@ -72,11 +68,11 @@ func (c *offlinepodImpl) reconciler(ctx context.Context, pod *model.OfflinePod) 
 	}, as)
 	if err != nil {
 		if apierrors.IsNotFound(err) {
-			logger.Info("Can't find advDeploy")
+			logger.Info("Can't find AppSet")
 			return nil
 		}
 
-		logger.Error(err, "failed to get AdvDeployment")
+		logger.Error(err, "failed to get AppSet")
 		return err
 	}
 
@@ -140,7 +136,7 @@ func (c *offlinepodImpl) reconciler(ctx context.Context, pod *model.OfflinePod) 
 		cache.SetMaxEntries(as.Status.AggrStatus.Desired)
 	}
 	if len(oldRaw) > 0 && cache.Len() == 0 {
-		jerr := json.Unmarshal([]byte(oldRaw), &apps)
+		jerr := json.ConfigCompatibleWithStandardLibrary.Unmarshal([]byte(oldRaw), &apps)
 		if jerr != nil {
 			logger.Error(jerr, "failed to Unmarshal offlineList")
 			return jerr
@@ -156,7 +152,7 @@ func (c *offlinepodImpl) reconciler(ctx context.Context, pod *model.OfflinePod) 
 
 	cache.Add(pod)
 	apps = cache.List()
-	appsByte, jerr := json.MarshalIndent(apps, "", "  ")
+	appsByte, jerr := json.ConfigCompatibleWithStandardLibrary.MarshalIndent(apps, "", "  ")
 	if jerr != nil {
 		logger.Error(jerr, "failed to Marshal offlineList")
 		return jerr

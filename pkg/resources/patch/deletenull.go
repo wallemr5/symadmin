@@ -8,6 +8,7 @@ import (
 	json "github.com/json-iterator/go"
 	"github.com/pkg/errors"
 	v1 "k8s.io/api/apps/v1"
+	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
 )
 
@@ -21,6 +22,22 @@ func IgnoreStatusFields() CalculateOption {
 		}
 
 		modified, err = deleteStatusField(modified)
+		if err != nil {
+			return []byte{}, []byte{}, emperror.Wrap(err, "could not delete status field from modified byte sequence")
+		}
+
+		return current, modified, nil
+	}
+}
+
+func IgnoreVolumeClaimTemplateTypeMetaAndStatus() CalculateOption {
+	return func(current, modified []byte) ([]byte, []byte, error) {
+		current, err := deleteVolumeClaimTemplateFields(current)
+		if err != nil {
+			return []byte{}, []byte{}, emperror.Wrap(err, "could not delete status field from current byte sequence")
+		}
+
+		modified, err = deleteVolumeClaimTemplateFields(modified)
 		if err != nil {
 			return []byte{}, []byte{}, emperror.Wrap(err, "could not delete status field from modified byte sequence")
 		}
@@ -45,22 +62,6 @@ func IgnoreDeployReplicasFields() CalculateOption {
 	}
 }
 
-func deleteDeployReplicasFields(obj []byte) ([]byte, error) {
-	deploy := v1.Deployment{}
-	err := json.Unmarshal(obj, &deploy)
-	if err != nil {
-		return []byte{}, emperror.Wrap(err, "could not unmarshal byte sequence")
-	}
-
-	deploy.Spec.Replicas = nil
-	obj, err = json.ConfigCompatibleWithStandardLibrary.Marshal(deploy)
-	if err != nil {
-		return []byte{}, emperror.Wrap(err, "could not marshal byte sequence")
-	}
-
-	return obj, nil
-}
-
 func IgnoreStsReplicasFields() CalculateOption {
 	return func(current, modified []byte) ([]byte, []byte, error) {
 		current, err := deleteStsReplicasFields(current)
@@ -77,22 +78,6 @@ func IgnoreStsReplicasFields() CalculateOption {
 	}
 }
 
-func deleteStsReplicasFields(obj []byte) ([]byte, error) {
-	sts := v1.StatefulSet{}
-	err := json.Unmarshal(obj, &sts)
-	if err != nil {
-		return []byte{}, emperror.Wrap(err, "could not unmarshal byte sequence")
-	}
-
-	sts.Spec.Replicas = nil
-	obj, err = json.ConfigCompatibleWithStandardLibrary.Marshal(sts)
-	if err != nil {
-		return []byte{}, emperror.Wrap(err, "could not marshal byte sequence")
-	}
-
-	return obj, nil
-}
-
 func init() {
 	// k8s.io/apimachinery/pkg/util/intstr.IntOrString behaves really badly
 	// from JSON marshaling point of view, it can't be empty basically.
@@ -105,14 +90,18 @@ func init() {
 		func(ptr unsafe.Pointer, stream *json.Stream) {
 			i := (*intstr.IntOrString)(ptr)
 			if i.IntValue() == 0 {
-				stream.WriteNil()
+				if i.StrVal != "" && i.StrVal != "0" {
+					stream.WriteString(i.StrVal)
+				} else {
+					stream.WriteNil()
+				}
 			} else {
 				stream.WriteInt(i.IntValue())
 			}
 		},
 		func(ptr unsafe.Pointer) bool {
 			i := (*intstr.IntOrString)(ptr)
-			return i.IntValue() == 0
+			return i.IntValue() == 0 && (i.StrVal == "" || i.StrVal == "0")
 		},
 	)
 }
@@ -120,7 +109,7 @@ func init() {
 func DeleteNullInJson(jsonBytes []byte) ([]byte, map[string]interface{}, error) {
 	var patchMap map[string]interface{}
 
-	err := json.Unmarshal(jsonBytes, &patchMap)
+	err := json.ConfigCompatibleWithStandardLibrary.Unmarshal(jsonBytes, &patchMap)
 	if err != nil {
 		return nil, nil, emperror.Wrap(err, "could not unmarshal json patch")
 	}
@@ -130,7 +119,7 @@ func DeleteNullInJson(jsonBytes []byte) ([]byte, map[string]interface{}, error) 
 		return nil, nil, emperror.Wrap(err, "could not delete null values from patch map")
 	}
 
-	o, err := json.Marshal(filteredMap)
+	o, err := json.ConfigCompatibleWithStandardLibrary.Marshal(filteredMap)
 	if err != nil {
 		return nil, nil, emperror.Wrap(err, "could not marshal filtered patch map")
 	}
@@ -207,12 +196,67 @@ func deleteNullInSlice(m []interface{}) ([]interface{}, error) {
 
 func deleteStatusField(obj []byte) ([]byte, error) {
 	var objectMap map[string]interface{}
-	err := json.Unmarshal(obj, &objectMap)
+	err := json.ConfigCompatibleWithStandardLibrary.Unmarshal(obj, &objectMap)
 	if err != nil {
 		return []byte{}, emperror.Wrap(err, "could not unmarshal byte sequence")
 	}
 	delete(objectMap, "status")
-	obj, err = json.Marshal(objectMap)
+	obj, err = json.ConfigCompatibleWithStandardLibrary.Marshal(objectMap)
+	if err != nil {
+		return []byte{}, emperror.Wrap(err, "could not marshal byte sequence")
+	}
+
+	return obj, nil
+}
+
+func deleteVolumeClaimTemplateFields(obj []byte) ([]byte, error) {
+	sts := v1.StatefulSet{}
+	err := json.ConfigCompatibleWithStandardLibrary.Unmarshal(obj, &sts)
+	if err != nil {
+		return []byte{}, emperror.Wrap(err, "could not unmarshal byte sequence")
+	}
+
+	for i := range sts.Spec.VolumeClaimTemplates {
+		sts.Spec.VolumeClaimTemplates[i].Kind = ""
+		sts.Spec.VolumeClaimTemplates[i].APIVersion = ""
+		sts.Spec.VolumeClaimTemplates[i].Status = corev1.PersistentVolumeClaimStatus{
+			Phase: corev1.ClaimPending,
+		}
+	}
+
+	obj, err = json.ConfigCompatibleWithStandardLibrary.Marshal(sts)
+	if err != nil {
+		return []byte{}, emperror.Wrap(err, "could not marshal byte sequence")
+	}
+
+	return obj, nil
+}
+
+func deleteDeployReplicasFields(obj []byte) ([]byte, error) {
+	deploy := v1.Deployment{}
+	err := json.ConfigCompatibleWithStandardLibrary.Unmarshal(obj, &deploy)
+	if err != nil {
+		return []byte{}, emperror.Wrap(err, "could not unmarshal byte sequence")
+	}
+
+	deploy.Spec.Replicas = nil
+	obj, err = json.ConfigCompatibleWithStandardLibrary.Marshal(deploy)
+	if err != nil {
+		return []byte{}, emperror.Wrap(err, "could not marshal byte sequence")
+	}
+
+	return obj, nil
+}
+
+func deleteStsReplicasFields(obj []byte) ([]byte, error) {
+	sts := v1.StatefulSet{}
+	err := json.ConfigCompatibleWithStandardLibrary.Unmarshal(obj, &sts)
+	if err != nil {
+		return []byte{}, emperror.Wrap(err, "could not unmarshal byte sequence")
+	}
+
+	sts.Spec.Replicas = nil
+	obj, err = json.ConfigCompatibleWithStandardLibrary.Marshal(sts)
 	if err != nil {
 		return []byte{}, emperror.Wrap(err, "could not marshal byte sequence")
 	}

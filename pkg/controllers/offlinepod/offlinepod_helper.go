@@ -2,9 +2,8 @@ package offlinepod
 
 import (
 	"context"
-	"time"
-
 	"sync"
+	"time"
 
 	"github.com/go-logr/logr"
 	"gitlab.dmall.com/arch/sym-admin/pkg/apiManager/model"

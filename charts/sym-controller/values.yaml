@@ -16,7 +16,7 @@ image:
   reCreate: false
   leader: true
   threadiness: 1
-  repos: "http://chartmuseum.dmall.com"
+#  repos: "http://chartmuseum.dmall.com"
 
 nameOverride: ""
 fullnameOverride: ""

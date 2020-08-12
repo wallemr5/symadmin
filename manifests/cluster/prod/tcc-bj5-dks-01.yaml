@@ -25,7 +25,7 @@ spec:
       values:
         custom-resources-config: enable
         lpv-path: /mnt/prometheus-data
-        lpv-size: 96Gi
+        lpv-size: 495Gi
         prom-limit-cpu: "24"
         prom-limit-memory: 32Gi
         prom-req-cpu: "16"
