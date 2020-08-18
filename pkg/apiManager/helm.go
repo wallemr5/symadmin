@@ -323,7 +323,7 @@ func (m *APIManager) LintLocalTemplate(c *gin.Context) {
 // LintHelmTemplate ...
 func (m *APIManager) LintHelmTemplate(c *gin.Context) {
 	rlsName := c.PostForm("rlsName")
-	ns := c.PostForm("namespace")
+	// ns := c.PostForm("namespace")
 	overrideValue := c.PostForm("overrideValue")
 	chartPkg, header, err := c.Request.FormFile("chart")
 	if err != nil {
@@ -335,8 +335,9 @@ func (m *APIManager) LintHelmTemplate(c *gin.Context) {
 		return
 	}
 
+	// avoid conflict
+	ns := "sym-admin"
 	klog.Infof("get upload chart file: %s", header.Filename)
-
 	chartByte, err := ioutil.ReadAll(chartPkg)
 	if err != nil {
 		klog.Errorf("read chart file error: %+v", err)
