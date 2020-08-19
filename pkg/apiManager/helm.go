@@ -16,6 +16,8 @@ import (
 	"gitlab.dmall.com/arch/sym-admin/pkg/resources"
 	"gitlab.dmall.com/arch/sym-admin/pkg/utils"
 	appsv1 "k8s.io/api/apps/v1"
+	corev1 "k8s.io/api/core/v1"
+	"k8s.io/api/extensions/v1beta1"
 	"k8s.io/apimachinery/pkg/runtime/serializer/json"
 	"k8s.io/client-go/util/retry"
 	"k8s.io/klog"
@@ -232,6 +234,8 @@ func lintK8sObj(c client.Client, objs object.K8sObjects) (string, string, bool) 
 	ctx := context.TODO()
 	var buf bytes.Buffer
 
+	// avoid conflict
+	ns := "sym-admin"
 	s := json.NewSerializerWithOptions(json.DefaultMetaFactory,
 		k8sclient.GetScheme(), k8sclient.GetScheme(), json.SerializerOptions{Yaml: true})
 	for _, obj := range objs {
@@ -246,14 +250,30 @@ func lintK8sObj(c client.Client, objs object.K8sObjects) (string, string, bool) 
 			continue
 		}
 
+		isKnown := true
 		convertObj := orgObj.DeepCopyObject()
 		switch convertObj.(type) {
 		case *appsv1.Deployment:
 			deploy := convertObj.(*appsv1.Deployment)
 			deploy.Spec.Replicas = utils.IntPointer(0)
+			deploy.Namespace = ns
 		case *appsv1.StatefulSet:
 			sta := convertObj.(*appsv1.StatefulSet)
 			sta.Spec.Replicas = utils.IntPointer(0)
+			sta.Namespace = ns
+		case *corev1.Service:
+			svc := convertObj.(*corev1.Service)
+			svc.Namespace = ns
+		case *v1beta1.Ingress:
+			ingress := convertObj.(*v1beta1.Ingress)
+			ingress.Namespace = ns
+		default:
+			klog.Errorf("%s/%s unknown kind, yml: \n%s", obj.Kind, obj.Name, valueStr)
+			isKnown = false
+		}
+
+		if !isKnown {
+			continue
 		}
 
 		_, err = resources.Reconcile(ctx, c, convertObj, resources.Option{DesiredState: resources.DesiredStatePresent})
@@ -302,7 +322,7 @@ func (m *APIManager) LintLocalTemplate(c *gin.Context) {
 // LintHelmTemplate ...
 func (m *APIManager) LintHelmTemplate(c *gin.Context) {
 	rlsName := c.PostForm("rlsName")
-	// ns := c.PostForm("namespace")
+	ns := c.PostForm("namespace")
 	overrideValue := c.PostForm("overrideValue")
 	chartPkg, header, err := c.Request.FormFile("chart")
 	if err != nil {
@@ -314,8 +334,6 @@ func (m *APIManager) LintHelmTemplate(c *gin.Context) {
 		return
 	}
 
-	// avoid conflict
-	ns := "sym-admin"
 	klog.Infof("get upload chart file: %s", header.Filename)
 	chartByte, err := ioutil.ReadAll(chartPkg)
 	if err != nil {
