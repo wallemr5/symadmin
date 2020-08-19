@@ -1,12 +1,12 @@
 package apiManager
 
 import (
+	"bytes"
 	"context"
 	"fmt"
 	"io/ioutil"
 	"net/http"
 	"strings"
-
 	"time"
 
 	"github.com/gin-gonic/gin"
@@ -16,7 +16,6 @@ import (
 	"gitlab.dmall.com/arch/sym-admin/pkg/resources"
 	"gitlab.dmall.com/arch/sym-admin/pkg/utils"
 	appsv1 "k8s.io/api/apps/v1"
-	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/serializer/json"
 	"k8s.io/client-go/util/retry"
 	"k8s.io/klog"
@@ -227,31 +226,22 @@ func (m *APIManager) GetHelmReleaseInfo(c *gin.Context) {
 	})
 }
 
-type LintObjResult struct {
-	Kind           string `json:"kind,omitempty"`
-	Name           string `json:"name,omitempty"`
-	Namespace      string `json:"namespace,omitempty"`
-	Message        string `json:"message,omitempty"`
-	runtime.Object `json:"object,omitempty"`
-}
-
-func lintK8sObj(c client.Client, objs object.K8sObjects) ([]*LintObjResult, bool) {
+func lintK8sObj(c client.Client, objs object.K8sObjects) (string, string, bool) {
 	isSuccess := true
+	message := "success"
 	ctx := context.TODO()
-	resObjs := make([]*LintObjResult, 0, len(objs))
+	var buf bytes.Buffer
+
 	s := json.NewSerializerWithOptions(json.DefaultMetaFactory,
 		k8sclient.GetScheme(), k8sclient.GetScheme(), json.SerializerOptions{Yaml: true})
 	for _, obj := range objs {
 		valueStr := obj.YAMLDebugString()
+		buf.WriteString("\n---\n")
+		buf.WriteString(valueStr)
 		orgObj, _, err := s.Decode(utils.String2bytes(valueStr), nil, nil)
 		if err != nil {
-			resObjs = append(resObjs, &LintObjResult{
-				Kind:      obj.Kind,
-				Name:      obj.Name,
-				Namespace: obj.Namespace,
-				Object:    obj.UnstructuredObject(),
-				Message:   fmt.Sprintf("failed to parse yaml to k8s object err: %+v", err),
-			})
+			klog.Errorf("%s/%sfailed to parse yaml to k8s object err: %+v, yml: \n%s", obj.Kind, obj.Name, err, valueStr)
+			message = fmt.Sprintf("%s/%s failed to parse yaml to k8s object err: %+v", obj.Kind, obj.Name, err)
 			isSuccess = false
 			continue
 		}
@@ -268,14 +258,8 @@ func lintK8sObj(c client.Client, objs object.K8sObjects) ([]*LintObjResult, bool
 
 		_, err = resources.Reconcile(ctx, c, convertObj, resources.Option{DesiredState: resources.DesiredStatePresent})
 		if err != nil {
-			klog.Errorf("failed dry run reconcile cluster err: %+v, yml: \n%s", err, valueStr)
-			resObjs = append(resObjs, &LintObjResult{
-				Kind:      obj.Kind,
-				Name:      obj.Name,
-				Namespace: obj.Namespace,
-				Object:    obj.UnstructuredObject(),
-				Message:   fmt.Sprintf("failed dry run reconcile cluster err: %+v", err),
-			})
+			klog.Errorf("%s/%s failed dry run err: %+v, yml: \n%s", obj.Kind, obj.Name, err, valueStr)
+			message = fmt.Sprintf("%s/%s failed dry run err: %+v", obj.Kind, obj.Name, err)
 			isSuccess = false
 			continue
 		}
@@ -284,39 +268,34 @@ func lintK8sObj(c client.Client, objs object.K8sObjects) ([]*LintObjResult, bool
 			time.Sleep(10 * time.Millisecond)
 			_, err = resources.Reconcile(ctx, c, convertObj, resources.Option{DesiredState: resources.DesiredStateAbsent})
 			if err != nil {
-				klog.Errorf("failed to delete err: %+v, yml: \n%s", err, valueStr)
+				klog.Errorf("%s/%s failed to delete err: %+v, yml: \n%s", obj.Kind, obj.Name, err, valueStr)
 				return err
 			}
 			return nil
 		})
-
-		resObjs = append(resObjs, &LintObjResult{
-			Kind:      obj.Kind,
-			Name:      obj.Name,
-			Namespace: obj.Namespace,
-			Object:    orgObj,
-			Message:   "success",
-		})
 	}
-	return resObjs, isSuccess
+
+	return buf.String(), message, isSuccess
 }
 
 // LintLocalTemplate ...
 func (m *APIManager) LintLocalTemplate(c *gin.Context) {
 	objs, err := object.ParseK8sObjectsFromYAMLManifest(objTemp)
 	if err != nil {
-		klog.Errorf("failed parse k8s obj error: %+v", err)
+		klog.Errorf("failed parse k8s obj err: %+v", err)
 		c.IndentedJSON(http.StatusBadRequest, gin.H{
 			"success": false,
-			"message": fmt.Sprintf("failed parse k8s obj error: %+v", err),
+			"message": fmt.Sprintf("failed parse k8s obj err: %+v", err),
 		})
 		return
 	}
 
-	resObjs, isSuccess := lintK8sObj(m.K8sMgr.MasterClient.GetClient(), objs)
+	manifest, message, isSuccess := lintK8sObj(m.K8sMgr.MasterClient.GetClient(), objs)
+	// c.String(http.StatusOK, manifest)
 	c.IndentedJSON(http.StatusOK, gin.H{
-		"success": isSuccess,
-		"objs":    resObjs,
+		"success":  isSuccess,
+		"message":  message,
+		"manifest": manifest,
 	})
 }
 
@@ -327,10 +306,10 @@ func (m *APIManager) LintHelmTemplate(c *gin.Context) {
 	overrideValue := c.PostForm("overrideValue")
 	chartPkg, header, err := c.Request.FormFile("chart")
 	if err != nil {
-		klog.Errorf("upload chart file error: %+v", err)
+		klog.Errorf("upload chart file err: %+v", err)
 		c.IndentedJSON(http.StatusBadRequest, gin.H{
 			"success": false,
-			"message": fmt.Sprintf("upload chart file error: %+v", err),
+			"message": fmt.Sprintf("upload chart file err: %+v", err),
 		})
 		return
 	}
@@ -340,27 +319,28 @@ func (m *APIManager) LintHelmTemplate(c *gin.Context) {
 	klog.Infof("get upload chart file: %s", header.Filename)
 	chartByte, err := ioutil.ReadAll(chartPkg)
 	if err != nil {
-		klog.Errorf("read chart file error: %+v", err)
+		klog.Errorf("read chart file err: %+v", err)
 		c.IndentedJSON(http.StatusBadRequest, gin.H{
 			"success": false,
-			"message": fmt.Sprintf("read chart file error: %+v", err),
+			"message": fmt.Sprintf("read chart file err: %+v", err),
 		})
 	}
 
 	objs, err := object.RenderTemplate(chartByte, rlsName, ns, overrideValue)
 	if err != nil {
-		klog.Errorf("lint helm template error: %+v", err)
+		klog.Errorf("lint helm template err: %+v", err)
 		c.IndentedJSON(http.StatusBadRequest, gin.H{
 			"success": false,
-			"message": fmt.Sprintf("lint helm template error: %+v", err),
+			"message": fmt.Sprintf("lint helm template err: %+v", err),
 		})
 		return
 	}
 
-	resObjs, isSuccess := lintK8sObj(m.K8sMgr.MasterClient.GetClient(), objs)
+	manifest, message, isSuccess := lintK8sObj(m.K8sMgr.MasterClient.GetClient(), objs)
 	c.IndentedJSON(http.StatusOK, gin.H{
-		"success": isSuccess,
-		"objs":    resObjs,
+		"success":  isSuccess,
+		"message":  message,
+		"manifest": manifest,
 	})
 }
 
