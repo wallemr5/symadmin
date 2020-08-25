@@ -1,4 +1,4 @@
-package apiManager
+package v1
 
 import (
 	"bytes"
@@ -64,7 +64,7 @@ type xtermMessage struct {
 }
 
 // GetTerminal ...
-func (m *APIManager) GetTerminal(c *gin.Context) {
+func (m *Manager) GetTerminal(c *gin.Context) {
 	clusterName := c.Param("name")
 	namespace := c.DefaultQuery("namespace", "default")
 	tty, _ := strconv.ParseBool(c.DefaultQuery("tty", "true"))
@@ -111,7 +111,7 @@ func (m *APIManager) GetTerminal(c *gin.Context) {
 }
 
 // ExecOnceWithHTTP ...
-func (m *APIManager) ExecOnceWithHTTP(c *gin.Context) {
+func (m *Manager) ExecOnceWithHTTP(c *gin.Context) {
 	clusterName := c.Param("name")
 	namespace := c.DefaultQuery("namespace", "default")
 	tty, _ := strconv.ParseBool(c.DefaultQuery("tty", "false"))
@@ -151,7 +151,7 @@ func (m *APIManager) ExecOnceWithHTTP(c *gin.Context) {
 }
 
 // GetFiles get the log file of the specified directory
-func (m *APIManager) GetFiles(c *gin.Context) {
+func (m *Manager) GetFiles(c *gin.Context) {
 	clusterCode := c.Query("clusterCode")
 	namespace := c.Query("namespace")
 	podName := c.Query("podName")
@@ -326,7 +326,7 @@ func (m *APIManager) GetFiles(c *gin.Context) {
 }
 
 // GetOfflineLogTerminal ...
-func (m *APIManager) GetOfflineLogTerminal(c *gin.Context) {
+func (m *Manager) GetOfflineLogTerminal(c *gin.Context) {
 	clusterName := c.Param("name")
 	namespace := "sym-admin"
 

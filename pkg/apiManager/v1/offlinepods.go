@@ -1,4 +1,4 @@
-package apiManager
+package v1
 
 import (
 	"context"
@@ -15,16 +15,18 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
+// default const
 const (
-	DEFAULT_NAMESPACE string = "sym-admin"
+	DefaultNameSpace string = "sym-admin"
 )
 
-func (m *APIManager) GetAllOfflineApp(c *gin.Context) {
+// GetAllOfflineApp ...
+func (m *Manager) GetAllOfflineApp(c *gin.Context) {
 	lb := labels.Set{
 		"controllerOwner": "offlinePod",
 	}
 
-	listOptions := &client.ListOptions{Namespace: DEFAULT_NAMESPACE, LabelSelector: lb.AsSelector()}
+	listOptions := &client.ListOptions{Namespace: DefaultNameSpace, LabelSelector: lb.AsSelector()}
 
 	offlineApp := make([]string, 0, 10)
 	ctx := context.Background()
@@ -53,8 +55,9 @@ func (m *APIManager) GetAllOfflineApp(c *gin.Context) {
 	})
 }
 
+// GetOfflinePods ...
 // /api/namespace/:namespace/appname/:appname/offlinepodlist
-func (m *APIManager) GetOfflinePods(c *gin.Context) {
+func (m *Manager) GetOfflinePods(c *gin.Context) {
 	namespace := c.Param("namespace")
 	cmname := c.Param("appname")
 	apps := []*model.OfflinePod{}

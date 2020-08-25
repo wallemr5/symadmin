@@ -1,4 +1,4 @@
-package apiManager
+package v1
 
 import (
 	"context"
@@ -16,7 +16,7 @@ import (
 )
 
 // GetEndpoints ...
-func (m *APIManager) GetEndpoints(c *gin.Context) {
+func (m *Manager) GetEndpoints(c *gin.Context) {
 	clusterName := c.Param("name")
 	appName := c.Param("appName")
 	clusters := m.K8sMgr.GetAll(clusterName)

@@ -1,8 +1,7 @@
-package apiManager
+package v1
 
 import (
 	"context"
-
 	"net/http"
 
 	"github.com/gin-gonic/gin"
@@ -16,7 +15,7 @@ import (
 )
 
 // HandleOfflineWorkloadDeploy get log files in a pod
-func (m *APIManager) HandleOfflineWorkloadDeploy(c *gin.Context) {
+func (m *Manager) HandleOfflineWorkloadDeploy(c *gin.Context) {
 	hostPathType := corev1.HostPathDirectory
 	lb := map[string]string{
 		"app": "offline-pod-log",

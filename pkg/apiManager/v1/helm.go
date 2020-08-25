@@ -1,4 +1,4 @@
-package apiManager
+package v1
 
 import (
 	"bytes"
@@ -194,7 +194,7 @@ spec:
 )
 
 // GetHelmReleases ...
-func (m *APIManager) GetHelmReleases(c *gin.Context) {
+func (m *Manager) GetHelmReleases(c *gin.Context) {
 	// clusterName := c.Param("name")
 	// appName := c.Param("appName")
 	// group := c.DefaultQuery("group", "")
@@ -208,7 +208,7 @@ func (m *APIManager) GetHelmReleases(c *gin.Context) {
 }
 
 // GetHelmReleaseInfo ...
-func (m *APIManager) GetHelmReleaseInfo(c *gin.Context) {
+func (m *Manager) GetHelmReleaseInfo(c *gin.Context) {
 	// clusterName := c.Param("name")
 	// releaseName := c.Param("releaseName")
 	// cluster, err := m.K8sMgr.Get(clusterName)
@@ -299,7 +299,7 @@ func lintK8sObj(c client.Client, objs object.K8sObjects) (string, string, bool) 
 }
 
 // LintLocalTemplate ...
-func (m *APIManager) LintLocalTemplate(c *gin.Context) {
+func (m *Manager) LintLocalTemplate(c *gin.Context) {
 	objs, err := object.ParseK8sObjectsFromYAMLManifest(objTemp)
 	if err != nil {
 		klog.Errorf("failed parse k8s obj err: %+v", err)
@@ -320,7 +320,7 @@ func (m *APIManager) LintLocalTemplate(c *gin.Context) {
 }
 
 // LintHelmTemplate ...
-func (m *APIManager) LintHelmTemplate(c *gin.Context) {
+func (m *Manager) LintHelmTemplate(c *gin.Context) {
 	rlsName := c.PostForm("rlsName")
 	ns := c.PostForm("namespace")
 	overrideValue := c.PostForm("overrideValue")

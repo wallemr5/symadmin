@@ -1,4 +1,4 @@
-package apiManager
+package v1
 
 import (
 	"context"
@@ -18,7 +18,7 @@ import (
 )
 
 // GetServices ...
-func (m *APIManager) GetServices(c *gin.Context) {
+func (m *Manager) GetServices(c *gin.Context) {
 	appName := c.Param("appName")
 	clusterName := c.Param("name")
 	namespace := c.Param("namespace")
@@ -39,7 +39,7 @@ func (m *APIManager) GetServices(c *gin.Context) {
 }
 
 // GetServiceInfo ...
-func (m *APIManager) GetServiceInfo(c *gin.Context) {
+func (m *Manager) GetServiceInfo(c *gin.Context) {
 	clusterName := c.Param("name")
 	namespace := c.Param("namespace")
 	serviceName := c.Param("svcName")

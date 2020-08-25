@@ -1,4 +1,4 @@
-package apiManager
+package v1
 
 import (
 	"context"
@@ -16,7 +16,7 @@ import (
 )
 
 // HandleLogs get the pod container stdout
-func (m *APIManager) HandleLogs(c *gin.Context) {
+func (m *Manager) HandleLogs(c *gin.Context) {
 	clusterName := c.Param("name")
 	podName := c.Param("podName")
 	namespace := c.Param("namespace")
@@ -97,12 +97,12 @@ func (m *APIManager) HandleLogs(c *gin.Context) {
 		"success": true,
 		"message": nil,
 		"resultMap": gin.H{
-			"log": processTextToHtml(string(result)),
+			"log": processTextToHTML(string(result)),
 		}})
 }
 
 // HandleFileLogs get log files in a pod
-func (m *APIManager) HandleFileLogs(c *gin.Context) {
+func (m *Manager) HandleFileLogs(c *gin.Context) {
 	clusterName := c.Param("name")
 	namespace := c.Param("namespace")
 	podName := c.Param("podName")
@@ -146,12 +146,12 @@ func (m *APIManager) HandleFileLogs(c *gin.Context) {
 		"message": nil,
 		"resultMap": gin.H{
 			"path":   filepath,
-			"applog": processTextToHtml(string(result)),
+			"applog": processTextToHTML(string(result)),
 		},
 	})
 }
 
-func processTextToHtml(text string) string {
+func processTextToHTML(text string) string {
 	if text == "" {
 		return "暂无日志"
 	}

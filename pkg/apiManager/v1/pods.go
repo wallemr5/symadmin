@@ -1,4 +1,4 @@
-package apiManager
+package v1
 
 import (
 	"context"
@@ -9,6 +9,7 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"gitlab.dmall.com/arch/sym-admin/pkg/apiManager/model"
+	"gitlab.dmall.com/arch/sym-admin/pkg/utils"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -20,7 +21,7 @@ import (
 )
 
 // GetPodByLabels ...
-func (m *APIManager) GetPodByLabels(c *gin.Context) {
+func (m *Manager) GetPodByLabels(c *gin.Context) {
 	clusterName := c.Param("name")
 	appName, ok := c.GetQuery("appName")
 	group := c.DefaultQuery("group", "")
@@ -54,7 +55,7 @@ func (m *APIManager) GetPodByLabels(c *gin.Context) {
 }
 
 // GetPodEvent return pod event
-func (m *APIManager) GetPodEvent(c *gin.Context) {
+func (m *Manager) GetPodEvent(c *gin.Context) {
 	clusterName := c.Param("name")
 	podName := c.Param("podName")
 	namespace := c.Param("namespace")
@@ -92,8 +93,8 @@ func (m *APIManager) GetPodEvent(c *gin.Context) {
 				ObjectKind:  event.InvolvedObject.Kind,
 				Type:        event.Type,
 				Count:       event.Count,
-				FirstTime:   formatTime(event.FirstTimestamp.String()),
-				LastTime:    formatTime(event.LastTimestamp.String()),
+				FirstTime:   utils.FormatTime(event.FirstTimestamp.String()),
+				LastTime:    utils.FormatTime(event.LastTimestamp.String()),
 				Message:     event.Message,
 				Reason:      event.Reason,
 			}
@@ -117,7 +118,7 @@ func (m *APIManager) GetPodEvent(c *gin.Context) {
 }
 
 // GetPodByIP ...
-func (m *APIManager) GetPodByIP(c *gin.Context) {
+func (m *Manager) GetPodByIP(c *gin.Context) {
 	clusterName := c.Param("name")
 	podIP := c.Param("podIP")
 
@@ -156,7 +157,7 @@ func (m *APIManager) GetPodByIP(c *gin.Context) {
 }
 
 // DeletePodByName ...
-func (m *APIManager) DeletePodByName(c *gin.Context) {
+func (m *Manager) DeletePodByName(c *gin.Context) {
 	clusterName := c.Param("name")
 	podName := c.Param("podName")
 	namespace := c.Param("namespace")
@@ -192,7 +193,7 @@ func (m *APIManager) DeletePodByName(c *gin.Context) {
 }
 
 // GetPodByName ...
-func (m *APIManager) GetPodByName(c *gin.Context) {
+func (m *Manager) GetPodByName(c *gin.Context) {
 	clusterName := c.Param("name")
 	podName := c.Param("podName")
 	namespace := c.Param("namespace")
@@ -223,7 +224,7 @@ func (m *APIManager) GetPodByName(c *gin.Context) {
 		HostIP:       pod.Status.HostIP,
 		PodIP:        pod.Status.PodIP,
 		ImageVersion: "",
-		StartTime:    formatTime(pod.Status.StartTime.String()),
+		StartTime:    utils.FormatTime(pod.Status.StartTime.String()),
 		Containers:   nil,
 		Labels:       pod.GetLabels(),
 	}
@@ -239,7 +240,7 @@ func (m *APIManager) GetPodByName(c *gin.Context) {
 }
 
 // DeletePodByGroup ...
-func (m *APIManager) DeletePodByGroup(c *gin.Context) {
+func (m *Manager) DeletePodByGroup(c *gin.Context) {
 	clusterName := c.Param("name")
 	appName := c.Param("appName")
 	namespace := c.Param("namespace")
@@ -296,7 +297,7 @@ func (m *APIManager) DeletePodByGroup(c *gin.Context) {
 }
 
 // return Pod list， not PodOfCluster
-func (m *APIManager) getPodListByAppName(clusterName, namespace, appName, group, zone, ldcLabel string) (map[string][]*model.Pod, error) {
+func (m *Manager) getPodListByAppName(clusterName, namespace, appName, group, zone, ldcLabel string) (map[string][]*model.Pod, error) {
 	bluePods := make([]*model.Pod, 0, 4)
 	greenPods := make([]*model.Pod, 0, 4)
 	canaryPods := make([]*model.Pod, 0, 4)
@@ -348,7 +349,7 @@ func (m *APIManager) getPodListByAppName(clusterName, namespace, appName, group,
 		}
 
 		if pod.Status.StartTime != nil {
-			apiPod.StartTime = formatTime(pod.Status.StartTime.String())
+			apiPod.StartTime = utils.FormatTime(pod.Status.StartTime.String())
 		}
 
 		apiPod.Endpoints = false
@@ -380,8 +381,8 @@ func (m *APIManager) getPodListByAppName(clusterName, namespace, appName, group,
 					Signal:      t.Signal,
 					Reason:      t.Reason,
 					Message:     t.Message,
-					StartedAt:   formatTime(t.StartedAt.String()),
-					FinishedAt:  formatTime(t.FinishedAt.String()),
+					StartedAt:   utils.FormatTime(t.StartedAt.String()),
+					FinishedAt:  utils.FormatTime(t.FinishedAt.String()),
 					ContainerID: t.ContainerID,
 				}
 			}
@@ -412,14 +413,4 @@ func (m *APIManager) getPodListByAppName(clusterName, namespace, appName, group,
 	result["canaryGroup"] = canaryPods
 
 	return result, nil
-}
-
-func formatTime(dt string) string {
-	loc, _ := time.LoadLocation("Asia/Chongqing")
-	result, err := time.ParseInLocation("2006-01-02 15:04:05 -0700 MST", dt, loc)
-	if err != nil {
-		klog.Errorf("time parse error: %v", err)
-		return ""
-	}
-	return result.Format("2006-01-02 15:04:05")
 }

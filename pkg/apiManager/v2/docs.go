@@ -1,4 +1,4 @@
-package apiManager
+package v2
 
 // GetClusterDesc describing api /api/cluster/:name
 var GetClusterDesc = `

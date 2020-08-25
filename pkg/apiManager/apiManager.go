@@ -1,11 +1,12 @@
 package apiManager
 
 import (
+	"context"
 	"fmt"
 	"time"
 
-	"context"
-
+	apiv1 "gitlab.dmall.com/arch/sym-admin/pkg/apiManager/v1"
+	apiv2 "gitlab.dmall.com/arch/sym-admin/pkg/apiManager/v2"
 	workloadv1beta1 "gitlab.dmall.com/arch/sym-admin/pkg/apis/workload/v1beta1"
 	"gitlab.dmall.com/arch/sym-admin/pkg/healthcheck"
 	k8smanager "gitlab.dmall.com/arch/sym-admin/pkg/k8s/manager"
@@ -15,6 +16,15 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/klog"
 )
+
+// APIManager ...
+type APIManager struct {
+	Opt           *Option
+	Cluster       k8smanager.CustomeCluster
+	Router        *router.Router
+	HealthHandler healthcheck.Handler
+	K8sMgr        *k8smanager.ClusterManager
+}
 
 // Option ...
 type Option struct {
@@ -29,16 +39,6 @@ type Option struct {
 	GinLogEnabled  bool
 	GinLogSkipPath []string
 	PprofEnabled   bool
-}
-
-// APIManager ...
-type APIManager struct {
-	Opt *Option
-
-	Cluster       k8smanager.CustomeCluster
-	Router        *router.Router
-	HealthHandler healthcheck.Handler
-	K8sMgr        *k8smanager.ClusterManager
 }
 
 // DefaultOption ...
@@ -64,6 +64,9 @@ func NewAPIManager(cli k8smanager.MasterClient, opt *Option, componentName strin
 		HealthHandler: healthHandler,
 	}
 
+	v1 := apiv1.Manager{}
+	v2 := apiv2.Manager{}
+
 	klog.Info("start init multi cluster manager ... ")
 	k8sMgr, err := k8smanager.NewManager(cli, k8smanager.DefaultClusterManagerOption(true, labels.GetClusterLs()))
 	if err != nil {
@@ -82,9 +85,12 @@ func NewAPIManager(cli k8smanager.MasterClient, opt *Option, componentName strin
 	rt := router.NewRouter(routerOptions)
 	rt.AddRoutes("index", rt.DefaultRoutes())
 	rt.AddRoutes("health", healthHandler.Routes())
-	rt.AddRoutes("cluster", apiMgr.Routes())
+	rt.AddRoutes("cluster", v1.Routes())
+	rt.AddRoutes("cluster", v2.Routes())
 	apiMgr.Router = rt
 	apiMgr.K8sMgr = k8sMgr
+	v1.K8sMgr = k8sMgr
+	v2.K8sMgr = k8sMgr
 	apiMgr.K8sMgr.AddPreInit(func() {
 		klog.Infof("preInit manager cluster informer ... ")
 		for _, c := range apiMgr.K8sMgr.GetAll() {
@@ -94,6 +100,8 @@ func NewAPIManager(cli k8smanager.MasterClient, opt *Option, componentName strin
 
 	if opt.IsMeta {
 		apiMgr.Cluster = k8sMgr
+		v1.Cluster = k8sMgr
+		v2.Cluster = k8sMgr
 	} else {
 		// apiMgr.Cluster = cli
 	}
@@ -171,183 +179,4 @@ func (m *APIManager) ClusterChange() {
 			m.registryResource(cluster)
 		}
 	}
-}
-
-// Routes ...
-func (m *APIManager) Routes() []*router.Route {
-	var routes []*router.Route
-
-	apiRoutes := []*router.Route{
-		{
-			Method:  "GET",
-			Path:    "/api/cluster/:name",
-			Handler: m.GetClusters,
-			Desc:    GetClusterDesc,
-		},
-		{
-			Method:  "GET",
-			Path:    "/api/cluster/:name/namespace/:namespace/app/:appName/resource",
-			Handler: m.GetClusterResource,
-			Desc:    GetClusterResourceDesc,
-		},
-		{
-			Method:  "GET",
-			Path:    "/api/cluster/:name/appPods/labels",
-			Handler: m.GetPodByLabels,
-			Desc:    GetPodByLabelsDesc,
-		},
-		{
-			Method:  "GET",
-			Path:    "/api/v2/cluster/:name/pods",
-			Handler: m.GetPodByLabelsV2,
-		},
-		{
-			Method:  "GET",
-			Path:    "/api/cluster/:name/ip/:podIP",
-			Handler: m.GetPodByIP,
-			Desc:    GetPodByLabelsDesc,
-		},
-		{
-			Method:  "GET",
-			Path:    "/api/cluster/:name/appPod/:appName/helm",
-			Handler: m.GetHelmReleases,
-			Desc:    GetHelmReleasesDesc,
-		},
-		{
-			Method:  "GET",
-			Path:    "/api/cluster/:name/helm/:releaseName",
-			Handler: m.GetHelmReleaseInfo,
-			Desc:    GetHelmReleaseInfoDesc,
-		},
-		{
-			Method:  "POST",
-			Path:    "/api/linthelm",
-			Handler: m.LintHelmTemplate,
-			Desc:    GetHelmReleaseInfoDesc,
-		},
-		{
-			Method:  "POST",
-			Path:    "/api/cluster/:name/namespace/:namespace/app/:appName/restart",
-			Handler: m.DeletePodByGroup,
-			Desc:    DeletePodByGroupDesc,
-		},
-		{
-			Method:  "DELETE",
-			Path:    "/api/cluster/:name/namespace/:namespace/pod/:podName",
-			Handler: m.DeletePodByName,
-			Desc:    DeletePodByNameDesc,
-		},
-		{
-			Method:  "GET",
-			Path:    "/api/cluster/:name/namespace/:namespace/pod/:podName",
-			Handler: m.GetPodByName,
-			Desc:    GetPodByNameDesc,
-		},
-		{
-			Method:  "GET",
-			Path:    "/api/cluster/:name/endpoints/:appName",
-			Handler: m.GetEndpoints,
-			Desc:    GetEndpointsDesc,
-		},
-		{
-			Method:  "GET",
-			Path:    "/api/cluster/:name/terminal",
-			Handler: m.GetTerminal,
-			Desc:    GetTerminalDesc,
-		},
-		{
-			Method:  "GET",
-			Path:    "/api/cluster/:name/exec",
-			Handler: m.ExecOnceWithHTTP,
-			Desc:    ExecOnceWithHTTPDesc,
-		},
-		{
-			Method:  "GET",
-			Path:    "/api/cluster/:name/namespace/:namespace/services/:appName",
-			Handler: m.GetServices,
-			Desc:    GetServicesDesc,
-		},
-		{
-			Method:  "GET",
-			Path:    "/api/cluster/:name/namespace/:namespace/service/:svcName",
-			Handler: m.GetServiceInfo,
-			Desc:    GetServiceInfoDesc,
-		},
-		{
-			Method:  "GET",
-			Path:    "/api/cluster/:name/namespace/:namespace/deployments/:appName",
-			Handler: m.GetDeployments,
-			Desc:    GetDeploymentsDesc,
-		},
-		{
-			Method:  "GET",
-			Path:    "/api/cluster/:name/namespace/:namespace/deployment/:deployName",
-			Handler: m.GetDeploymentInfo,
-			Desc:    GetDeploymentInfoDesc,
-		},
-		{
-			Method:  "GET",
-			Path:    "/api/cluster/:name/deployments/stat",
-			Handler: m.GetDeploymentsStat,
-			Desc:    GetDeploymentsStatDesc,
-		},
-		{
-			Method:  "GET",
-			Path:    "/api/cluster/:name/namespace/:namespace/pods/:podName/event",
-			Handler: m.GetPodEvent,
-			Desc:    GetPodEventDesc,
-		},
-		{
-			Method:  "GET",
-			Path:    "/api/cluster/:name/namespace/:namespace/events/warning",
-			Handler: m.GetWarningEvents,
-			Desc:    GetWarningEventsDesc,
-		},
-		{
-			Method:  "GET",
-			Path:    "/api/pod/logfiles",
-			Handler: m.GetFiles,
-			Desc:    GetFilesDesc,
-		},
-		{
-			Method:  "GET",
-			Path:    "/api/cluster/:name/namespace/:namespace/pods/:podName/logs",
-			Handler: m.HandleLogs,
-			Desc:    HandleLogsDesc,
-		},
-		{
-			Method:  "GET",
-			Path:    "/api/cluster/:name/namespace/:namespace/pods/:podName/logs/file",
-			Handler: m.HandleFileLogs,
-			Desc:    HandleFileLogsDesc,
-		},
-		{
-			Method:  "GET",
-			Path:    "/api/cluster/:name/offlineWorkloadDeploy",
-			Handler: m.HandleOfflineWorkloadDeploy,
-		},
-		{
-			Method:  "GET",
-			Path:    "/api/offlinePodAppList/all",
-			Handler: m.GetAllOfflineApp,
-		},
-		{
-			Method:  "GET",
-			Path:    "/api/namespace/:namespace/appname/:appname/offlinepodlist",
-			Handler: m.GetOfflinePods,
-		},
-		{
-			Method:  "GET",
-			Path:    "/api/cluster/:name/offlineWorkloadPod/terminal",
-			Handler: m.GetOfflineLogTerminal,
-		},
-		{
-			Method:  "GET",
-			Path:    "/api/lintLocalTemplate/",
-			Handler: m.LintLocalTemplate,
-		},
-	}
-
-	routes = append(routes, apiRoutes...)
-	return routes
 }

@@ -1,4 +1,4 @@
-package apiManager
+package v1
 
 import (
 	"context"
@@ -8,6 +8,7 @@ import (
 	"github.com/gin-gonic/gin"
 	"gitlab.dmall.com/arch/sym-admin/pkg/apiManager/model"
 	workloadv1beta1 "gitlab.dmall.com/arch/sym-admin/pkg/apis/workload/v1beta1"
+	"gitlab.dmall.com/arch/sym-admin/pkg/utils"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/fields"
@@ -18,7 +19,7 @@ import (
 )
 
 // GetWarningEvents is an interface to help Cancan get out of trouble:)
-func (m *APIManager) GetWarningEvents(c *gin.Context) {
+func (m *Manager) GetWarningEvents(c *gin.Context) {
 	clusterName := c.Param("name")
 	namespace := c.Param("namespace")
 	appName, ok := c.GetQuery("appName")
@@ -117,8 +118,8 @@ func (m *APIManager) GetWarningEvents(c *gin.Context) {
 					ObjectKind:  event.InvolvedObject.Kind,
 					Type:        event.Type,
 					Count:       event.Count,
-					FirstTime:   formatTime(event.FirstTimestamp.String()),
-					LastTime:    formatTime(event.LastTimestamp.String()),
+					FirstTime:   utils.FormatTime(event.FirstTimestamp.String()),
+					LastTime:    utils.FormatTime(event.LastTimestamp.String()),
 					Message:     event.Message,
 					Reason:      event.Reason,
 				}
@@ -142,8 +143,8 @@ func (m *APIManager) GetWarningEvents(c *gin.Context) {
 					ObjectKind:  event.InvolvedObject.Kind,
 					Type:        event.Type,
 					Count:       event.Count,
-					FirstTime:   formatTime(event.FirstTimestamp.String()),
-					LastTime:    formatTime(event.LastTimestamp.String()),
+					FirstTime:   utils.FormatTime(event.FirstTimestamp.String()),
+					LastTime:    utils.FormatTime(event.LastTimestamp.String()),
 					Message:     event.Message,
 					Reason:      event.Reason,
 				}

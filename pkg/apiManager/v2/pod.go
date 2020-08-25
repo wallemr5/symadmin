@@ -1,17 +1,19 @@
-package apiManager
+package v2
 
 import (
-	"github.com/gin-gonic/gin"
-	"gitlab.dmall.com/arch/sym-admin/pkg/apiManager/model"
-	"k8s.io/apimachinery/pkg/fields"
-	"k8s.io/apimachinery/pkg/labels"
 	"net/http"
 	"regexp"
+
+	"github.com/gin-gonic/gin"
+	"gitlab.dmall.com/arch/sym-admin/pkg/apiManager/model"
+	"gitlab.dmall.com/arch/sym-admin/pkg/utils"
+	"k8s.io/apimachinery/pkg/fields"
+	"k8s.io/apimachinery/pkg/labels"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 // GetPodByLabels ...
-func (m *APIManager) GetPodByLabelsV2(c *gin.Context) {
+func (m *Manager) GetPodByLabels(c *gin.Context) {
 	clusterName := c.Param("name")
 	appName, ok := c.GetQuery("appName")
 	group := c.DefaultQuery("group", "")
@@ -30,7 +32,7 @@ func (m *APIManager) GetPodByLabelsV2(c *gin.Context) {
 		return
 	}
 
-	result, err := m.getPodListByAppNameV2(clusterName, namespace, appName, group, zone, ldcLabel, podIP, phase)
+	result, err := m.getPodListByAppName(clusterName, namespace, appName, group, zone, ldcLabel, podIP, phase)
 	if err != nil {
 		c.IndentedJSON(http.StatusBadRequest, gin.H{
 			"success":   false,
@@ -49,7 +51,7 @@ func (m *APIManager) GetPodByLabelsV2(c *gin.Context) {
 }
 
 // return Pod list， not PodOfCluster
-func (m *APIManager) getPodListByAppNameV2(clusterName, namespace, appName, group, zone, ldcLabel, podIP, phase string) ([]*model.Pod, error) {
+func (m *Manager) getPodListByAppName(clusterName, namespace, appName, group, zone, ldcLabel, podIP, phase string) ([]*model.Pod, error) {
 	pods := make([]*model.Pod, 0, 4)
 	options := labels.Set{}
 	if group != "" {
@@ -109,7 +111,7 @@ func (m *APIManager) getPodListByAppNameV2(clusterName, namespace, appName, grou
 		}
 
 		if pod.Status.StartTime != nil {
-			apiPod.StartTime = formatTime(pod.Status.StartTime.String())
+			apiPod.StartTime = utils.FormatTime(pod.Status.StartTime.String())
 		}
 
 		apiPod.Endpoints = false
@@ -141,8 +143,8 @@ func (m *APIManager) getPodListByAppNameV2(clusterName, namespace, appName, grou
 					Signal:      t.Signal,
 					Reason:      t.Reason,
 					Message:     t.Message,
-					StartedAt:   formatTime(t.StartedAt.String()),
-					FinishedAt:  formatTime(t.FinishedAt.String()),
+					StartedAt:   utils.FormatTime(t.StartedAt.String()),
+					FinishedAt:  utils.FormatTime(t.FinishedAt.String()),
 					ContainerID: t.ContainerID,
 				}
 			}

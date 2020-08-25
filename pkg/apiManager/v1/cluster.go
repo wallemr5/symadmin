@@ -1,4 +1,4 @@
-package apiManager
+package v1
 
 import (
 	"net/http"
@@ -10,7 +10,7 @@ import (
 )
 
 // GetClusters returns all cluster's status.
-func (m *APIManager) GetClusters(c *gin.Context) {
+func (m *Manager) GetClusters(c *gin.Context) {
 	clusterName := c.Param("name")
 	clusters := m.K8sMgr.GetAll(clusterName)
 
@@ -29,7 +29,7 @@ func (m *APIManager) GetClusters(c *gin.Context) {
 }
 
 // GetClusterResource ...
-func (m *APIManager) GetClusterResource(c *gin.Context) {
+func (m *Manager) GetClusterResource(c *gin.Context) {
 	clusterName := c.Param("name")
 	appName := c.Param("appName")
 	namespace := c.Param("namespace")

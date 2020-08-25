@@ -1,4 +1,4 @@
-package apiManager
+package v1
 
 import (
 	"context"
@@ -16,7 +16,7 @@ import (
 )
 
 // GetDeployments get all deployments in assigned namespace
-func (m *APIManager) GetDeployments(c *gin.Context) {
+func (m *Manager) GetDeployments(c *gin.Context) {
 	clusterName := c.Param("name")
 	namespace := c.Param("namespace")
 	appName := c.Param("appName")
@@ -60,7 +60,7 @@ func (m *APIManager) GetDeployments(c *gin.Context) {
 }
 
 // GetDeploymentInfo ...
-func (m *APIManager) GetDeploymentInfo(c *gin.Context) {
+func (m *Manager) GetDeploymentInfo(c *gin.Context) {
 	clusterName := c.Param("name")
 	namespace := c.Param("namespace")
 	deployName := c.Param("deployName")
@@ -110,7 +110,7 @@ func (m *APIManager) GetDeploymentInfo(c *gin.Context) {
 }
 
 // GetDeploymentsStat ...
-func (m *APIManager) GetDeploymentsStat(c *gin.Context) {
+func (m *Manager) GetDeploymentsStat(c *gin.Context) {
 	clusterName := c.Param("name")
 	appName := c.DefaultQuery("appName", "all")
 	group := c.DefaultQuery("group", "")
@@ -174,7 +174,7 @@ func (m *APIManager) GetDeploymentsStat(c *gin.Context) {
 	})
 }
 
-func (m *APIManager) getDeployments(clusterName, namespace, appName, group, zone, ldcLabel string) ([]*model.DeploymentInfo, error) {
+func (m *Manager) getDeployments(clusterName, namespace, appName, group, zone, ldcLabel string) ([]*model.DeploymentInfo, error) {
 	result := make([]*model.DeploymentInfo, 0)
 
 	options := labels.Set{}
@@ -223,7 +223,7 @@ func (m *APIManager) getDeployments(clusterName, namespace, appName, group, zone
 	return result, nil
 }
 
-func (m *APIManager) getStatefulset(clusterName, namespace, appName, group, zone, ldcLabel string) ([]*model.DeploymentInfo, error) {
+func (m *Manager) getStatefulset(clusterName, namespace, appName, group, zone, ldcLabel string) ([]*model.DeploymentInfo, error) {
 	result := make([]*model.DeploymentInfo, 0)
 
 	options := labels.Set{}
