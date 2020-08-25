@@ -47,6 +47,7 @@ type ContainerStateTerminated struct {
 
 // Pod ...
 type Pod struct {
+	Id           string             `json:"id,omitempty"`
 	Name         string             `json:"name,omitempty"`
 	Namespace    string             `json:"namespace,omitempty"`
 	ClusterCode  string             `json:"clusterCode,omitempty"`
@@ -54,6 +55,7 @@ type Pod struct {
 	HostIP       string             `json:"hostIP,omitempty"`
 	Phase        corev1.PodPhase    `json:"phase,omitempty"`
 	Group        string             `json:"group,omitempty"`
+	Zone         string             `json:"zone,omitempty"`
 	RestartCount int32              `json:"restartCount"`
 	PodIP        string             `json:"podIP,omitempty"`
 	ImageVersion string             `json:"imageVersion,omitempty"`

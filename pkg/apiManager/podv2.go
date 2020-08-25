@@ -6,6 +6,7 @@ import (
 	"k8s.io/apimachinery/pkg/fields"
 	"k8s.io/apimachinery/pkg/labels"
 	"net/http"
+	"regexp"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
@@ -39,9 +40,11 @@ func (m *APIManager) GetPodByLabelsV2(c *gin.Context) {
 		return
 	}
 	c.IndentedJSON(http.StatusOK, gin.H{
-		"success":   true,
-		"message":   nil,
-		"resultMap": result,
+		"success": true,
+		"message": nil,
+		"resultMap": gin.H{
+			"data": result,
+		},
 	})
 }
 
@@ -61,9 +64,16 @@ func (m *APIManager) getPodListByAppNameV2(clusterName, namespace, appName, grou
 	options["app"] = appName
 
 	listOptions := &client.ListOptions{Namespace: namespace, LabelSelector: options.AsSelector()}
-	if len(podIP) > 0 {
-		set := fields.Set{"status.podIP": podIP}
+	fieldMap := make(map[string]string)
 
+	if len(podIP) > 0 {
+		fieldMap["status.podIP"] = podIP
+	}
+	if len(phase) > 0 {
+		fieldMap["status.phase"] = phase
+	}
+	if len(fieldMap) > 0 {
+		set := fields.Set(fieldMap)
 		listOptions.FieldSelector = set.AsSelector()
 	}
 	podList, err := m.Cluster.GetPods(listOptions, clusterName)
@@ -82,12 +92,14 @@ func (m *APIManager) getPodListByAppNameV2(clusterName, namespace, appName, grou
 
 	for _, pod := range podList {
 		apiPod := &model.Pod{
+			Id:           getPodId(pod.GetName()),
 			Name:         pod.GetName(),
 			Namespace:    pod.Namespace,
 			ClusterCode:  pod.GetLabels()["sym-cluster-info"],
 			Annotations:  pod.GetAnnotations(),
 			HostIP:       pod.Status.HostIP,
 			Group:        pod.GetLabels()["sym-group"],
+			Zone:         pod.GetLabels()["sym-zone"],
 			PodIP:        pod.Status.PodIP,
 			Phase:        pod.Status.Phase,
 			ImageVersion: pod.GetAnnotations()["buildNumber_0"],
@@ -141,4 +153,16 @@ func (m *APIManager) getPodListByAppNameV2(clusterName, namespace, appName, grou
 	}
 
 	return pods, nil
+}
+
+func getPodId(podName string) string {
+	reg, err := regexp.Compile("(-[r|g]z[0-9]+[a-z])?(-green|-blue|-canary)-(.*)")
+	if err != nil {
+		return ""
+	}
+	submatch := reg.FindStringSubmatch(podName)
+	if len(submatch) > 3 {
+		return submatch[3]
+	}
+	return ""
 }
