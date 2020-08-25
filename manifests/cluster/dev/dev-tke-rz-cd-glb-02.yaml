@@ -1,0 +1,59 @@
+apiVersion: workload.dmall.com/v1beta1
+kind: Cluster
+metadata:
+  labels:
+    clusterName: tcc-rz02-dev
+    createdBy: sym-controller
+  name: tcc-rz02-dev
+  namespace: sym-admin
+spec:
+  symNodeName: 10.16.116.2
+  pause: false
+  meta:
+    area: chengdu
+    az: cd
+    clusterType: tke
+    clusterIngressHead: dev-rz-02
+    clusterIngressImpl: contour
+  apps:
+    - name: contour
+      repo: dmall
+      namespace: projectcontour
+      chartVersion: 1.1.4
+    - name: monitor
+      repo: dmall
+      chartVersion: 9.1.0
+      values:
+        lpv-path: /root/prometheus-data
+        lpv-size: 20Gi
+        custom-resources-config: disable
+        selector-only-system: disable
+        prom-limit-cpu: "4"
+        prom-limit-memory: 8Gi
+        prom-req-cpu: "1"
+        prom-req-memory: 2Gi
+        prom-retention: 3d
+      namespace: monitoring
+    - name: node-problem-detector
+      repo: dmall
+      chartVersion: 1.5.2
+      namespace: monitoring
+    - name: metrics-server
+      repo: dmall
+      namespace: monitoring
+      values:
+        sym-affinity: enable
+    - name: sym-ctl
+      repo: dmall
+      namespace: sym-admin
+      chartName: sym-controller
+      chartVersion : 1.0.18
+      values:
+        tag: "v1.1.0-dev6"
+        master: "false"
+        worker: "true"
+        cluster: "false"
+        reCreate: "true"
+        leader: "true"
+        oldCluster: "false"
+        threadiness: "1"
