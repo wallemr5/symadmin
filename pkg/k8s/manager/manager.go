@@ -329,7 +329,7 @@ func (m *ClusterManager) preStart() error {
 			// add field pod ip index must before cache start
 			if err := c.Mgr.GetFieldIndexer().IndexField(context.TODO(), &corev1.Pod{}, "status.phase", func(rawObj runtime.Object) []string {
 				pod := rawObj.(*corev1.Pod)
-				return []string{pod.Status.PodIP}
+				return []string{string(pod.Status.Phase)}
 			}); err != nil {
 				klog.Warningf("cluster[%s] add field index pod status.phase, err: %#v", c.Name, err)
 			} else {
