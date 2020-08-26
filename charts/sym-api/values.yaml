@@ -20,6 +20,7 @@ ingress:
   enabled: true
   annotations:
     kubernetes.io/ingress.class: traefik
+    projectcontour.io/websocket-routes: "/"
     # kubernetes.io/tls-acme: "true"
   hosts:
     # - host: api.sym.dmall.com
