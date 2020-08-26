@@ -61,7 +61,7 @@ func NewOfflinepodReconciler(mgr manager.Manager, cMgr *pkgmanager.DksManager) (
 			New: func() interface{} {
 				return &model.OfflinePod{}
 			}},
-		MaxOffline: 2,
+		MaxOffline: 10,
 	}
 
 	for _, cluster := range cMgr.K8sMgr.GetAll() {
