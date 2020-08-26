@@ -50,14 +50,55 @@ func (m *Manager) GetPodByLabels(c *gin.Context) {
 	})
 }
 
-// phase:
+// GetAppGroupVersion ...
+func (m *Manager) GetAppGroupVersion(c *gin.Context) {
+	clusterName := c.Param("clusterCode")
+	appName, ok := c.GetQuery("appName")
+	group := c.DefaultQuery("group", "")
+	namespace := c.DefaultQuery("namespace", "")
+	zone := c.DefaultQuery("symZone", "")
+
+	if !ok || appName == "" {
+		c.IndentedJSON(http.StatusBadRequest, gin.H{
+			"success":   false,
+			"message":   "no appName",
+			"resultMap": nil,
+		})
+		return
+	}
+
+	pods, err := m.getPodListByAppName(clusterName, namespace, appName, group, zone, "", "", "")
+	if err != nil {
+		c.IndentedJSON(http.StatusBadRequest, gin.H{
+			"success":   false,
+			"message":   err.Error(),
+			"resultMap": nil,
+		})
+		return
+	}
+
+	result := make(map[string]string)
+	for _, pod := range pods {
+		_, ok := result[pod.Group]
+		if !ok {
+			result[pod.Group] = pod.ImageVersion
+		}
+	}
+
+	c.IndentedJSON(http.StatusOK, gin.H{
+		"success":   true,
+		"message":   nil,
+		"resultMap": result,
+	})
+}
+
+// TODO phase:
 // 1. 发布中 -> Pending
 // 2. 回滚中 -> Pending / ContainerCreating
 // 3. 停止中 -> Terminating -> pod.DeletionTimestamp != nil
 // 4. 准备中 -> ContainerCreating -> pod.status.phase = Pending & container.state = Waiting ,container.state.reason = ContainerCreating
 // 5. 已在线 -> Running
 // 6. 发布失败 -> Failed
-// return Pod list， not PodOfCluster
 func (m *Manager) getPodListByAppName(clusterName, namespace, appName, group, zone, ldcLabel, podIP, phase string) ([]*model.Pod, error) {
 	pods := make([]*model.Pod, 0, 4)
 	options := labels.Set{}

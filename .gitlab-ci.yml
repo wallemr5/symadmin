@@ -14,13 +14,19 @@ before_script:
   - go env -w GO111MODULE=on
 
 stages:
-  - test
+  - lint
+  # - test
   # - build
 
-test:
-  stage: test
+lint:
+  stage: lint
   script:
-    - make test
+    - make lint
+
+# test:
+#   stage: test
+#   script:
+#     - make test
 
 # build-sym-api:
 #   stage: build

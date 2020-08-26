@@ -38,4 +38,24 @@ var _ = Describe("test pods api", func() {
 		Entry("only appName & podIP query ok", "rdp-configuration-center-web", "", "", "", "", "10.13.98.93", "", 200),
 		Entry("only appName & phase query ok", "rdp-configuration-center-web", "", "", "", "", "", "Running", 200),
 	)
+
+	DescribeTable("get app group version", func(appName, group string, expected int) {
+		testServer := gin.Default()
+		testServer.GET("/api/v2/cluster/:clusterCode/app/group/version", manager.GetAppGroupVersion)
+
+		w := httptest.NewRecorder()
+		url := fmt.Sprintf("/api/v2/cluster/all/app/group/version?appName=%s&group=%s", appName, group)
+
+		req, _ := http.NewRequest("GET", url, nil)
+		testServer.ServeHTTP(w, req)
+		fmt.Println(w.Body.String())
+
+		Expect(w.Code).To(Equal(expected))
+		Expect(w.Body.String()).NotTo(Equal(emptyResult))
+	},
+		Entry("no appName return 400", "", "", 400),
+		Entry("only appName query ok", "rdp-configuration-center-web", "", 200),
+		Entry("appName & blue group", "rdp-configuration-center-web", "blue", 200),
+		Entry("appName & green group", "rdp-configuration-center-web", "green", 200),
+	)
 })

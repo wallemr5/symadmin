@@ -70,6 +70,8 @@ fmt:
 vet:
 	go vet ./...
 
+lint: fmt vet
+
 # Generate code, e.g. XXX.deepcopy.go
 generate: controller-gen
 	$(CONTROLLER_GEN) object:headerFile=./hack/boilerplate.go.txt paths="./..."
