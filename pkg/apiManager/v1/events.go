@@ -42,8 +42,10 @@ func (m *Manager) GetWarningEvents(c *gin.Context) {
 			Name:      appName,
 		}, adv)
 		if err != nil {
+			if apierrors.IsNotFound(err) {
+				continue
+			}
 			klog.Errorf("get advdeployment error: %v", err)
-			continue
 		}
 		advList = append(advList, adv)
 	}
