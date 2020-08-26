@@ -2,9 +2,9 @@ apiVersion: workload.dmall.com/v1beta1
 kind: Cluster
 metadata:
   labels:
-    clusterName: tcc-gz02-dev
+    clusterName: tcc-gz01-dev
     createdBy: sym-controller
-  name: tcc-gz02-dev
+  name: tcc-gz01-dev
   namespace: sym-admin
 spec:
   symNodeName: 10.248.227.132
@@ -21,7 +21,7 @@ spec:
     - name: contour
       repo: dmall
       namespace: projectcontour
-      chartVersion: 1.1.
+      chartVersion: 1.1.5
     - name: monitor
       repo: dmall
       namespace: monitoring
@@ -40,26 +40,4 @@ spec:
         prom-retention: 2d
         lpv-grafana-path: /root/grafana-data
         lpv-grafana-size: 1Gi
-    - name: sym-api
-      repo: dmall
-      namespace: sym-admin
-      chartName: sym-api
-      chartVersion: 1.0.17
-      values:
-        hosts: testapi-glb.sym.dmall.com
-        tag: "v1.1.0-dev16-3"
-    - name: sym-ctl
-      repo: dmall
-      namespace: sym-admin
-      chartName: sym-controller
-      chartVersion : 1.0.18
-      values:
-        tag: "v1.1.0-dev16-3"
-        master: "true"
-        worker: "true"
-        offlinepod: "true"
-        cluster: "true"
-        reCreate: "true"
-        leader: "true"
-        oldCluster: "false"
-        threadiness: "1"
+
