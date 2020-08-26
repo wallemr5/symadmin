@@ -14,7 +14,7 @@ import (
 
 // GetPodByLabels ...
 func (m *Manager) GetPodByLabels(c *gin.Context) {
-	clusterName := c.Param("name")
+	clusterName := c.Param("clusterCode")
 	appName, ok := c.GetQuery("appName")
 	group := c.DefaultQuery("group", "")
 	ldcLabel := c.DefaultQuery("ldcLabel", "")
@@ -66,8 +66,8 @@ func (m *Manager) getPodListByAppName(clusterName, namespace, appName, group, zo
 	options["app"] = appName
 
 	listOptions := &client.ListOptions{Namespace: namespace, LabelSelector: options.AsSelector()}
-	fieldMap := make(map[string]string)
 
+	fieldMap := make(map[string]string)
 	if len(podIP) > 0 {
 		fieldMap["status.podIP"] = podIP
 	}
@@ -78,6 +78,7 @@ func (m *Manager) getPodListByAppName(clusterName, namespace, appName, group, zo
 		set := fields.Set(fieldMap)
 		listOptions.FieldSelector = set.AsSelector()
 	}
+
 	podList, err := m.Cluster.GetPods(listOptions, clusterName)
 	if err != nil {
 		return nil, err
@@ -94,7 +95,7 @@ func (m *Manager) getPodListByAppName(clusterName, namespace, appName, group, zo
 
 	for _, pod := range podList {
 		apiPod := &model.Pod{
-			Id:           getPodId(pod.GetName()),
+			Id:           getPodID(pod.GetName()),
 			Name:         pod.GetName(),
 			Namespace:    pod.Namespace,
 			ClusterCode:  pod.GetLabels()["sym-cluster-info"],
@@ -157,7 +158,7 @@ func (m *Manager) getPodListByAppName(clusterName, namespace, appName, group, zo
 	return pods, nil
 }
 
-func getPodId(podName string) string {
+func getPodID(podName string) string {
 	reg, err := regexp.Compile("(-[r|g]z[0-9]+[a-z])?(-green|-blue|-canary)-(.*)")
 	if err != nil {
 		return ""

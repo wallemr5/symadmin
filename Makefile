@@ -29,7 +29,7 @@ all: manager
 
 # Run tests
 test: set-goproxy fmt vet
-	go test -race -cover ./...
+	go test -race -cover $(ROOT)/pkg/apiManager/v2
 
 
 # Build manager binary
