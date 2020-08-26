@@ -1,4 +1,4 @@
-VERSION ?= v1.1.0-dev16-3
+VERSION ?= v1.1.0-dev16-5
 # Image URL to use all building/pushing image targets
 IMG_REG ?= symcn.tencentcloudcr.com/symcn
 IMG_CTL := $(IMG_REG)/sym-admin-controller
@@ -130,7 +130,7 @@ helm-cn:
 helm-dev:
 	helm upgrade --kubeconfig ${KUBECONFIG} --kube-context dev-tke-gz-bj5-glb --install --create-namespace sym-ctl --namespace sym-admin  --set image.tag=${VERSION},image.worker=true,image.master=true,image.offlinepod=true,image.threadiness=1,resources.limits.cpu=1,resources.requests.cpu="500m" ./charts/sym-controller
 	helm upgrade --kubeconfig ${KUBECONFIG} --kube-context dev-tke-rz-cd-glb --install --create-namespace sym-ctl --namespace sym-admin  --set image.tag=${VERSION},image.worker=true,image.master=false,image.threadiness=1,resources.limits.cpu=1,resources.requests.cpu="500m" ./charts/sym-controller
-	helm upgrade --kubeconfig ${KUBECONFIG} --kube-context dev-tke-gz-bj5-glb --install --create-namespace sym-api --namespace sym-admin --set image.tag=${VERSION},replicaCount=2,ingress.hosts[0].host=testapi-glb.sym.dmall.com,ingress.hosts[0].paths[0]=/,resources.limits.cpu=1,resources.requests.cpu="500m",replicaCount=1 ./charts/sym-api
+	helm upgrade --kubeconfig ${KUBECONFIG} --kube-context dev-tke-gz-bj5-glb --install --create-namespace sym-api --namespace sym-admin --set image.tag=${VERSION},replicaCount=2,ingress.annotations."kubernetes\.io/ingress\.class"=contour,ingress.hosts[0].host=testapi-glb.sym.dmall.com,ingress.hosts[0].paths[0]=/,resources.limits.cpu=1,resources.requests.cpu="500m",replicaCount=1 ./charts/sym-api
 	helm upgrade --kubeconfig ${KUBECONFIG} --kube-context dev-tke-rz-cd-glb-02 --install --create-namespace sym-ctl --namespace sym-admin  --set image.tag=${VERSION},image.worker=true,image.master=false,image.threadiness=1,resources.limits.cpu=1,resources.requests.cpu="500m" ./charts/sym-controller
 
 helm-dev-df:
