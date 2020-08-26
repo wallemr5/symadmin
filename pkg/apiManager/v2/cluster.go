@@ -10,7 +10,7 @@ import (
 
 // GetClusters returns all cluster's status.
 func (m *Manager) GetClusters(c *gin.Context) {
-	clusterName := c.Param("name")
+	clusterName := c.Param("clusterCode")
 	clusters := m.K8sMgr.GetAll(clusterName)
 
 	status := make([]*model.ClusterStatus, 0, 4)

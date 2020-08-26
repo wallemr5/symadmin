@@ -11,7 +11,7 @@ func (m *Manager) Routes() []*router.Route {
 	apiRoutes := []*router.Route{
 		{
 			Method:  "GET",
-			Path:    "/api/v2/cluster/:name",
+			Path:    "/api/v2/cluster/:clusterCode",
 			Handler: m.GetClusters,
 			Desc:    GetClusterDesc,
 		},

@@ -50,6 +50,13 @@ func (m *Manager) GetPodByLabels(c *gin.Context) {
 	})
 }
 
+// phase:
+// 1. 发布中 -> Pending
+// 2. 回滚中 -> Pending / ContainerCreating
+// 3. 停止中 -> Terminating -> pod.DeletionTimestamp != nil
+// 4. 准备中 -> ContainerCreating -> pod.status.phase = Pending & container.state = Waiting ,container.state.reason = ContainerCreating
+// 5. 已在线 -> Running
+// 6. 发布失败 -> Failed
 // return Pod list， not PodOfCluster
 func (m *Manager) getPodListByAppName(clusterName, namespace, appName, group, zone, ldcLabel, podIP, phase string) ([]*model.Pod, error) {
 	pods := make([]*model.Pod, 0, 4)
