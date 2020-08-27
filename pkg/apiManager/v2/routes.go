@@ -17,7 +17,7 @@ func (m *Manager) Routes() []*router.Route {
 		},
 		{
 			Method:  "GET",
-			Path:    "/api/v2/cluster/:clusterCode/appPods/labels",
+			Path:    "/api/v2/cluster/:clusterCode/pods",
 			Handler: m.GetPodByLabels,
 			Desc:    GetPodByLabelsDesc,
 		},

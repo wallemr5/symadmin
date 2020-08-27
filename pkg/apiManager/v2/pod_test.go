@@ -15,7 +15,7 @@ var _ = Describe("test pods api", func() {
 	DescribeTable("get pods by labels",
 		func(appName, group, ldcLabel, namespace, symZone, podIP, phase string, expected int) {
 			testServer := gin.Default()
-			testServer.GET("/api/v2/cluster/:clusterCode/appPods/labels", manager.GetPodByLabels)
+			testServer.GET("/api/v2/cluster/:clusterCode/pods", manager.GetPodByLabels)
 
 			w := httptest.NewRecorder()
 			url := fmt.Sprintf(
