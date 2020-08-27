@@ -57,3 +57,9 @@ limit: query string, the limit number, default is 10. <br/>
 e.g. <br/>
 <a href="/api/cluster/all/namespace/default/pods/all/event">/api/cluster/all/namespace/default/pods/all/event</a><br/>
 `
+
+// TailFileDesc ...
+var TailFileDesc = ``
+
+// ListFileDesc ...
+var ListFileDesc = ``

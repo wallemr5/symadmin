@@ -39,6 +39,18 @@ func (m *Manager) Routes() []*router.Route {
 			Handler: m.GetPodEvent,
 			Desc:    GetPodEventDesc,
 		},
+		{
+			Method:  "GET",
+			Path:    "/api/v2/cluster/:clusterCode/namespace/:namespace/pods/:podName/tail",
+			Handler: m.TailFile,
+			Desc:    TailFileDesc,
+		},
+		{
+			Method:  "GET",
+			Path:    "/api/v2/cluster/:clusterCode/namespace/:namespace/pods/:podName/files",
+			Handler: m.ListFiles,
+			Desc:    ListFileDesc,
+		},
 	}
 
 	routes = append(routes, apiRoutes...)

@@ -12,7 +12,7 @@ import (
 )
 
 var _ = Describe("test get event", func() {
-	FDescribeTable("get pod event",
+	DescribeTable("get pod event",
 		func(namespace, podName, limit string, expected int) {
 			testServer := gin.Default()
 			testServer.GET("/api/v2/cluster/:clusterCode/namespace/:namespace/pods/:podName/event", manager.GetPodEvent)
