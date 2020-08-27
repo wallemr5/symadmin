@@ -1,14 +1,18 @@
 package v2
 
 import (
+	"context"
 	"net/http"
 	"regexp"
 
 	"github.com/gin-gonic/gin"
 	"gitlab.dmall.com/arch/sym-admin/pkg/apiManager/model"
 	"gitlab.dmall.com/arch/sym-admin/pkg/utils"
+	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/fields"
 	"k8s.io/apimachinery/pkg/labels"
+	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/klog"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
@@ -204,6 +208,55 @@ func (m *Manager) getPodListByAppName(clusterName, namespace, appName, group, zo
 	}
 
 	return pods, nil
+}
+
+// DeletePodByName ...
+func (m *Manager) DeletePodByName(c *gin.Context) {
+	clusterName := c.Param("clusterCode")
+	podName := c.Param("podName")
+	namespace := c.Param("namespace")
+
+	cluster, err := m.K8sMgr.Get(clusterName)
+	if err != nil {
+		klog.Errorf("get cluster error: %v", err)
+		c.IndentedJSON(http.StatusBadRequest, gin.H{
+			"success":   false,
+			"message":   err.Error(),
+			"resultMap": nil,
+		})
+		return
+	}
+
+	ctx := context.Background()
+	pod := &corev1.Pod{}
+	err = cluster.Client.Get(ctx, types.NamespacedName{
+		Namespace: namespace,
+		Name:      podName,
+	}, pod)
+	if err != nil {
+		klog.Errorf("get pod error: %v", err)
+		c.IndentedJSON(http.StatusBadRequest, gin.H{
+			"success":   false,
+			"message":   err.Error(),
+			"resultMap": nil,
+		})
+		return
+	}
+
+	err = cluster.Client.Delete(ctx, pod)
+	if err != nil {
+		klog.Errorf("delete pod error: %v", err)
+		c.IndentedJSON(http.StatusBadRequest, gin.H{
+			"success":   false,
+			"message":   err.Error(),
+			"resultMap": nil,
+		})
+	}
+	c.IndentedJSON(http.StatusOK, gin.H{
+		"success":   true,
+		"message":   nil,
+		"resultMap": nil,
+	})
 }
 
 func getPodID(podName string) string {

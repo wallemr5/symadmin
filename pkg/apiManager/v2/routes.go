@@ -21,6 +21,12 @@ func (m *Manager) Routes() []*router.Route {
 			Handler: m.GetPodByLabels,
 			Desc:    GetPodByLabelsDesc,
 		},
+		{
+			Method:  "DELETE",
+			Path:    "/api/v2/cluster/:clusterCode/namespace/:namespace/pod/:podName",
+			Handler: m.DeletePodByName,
+			Desc:    DeletePodByNameDesc,
+		},
 	}
 
 	routes = append(routes, apiRoutes...)

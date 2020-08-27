@@ -21,3 +21,14 @@ ldcLabel: query string, the unique ldcLabel name. <br/>
 e.g. <br/>
 <a href="/api/cluster/all/appPod/labels?appName=bbcc&group=blue">/api/cluster/all/appPod/labels?appName=bbcc&group=blue</a><br/>
 `
+
+// DeletePodByNameDesc ...
+var DeletePodByNameDesc = `
+Delete a pod with pod name: <br/>
+name: the unique cluster name and all <br/>
+namespace: url param, namespace name <br/>
+podName: url param, the unique pod name <br/>
+<br/>
+e.g. <br/>
+<a>/api/cluster/tcc-bj5-dks-monit-01/namespace/default/pod/bbcc-xx-xx</a><br/>
+`

@@ -58,4 +58,25 @@ var _ = Describe("test pods api", func() {
 		Entry("appName & blue group", "rdp-configuration-center-web", "blue", 200),
 		Entry("appName & green group", "rdp-configuration-center-web", "green", 200),
 	)
+
+	XDescribeTable("delete pod by name", func(clusterCode, namespace, podName string, expected int) {
+		testServer := gin.Default()
+		testServer.DELETE("/api/v2/cluster/:clusterCode/namespace/:namespace/pod/:podName",
+			manager.DeletePodByName)
+
+		w := httptest.NewRecorder()
+		url := fmt.Sprintf("/api/v2/cluster/%s/namespace/%s/pod/%s", clusterCode, namespace, podName)
+
+		req, _ := http.NewRequest("DELETE", url, nil)
+		testServer.ServeHTTP(w, req)
+		fmt.Println(w.Body.String())
+
+		Expect(w.Code).To(Equal(expected))
+		Expect(w.Body.String()).NotTo(Equal(emptyResult))
+	},
+		Entry("incorrent clustercode return 400", "1", "2", "3", 400),
+		Entry("incorrent namespace return 400", "tcc-gz01-bj5-test", "2", "3", 400),
+		Entry("incorrent podName return 400", "tcc-gz01-bj5-test", "dmall-inner", "aaabb", 400),
+		Entry("delete ok", "tcc-gz01-bj5-test", "dmall-inner", "abcd-11-adb-00-gz01a-blue-955798969-m5shq", 200),
+	)
 })
