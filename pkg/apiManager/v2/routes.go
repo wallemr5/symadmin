@@ -33,6 +33,12 @@ func (m *Manager) Routes() []*router.Route {
 			Handler: m.HandleLogs,
 			Desc:    HandleLogsDesc,
 		},
+		{
+			Method:  "GET",
+			Path:    "/api/v2/cluster/:clusterCode/namespace/:namespace/pods/:podName/event",
+			Handler: m.GetPodEvent,
+			Desc:    GetPodEventDesc,
+		},
 	}
 
 	routes = append(routes, apiRoutes...)
