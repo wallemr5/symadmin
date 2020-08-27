@@ -32,3 +32,16 @@ podName: url param, the unique pod name <br/>
 e.g. <br/>
 <a>/api/cluster/tcc-bj5-dks-monit-01/namespace/default/pod/bbcc-xx-xx</a><br/>
 `
+
+// HandleLogsDesc ...
+var HandleLogsDesc = `
+Get stdout of a specific pod container. <br/>
+name: url param, the unique cluster name and all. <br/>
+namespace: url param, namespace name <br/>
+podName: url param, the unique pod name. <br/>
+container: query string, the unique container in a pod. <br/>
+tail: query string, the log tail number, default is 1000. <br/>
+<br/>
+e.g. <br/>
+<a href="/api/cluster/tcc-bj5-dks-monit-01/namespace/default/pods/bbcc-xx-xx/logs?container=bbcc&tailLines=100">/api/cluster/tcc-bj5-dks-monit-01/namespace/default/pods/bbcc-xx-xx/logs?container=bbcc&tailLines=100</a><br/>
+`

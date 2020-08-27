@@ -1,8 +1,7 @@
-package v1
+package v2
 
 import (
 	"context"
-	"errors"
 	"io/ioutil"
 	"net/http"
 	"strconv"
@@ -17,43 +16,43 @@ import (
 
 // HandleLogs get the pod container stdout
 func (m *Manager) HandleLogs(c *gin.Context) {
-	clusterName := c.Param("name")
+	clusterCode := c.Param("clusterCode")
 	podName := c.Param("podName")
 	namespace := c.Param("namespace")
 	container := c.DefaultQuery("container", "")
-	tailLines, _ := strconv.ParseInt(c.DefaultQuery("tail", "1000"), 10, 64)
-	// limitBytes, _ := strconv.ParseInt(c.DefaultQuery("limitBytes", "2048"), 10, 64)
+
+	tailStr := c.DefaultQuery("tail", "1000")
+	if tailStr == "" {
+		tailStr = "1000"
+	}
+	tailLines, err := strconv.ParseInt(tailStr, 10, 64)
+	if err != nil {
+		c.IndentedJSON(http.StatusBadRequest, gin.H{
+			"success":   false,
+			"message":   err.Error(),
+			"resultMap": nil,
+		})
+		return
+	}
+
 	follow, _ := strconv.ParseBool(c.DefaultQuery("follow", "false"))
 	previous, _ := strconv.ParseBool(c.DefaultQuery("previous", "false"))
 	timestamps, _ := strconv.ParseBool(c.DefaultQuery("timestamps", "false"))
-	// sinceSecond, _ := strconv.ParseInt(c.DefaultQuery("sinceSecond", "1"), 10, 64)
 
 	logOptions := &corev1.PodLogOptions{
 		Follow:     follow,
 		Previous:   previous,
 		Timestamps: timestamps,
 		TailLines:  &tailLines,
-		// LimitBytes: &limitBytes,
 	}
 
-	// sinceTime := metav1.Time{}
-	// sinceTimeStr, ok := c.GetQuery("sinceTime")
-	// if ok {
-	// 	parseTime, err := time.Parse("", sinceTimeStr)
-	// 	sinceTime.Time = parseTime
-	// 	logOptions.SinceTime = &sinceTime
-	// 	if err != nil {
-	// 		AbortHTTPError(c, ParseTimeStampError, "", err)
-	// 		return
-	// 	}
-	// }
-	// else {
-	// 	logOptions.SinceSeconds = &sinceSecond
-	// }
-
-	cluster, err := m.K8sMgr.Get(clusterName)
+	cluster, err := m.K8sMgr.Get(clusterCode)
 	if err != nil {
-		AbortHTTPError(c, GetClusterError, "", err)
+		c.IndentedJSON(http.StatusBadRequest, gin.H{
+			"success":   false,
+			"message":   err.Error(),
+			"resultMap": nil,
+		})
 		return
 	}
 
@@ -65,7 +64,11 @@ func (m *Manager) HandleLogs(c *gin.Context) {
 	}, pod)
 	if err != nil {
 		klog.Errorf("get pod error: %v", err)
-		AbortHTTPError(c, GetPodError, "", err)
+		c.IndentedJSON(http.StatusBadRequest, gin.H{
+			"success":   false,
+			"message":   err.Error(),
+			"resultMap": nil,
+		})
 		return
 	}
 
@@ -84,7 +87,11 @@ func (m *Manager) HandleLogs(c *gin.Context) {
 		Stream(context.TODO())
 	if err != nil {
 		klog.Errorf("get pod log error: %v", err)
-		AbortHTTPError(c, GetPodLogsError, "", err)
+		c.IndentedJSON(http.StatusBadRequest, gin.H{
+			"success":   false,
+			"message":   err.Error(),
+			"resultMap": nil,
+		})
 		return
 	}
 	defer req.Close()
@@ -92,7 +99,11 @@ func (m *Manager) HandleLogs(c *gin.Context) {
 	result, err := ioutil.ReadAll(req)
 	if err != nil {
 		klog.Errorf("get pod log error: %v", err)
-		AbortHTTPError(c, GetPodLogsError, "", err)
+		c.IndentedJSON(http.StatusBadRequest, gin.H{
+			"success":   false,
+			"message":   err.Error(),
+			"resultMap": nil,
+		})
 		return
 	}
 	c.IndentedJSON(http.StatusOK, gin.H{
@@ -101,56 +112,6 @@ func (m *Manager) HandleLogs(c *gin.Context) {
 		"resultMap": gin.H{
 			"log": processTextToHTML(string(result)),
 		}})
-}
-
-// HandleFileLogs get log files in a pod
-func (m *Manager) HandleFileLogs(c *gin.Context) {
-	clusterName := c.Param("name")
-	namespace := c.Param("namespace")
-	podName := c.Param("podName")
-	tailLines := c.DefaultQuery("tailLines", "1000")
-
-	containerName, ok := c.GetQuery("container")
-	if !ok {
-		AbortHTTPError(c, ParamInvalidError, "", errors.New("can not get container"))
-		return
-	}
-	filepath, ok := c.GetQuery("filepath")
-	if !ok {
-		AbortHTTPError(c, ParamInvalidError, "", errors.New("can not get filename"))
-		return
-	}
-
-	cluster, err := m.K8sMgr.Get(clusterName)
-	if err != nil {
-		klog.Errorf("get cluster error: %+v", err)
-		AbortHTTPError(c, GetClusterError, "", err)
-		return
-	}
-
-	cmd := "tail -n " + tailLines + " " + filepath
-	result, err := RunCmdOnceInContainer(cluster, namespace, podName, containerName, cmd, false)
-	if err != nil {
-		klog.Errorf("run cmd once in container error: %v", err)
-		c.IndentedJSON(http.StatusBadRequest, gin.H{
-			"success": false,
-			"message": err.Error(),
-			"resultMap": gin.H{
-				"path":   filepath,
-				"applog": "",
-			},
-		})
-		return
-	}
-
-	c.IndentedJSON(http.StatusOK, gin.H{
-		"success": true,
-		"message": nil,
-		"resultMap": gin.H{
-			"path":   filepath,
-			"applog": processTextToHTML(string(result)),
-		},
-	})
 }
 
 func processTextToHTML(text string) string {
