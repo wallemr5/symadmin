@@ -11,6 +11,7 @@ import (
 // File ...
 type File struct {
 	Name        string `json:"name"`
+	FullPath    string `json:"fullPath"`
 	IsDirectory bool   `json:"isDirectory"`
 }
 
@@ -75,7 +76,7 @@ func (m *Manager) TailFile(c *gin.Context) {
 		"message": nil,
 		"resultMap": gin.H{
 			"path": filepath,
-			"data": processTextToHTML(string(result)),
+			"data": string(result),
 		},
 	})
 }
@@ -89,7 +90,7 @@ func (m *Manager) ListFiles(c *gin.Context) {
 	podName := c.Param("podName")
 	path := c.DefaultQuery("path", "/web/logs/app/")
 	if path == "" {
-		path = "/web/logs/app"
+		path = "/web/logs/app/"
 	}
 
 	containerName, ok := c.GetQuery("container")
@@ -144,7 +145,10 @@ func (m *Manager) ListFiles(c *gin.Context) {
 			f.IsDirectory = true
 			f.Name = strings.TrimSuffix(fileName, "/")
 		}
-
+		if !strings.HasSuffix(path, "/") {
+			path += "/"
+		}
+		f.FullPath = path + f.Name
 		result = append(result, f)
 	}
 
