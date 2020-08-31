@@ -19,12 +19,13 @@ var _ = Describe("test pods api", func() {
 
 			w := httptest.NewRecorder()
 			url := fmt.Sprintf(
-				"/api/v2/cluster/all/appPods/labels?appName=%s&group=%s&ldcLabel=%s&namespace=%s&symZone=%s&podIP=%s&phase=%s",
+				"/api/v2/cluster/all/pods?appName=%s&group=%s&ldcLabel=%s&namespace=%s&symZone=%s&podIP=%s&phase=%s",
 				appName, group, ldcLabel, namespace, symZone, podIP, phase,
 			)
 
 			req, _ := http.NewRequest("GET", url, nil)
 			testServer.ServeHTTP(w, req)
+			fmt.Println(w.Body.String())
 
 			Expect(w.Code).To(Equal(expected))
 			Expect(w.Body.String()).NotTo(Equal(emptyResult))
