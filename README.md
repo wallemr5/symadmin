@@ -241,6 +241,8 @@ conventional-changelog -p angular -i CHANGELOG.md -s -p
 | dev-tke-rz-cd-glb      | 开发    | 业务开发集群 RZ            | cls-ehx4vson |  10.248.227.74 | 高老板测试用 |
 | dev-tke-rz-cd-glb-02   | 开发    | 业务开发集群 RZ02          | cls-6cy9p9q1 |    10.16.116.8 | 高老板测试用 |
 | dev-df-0doi9yrfhk-01   | df/开发 | df开发集群                 | cls-0doi9yrf | 10.248.224.193 | df开发集群   |
+| dev-df-test-hk-01   | df/测试 | df测试集群                 | cls-jvu2z5sv | 10.16.247.231| df测试集群   |
+
 
 集群 hosts 如下：
 
@@ -259,4 +261,5 @@ conventional-changelog -p angular -i CHANGELOG.md -s -p
 10.248.224.193 cls-0doi9yrf.ccs.tencent-cloud.com 
 10.248.227.142 cls-7txii71z.ccs.tencent-cloud.com
 10.16.116.8 cls-6cy9p9q1.ccs.tencent-cloud.com
+10.16.247.231 cls-jvu2z5sv.ccs.tencent-cloud.com
 ```

@@ -139,6 +139,10 @@ helm-dev-df:
 	helm upgrade --kubeconfig ${KUBECONFIG} --kube-context dev-df-hk-01 --install --create-namespace sym-ctl --namespace sym-admin  --set image.tag=${VERSION},image.worker=true,image.master=true,image.offlinepod=true,image.threadiness=1,resources.limits.cpu=1,resources.requests.cpu="500m" ./charts/sym-controller
 	helm upgrade --kubeconfig ${KUBECONFIG} --kube-context dev-df-hk-01 --install --create-namespace sym-api --namespace sym-admin --set image.tag=${VERSION},replicaCount=2,ingress.hosts[0].host=devapi.sym.inner-dmall.com.hk,ingress.hosts[0].paths[0]=/,resources.limits.cpu=1,resources.requests.cpu="500m",replicaCount=2 ./charts/sym-api
 
+helm-test-df:
+	helm upgrade --kubeconfig ${KUBECONFIG} --kube-context test-df-hk-01 --install --create-namespace sym-ctl --namespace sym-admin  --set image.tag=${VERSION},image.worker=true,image.master=true,image.offlinepod=true,image.threadiness=1,resources.limits.cpu=1,resources.requests.cpu="500m" ./charts/sym-controller
+	helm upgrade --kubeconfig ${KUBECONFIG} --kube-context test-df-hk-01 --install --create-namespace sym-api --namespace sym-admin --set image.tag=${VERSION},replicaCount=2,ingress.annotations."kubernetes\.io/ingress\.class"=contour,ingress.hosts[0].host=testapi.sym.inner-dmall.com.hk,ingress.hosts[0].paths[0]=/,resources.limits.cpu=1,resources.requests.cpu="500m",replicaCount=2 ./charts/sym-api
+
 helm-test:
 	helm upgrade --kubeconfig ${KUBECONFIG} --kube-context test-tke-gz-bj5-bus-01 --install --create-namespace sym-ctl --namespace sym-admin --set image.tag=${VERSION},image.worker=true,image.master=true,image.offlinepod=true,image.threadiness=1,resources.limits.cpu=1,resources.requests.cpu="500m" ./charts/sym-controller
 	helm upgrade --kubeconfig ${KUBECONFIG} --kube-context test-tke-rz-bj5-bus-01 --install --create-namespace sym-ctl --namespace sym-admin  --set image.tag=${VERSION},image.worker=true,image.master=false,image.threadiness=1,resources.limits.cpu=1,resources.requests.cpu="500m" ./charts/sym-controller
