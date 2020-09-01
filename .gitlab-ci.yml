@@ -1,4 +1,4 @@
-image: golang:1.14.6
+image: golang:1.14.7
 
 variables:
   REPO_NAME: gitlab.dmall.com/arch/sym-admin
@@ -11,7 +11,7 @@ variables:
 # Thus, making a symbolic link corrects this.
 before_script:
   - cd $CI_PROJECT_DIR
-  - go env -w GO111MODULE=on
+  - go env -w GO111MODULE=on GOPROXY=https://goproxy.io,direct
 
 stages:
   - lint
