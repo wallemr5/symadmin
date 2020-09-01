@@ -1,4 +1,4 @@
-image: golang:1.14.7
+image: golang:1.14.6
 
 variables:
   REPO_NAME: gitlab.dmall.com/arch/sym-admin
