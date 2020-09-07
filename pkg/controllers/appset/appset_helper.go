@@ -20,7 +20,7 @@ import (
 
 // ApplyStatus modify status handler
 func (r *AppSetReconciler) ApplyStatus(ctx context.Context, req customctrl.CustomRequest, app *workloadv1beta1.AppSet) (status workloadv1beta1.AppStatus, isChange bool, err error) {
-	as, err := buildAppSetStatus(ctx, r.DksMgr.K8sMgr, req, app)
+	as, err := buildAppSetStatus(ctx, r.DksMgr.ClustersMgr, req, app)
 	if err != nil {
 		klog.Errorf("%s: aggregate status failed, err: %+v", req.NamespacedName.String(), err)
 		return "", false, err
@@ -149,8 +149,8 @@ func (r *AppSetReconciler) applyStatus(ctx context.Context, req customctrl.Custo
 // DeleteAll delete crd handler
 func (r *AppSetReconciler) DeleteAll(ctx context.Context, req customctrl.CustomRequest, app *workloadv1beta1.AppSet) error {
 	// loop cluster delete advdeployment
-	for _, cluster := range r.DksMgr.K8sMgr.GetAll() {
-		cluster, err := r.DksMgr.K8sMgr.Get(cluster.GetName())
+	for _, cluster := range r.DksMgr.ClustersMgr.GetAll() {
+		cluster, err := r.DksMgr.ClustersMgr.Get(cluster.GetName())
 		if err != nil {
 			return err
 		}
@@ -202,7 +202,7 @@ func (r *AppSetReconciler) DeleteUnuseAdvDeployment(ctx context.Context, req cus
 	}
 
 	currentInfo := map[string]*workloadv1beta1.AdvDeployment{}
-	for _, cluster := range r.DksMgr.K8sMgr.GetAll() {
+	for _, cluster := range r.DksMgr.ClustersMgr.GetAll() {
 		b := &workloadv1beta1.AdvDeployment{}
 		err := cluster.Client.Get(ctx, req.NamespacedName, b)
 		if err == nil {
@@ -240,7 +240,7 @@ func (r *AppSetReconciler) DeleteUnuseAdvDeployment(ctx context.Context, req cus
 	}
 	klog.V(4).Infof("name: %s delete unexpect info cluster: %s", req.NamespacedName.String(), delCluster)
 
-	client, err := r.DksMgr.K8sMgr.Get(delCluster)
+	client, err := r.DksMgr.ClustersMgr.Get(delCluster)
 	if err != nil {
 		klog.Errorf("name: %s delete unexpect info, get cluster: %s client err: %+v", req.NamespacedName.String(), delCluster, err)
 		return false, err
@@ -317,7 +317,7 @@ func (r *AppSetReconciler) ApplySpec(ctx context.Context, req customctrl.CustomR
 	var changed int
 
 	for _, v := range app.Spec.ClusterTopology.Clusters {
-		c, err := r.DksMgr.K8sMgr.Get(v.Name)
+		c, err := r.DksMgr.ClustersMgr.Get(v.Name)
 		if err != nil {
 			return 0, errors.Wrapf(err, "cluster: %s is offline", v.Name)
 		}

@@ -174,7 +174,7 @@ func (r *Reconciler) EnsureClusters(namespace string, clusterName string) (*k8sm
 	}
 
 	// find global manager cluster
-	k, err := r.DksMgr.K8sMgr.Get(clusterName)
+	k, err := r.DksMgr.ClustersMgr.Get(clusterName)
 	if err == nil && k != nil {
 		return k, nil
 	}

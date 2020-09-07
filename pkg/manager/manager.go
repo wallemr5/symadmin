@@ -61,7 +61,7 @@ type DksManager struct {
 
 	Router        *router.Router
 	HealthHandler healthcheck.Handler
-	K8sMgr        *k8smanager.ClusterManager
+	ClustersMgr   *k8smanager.ClusterManager
 }
 
 func DefaultManagerOption() *ManagerOption {
@@ -89,7 +89,8 @@ func DefaultManagerOption() *ManagerOption {
 	}
 }
 
-func NewDksManager(cli k8smanager.MasterClient, opt *ManagerOption, componentName string) (*DksManager, error) {
+// NewDksManager is used for managing a couple of components of dks.
+func NewDksManager(masterCli k8smanager.MasterClient, opt *ManagerOption, componentName string) (*DksManager, error) {
 	routerOptions := &router.Options{
 		GinLogEnabled:    opt.GinLogEnabled,
 		MetricsEnabled:   true,
@@ -118,22 +119,22 @@ func NewDksManager(cli k8smanager.MasterClient, opt *ManagerOption, componentNam
 		HealthHandler: healthHandler,
 	}
 	if opt.MasterEnabled || opt.ClusterEnabled || opt.OfflinePodEnabled {
-		klog.Info("start init multi cluster manager ... ")
-		kMgr, err := k8smanager.NewManager(cli, k8smanager.DefaultClusterManagerOption(false, labels.GetClusterLs()))
+		klog.Info("start to initialize these multi managers of every cluster ... ")
+		clustersMgr, err := k8smanager.NewClusterManager(masterCli, k8smanager.DefaultClusterManagerOption(false, labels.GetClusterLs()))
 		if err != nil {
-			klog.Fatalf("unable to new k8s manager err: %v", err)
+			klog.Fatalf("unable to create a new clusters manager, err: %v", err)
 		}
 
-		dksMgr.K8sMgr = kMgr
-		dksMgr.K8sMgr.AddPreInit(func() {
+		dksMgr.ClustersMgr = clustersMgr
+		dksMgr.ClustersMgr.AddPreInit(func() {
 			klog.Infof("preInit manager cluster informer ... ")
-			for _, c := range dksMgr.K8sMgr.GetAll() {
+			for _, c := range dksMgr.ClustersMgr.GetAll() {
 				advDeployInformer, _ := c.Cache.GetInformer(context.TODO(), &workloadv1beta1.AdvDeployment{})
 				dksMgr.HealthHandler.AddReadinessCheck(fmt.Sprintf("%s_%s", c.Name, "advDeploy_cache_sync"), func() error {
 					if advDeployInformer.HasSynced() {
 						return nil
 					}
-					return fmt.Errorf("cluster:%s AdvDeployment cache not sync", c.Name)
+					return fmt.Errorf("cluster:%s AdvDeployment cache hasn't be synchronized", c.Name)
 				})
 			}
 		})

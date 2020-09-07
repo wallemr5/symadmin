@@ -41,6 +41,7 @@ func DefaultRootOption() *RootOption {
 	}
 }
 
+// The client for managing kubeconfigs
 type DksCli struct {
 	RootCmd *cobra.Command
 	Opt     *RootOption

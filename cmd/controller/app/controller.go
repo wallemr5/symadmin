@@ -35,7 +35,7 @@ var (
 	logger = logf.Log.WithName("controller")
 )
 
-func NewControllerCmd(cli *DksCli) *cobra.Command {
+func NewControllerCmd(dksCli *DksCli) *cobra.Command {
 	opt := manager.DefaultManagerOption()
 	cmd := &cobra.Command{
 		Use:     "controller",
@@ -44,12 +44,13 @@ func NewControllerCmd(cli *DksCli) *cobra.Command {
 		Run: func(cmd *cobra.Command, args []string) {
 			PrintFlags(cmd.Flags())
 
-			cfg, err := cli.GetK8sConfig()
+			cfg, err := dksCli.GetK8sConfig()
 			if err != nil {
-				klog.Fatalf("unable to get kubeconfig err: %+v", err)
+				klog.Fatalf("unable to get kubeconfig, err: %+v", err)
 			}
 
-			mgr, err := ctrlmanager.New(cfg, ctrlmanager.Options{
+			// Create a manager for managing all the controllers
+			ctrlMgr, err := ctrlmanager.New(cfg, ctrlmanager.Options{
 				Scheme:                  k8sclient.GetScheme(),
 				MetricsBindAddress:      "0",
 				HealthProbeBindAddress:  "0",
@@ -60,18 +61,17 @@ func NewControllerCmd(cli *DksCli) *cobra.Command {
 				SyncPeriod: &opt.ResyncPeriod,
 			})
 			if err != nil {
-				klog.Fatalf("unable to new manager err: %v", err)
+				klog.Fatalf("unable to create a controllers manager, err: %v", err)
 			}
 
-			stopCh := signals.SetupSignalHandler()
-			k8sCli := k8smanager.MasterClient{
-				KubeCli: cli.GetKubeInterfaceOrDie(),
-				Manager: mgr,
+			masterCli := k8smanager.MasterClient{
+				KubeCli: dksCli.GetKubeInterfaceOrDie(), // get the kubernetes client
+				Manager: ctrlMgr,
 			}
 
-			dksMgr, err := manager.NewDksManager(k8sCli, opt, "controller")
+			dksMgr, err := manager.NewDksManager(masterCli, opt, "controller")
 			if err != nil {
-				klog.Fatalf("unable to NewDksManager err: %v", err)
+				klog.Fatalf("unable to create a dks manager, err: %v", err)
 			}
 
 			components := &utils.Components{}
@@ -79,23 +79,24 @@ func NewControllerCmd(cli *DksCli) *cobra.Command {
 			// add http server Runnable to components
 			components.Add(dksMgr.Router)
 
-			if dksMgr.K8sMgr != nil {
+			if dksMgr.ClustersMgr != nil {
 				// add k8s cluster manager Runnable to components
-				components.Add(dksMgr.K8sMgr)
+				components.Add(dksMgr.ClustersMgr)
 			}
 
 			// Setup all Controllers
 			klog.Info("Setting up controller")
-			if err := controllers.AddToManager(mgr, dksMgr); err != nil {
-				klog.Fatalf("unable to register controllers to the manager err: %v", err)
+			if err := controllers.AddToManager(ctrlMgr, dksMgr); err != nil {
+				klog.Fatalf("unable to register controllers to the controller manager, err: %v", err)
 			}
 
+			stopCh := signals.SetupSignalHandler()
 			klog.Infof("start custom components")
 			go components.Start(stopCh)
 
 			logger.Info("zap debug", "ResyncPeriod", opt.ResyncPeriod)
 			klog.Info("starting manager")
-			if err := mgr.Start(stopCh); err != nil {
+			if err := ctrlMgr.Start(stopCh); err != nil {
 				klog.Fatalf("problem start running manager err: %v", err)
 			}
 		},

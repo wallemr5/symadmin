@@ -116,7 +116,7 @@ func NewAppSetController(mgr manager.Manager, cMgr *pkgmanager.DksManager) (*App
 	c.CustomImpl = customImpl
 	c.Client = mgr.GetClient()
 
-	for _, cluster := range cMgr.K8sMgr.GetAll() {
+	for _, cluster := range cMgr.ClustersMgr.GetAll() {
 		err := c.registryResource(cluster)
 		if err != nil {
 			return nil, nil
@@ -179,12 +179,12 @@ func (r *AppSetReconciler) registryResource(cluster *k8smanager.Cluster) error {
 func (r *AppSetReconciler) ClusterChange() {
 	for {
 		select {
-		case list, ok := <-r.DksMgr.K8sMgr.ClusterAddInfo:
+		case list, ok := <-r.DksMgr.ClustersMgr.ClusterAddInfo:
 			if !ok {
 				return
 			}
 			for name := range list {
-				cluster, err := r.DksMgr.K8sMgr.Get(name)
+				cluster, err := r.DksMgr.ClustersMgr.Get(name)
 				if err != nil {
 					klog.Errorf("get cluster[%s] faile: %+v", cluster.Name, err)
 					break

@@ -86,8 +86,8 @@ func convertToKubeconfig(cm *corev1.ConfigMap) (string, bool) {
 	return kubeconfig, true
 }
 
-// NewManager ...
-func NewManager(cli MasterClient, opt *ClusterManagerOption) (*ClusterManager, error) {
+// NewClusterManager ...
+func NewClusterManager(cli MasterClient, opt *ClusterManagerOption) (*ClusterManager, error) {
 	cMgr := &ClusterManager{
 		MasterClient:   cli,
 		clusters:       make([]*Cluster, 0, 4),
@@ -116,7 +116,7 @@ func (m *ClusterManager) AddPreInit(preInit func()) {
 }
 
 // getClusterConfigmap ...
-func (m *ClusterManager) getClusterConfigmap() ([]*corev1.ConfigMap, error) {
+func (m *ClusterManager) getClusterConfigmaps() ([]*corev1.ConfigMap, error) {
 	cms := make([]*corev1.ConfigMap, 0, 4)
 	if m.Started {
 		configmaps := &corev1.ConfigMapList{}
@@ -276,11 +276,12 @@ func (m *ClusterManager) Get(name string) (*Cluster, error) {
 	return findCluster, nil
 }
 
+// preStart initializing every cluster via reading clusters configurations from configmap
 func (m *ClusterManager) preStart() error {
 	ctx, cancel := context.WithTimeout(context.Background(), time.Minute)
 	defer cancel()
 
-	configmaps, err := m.getClusterConfigmap()
+	configmaps, err := m.getClusterConfigmaps()
 	if err != nil {
 		klog.Errorf("unable to get cluster configmap err: %v", err)
 		return err
@@ -371,7 +372,7 @@ func (m *ClusterManager) preStart() error {
 
 func (m *ClusterManager) cluterCheck() {
 	klog.V(5).Info("cluster configmap check.")
-	configmaps, err := m.getClusterConfigmap()
+	configmaps, err := m.getClusterConfigmaps()
 	if err != nil {
 		klog.Errorf("unable to get cluster configmap err: %v", err)
 		return

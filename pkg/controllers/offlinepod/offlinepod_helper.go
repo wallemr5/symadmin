@@ -64,7 +64,7 @@ func NewOfflinepodReconciler(mgr manager.Manager, cMgr *pkgmanager.DksManager) (
 		MaxOffline: 10,
 	}
 
-	for _, cluster := range cMgr.K8sMgr.GetAll() {
+	for _, cluster := range cMgr.ClustersMgr.GetAll() {
 		podInformer, err := cluster.Cache.GetInformer(context.TODO(), &corev1.Pod{})
 		if err != nil {
 			klog.Errorf("cluster name:%s can't add pod InformerEntry, err: %v", cluster.Name, err)
