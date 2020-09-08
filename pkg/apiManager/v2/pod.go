@@ -219,6 +219,10 @@ func (m *Manager) getPodListByAppName(clusterName, namespace, appName, group, zo
 			Labels:       pod.GetLabels(),
 		}
 
+		if phase == Terminating {
+			apiPod.Phase = corev1.PodPhase(Terminating)
+		}
+
 		if pod.Status.StartTime != nil {
 			apiPod.StartTime = utils.FormatTime(pod.Status.StartTime.String())
 		}
