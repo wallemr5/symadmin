@@ -41,7 +41,7 @@ func (m *Manager) TailFile(c *gin.Context) {
 		return
 	}
 
-	cluster, err := m.K8sMgr.Get(clusterName)
+	cluster, err := m.ClustersMgr.Get(clusterName)
 	if err != nil {
 		klog.Errorf("get cluster error: %+v", err)
 		c.IndentedJSON(http.StatusBadRequest, gin.H{
@@ -102,7 +102,7 @@ func (m *Manager) ListFiles(c *gin.Context) {
 		})
 		return
 	}
-	cluster, err := m.K8sMgr.Get(clusterCode)
+	cluster, err := m.ClustersMgr.Get(clusterCode)
 	if err != nil {
 		klog.Errorf("get cluster error: %+v", err)
 		c.IndentedJSON(http.StatusBadRequest, gin.H{

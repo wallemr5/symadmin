@@ -7,7 +7,7 @@ import (
 	"net/http"
 
 	"github.com/gin-gonic/gin"
-	"gitlab.dmall.com/arch/sym-admin/pkg/apiManager/model"
+	"gitlab.dmall.com/arch/sym-admin/pkg/apimanager/model"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/types"
@@ -32,7 +32,7 @@ func (m *Manager) GetAllOfflineApp(c *gin.Context) {
 	ctx := context.Background()
 
 	cmlist := &corev1.ConfigMapList{}
-	client := m.K8sMgr.MasterClient.GetClient()
+	client := m.ClustersMgr.MasterClient.GetClient()
 	err := client.List(ctx, cmlist, listOptions)
 
 	if err != nil {
@@ -61,7 +61,7 @@ func (m *Manager) GetOfflinePods(c *gin.Context) {
 	namespace := c.Param("namespace")
 	cmname := c.Param("appname")
 	apps := []*model.OfflinePod{}
-	client := m.K8sMgr.MasterClient.GetClient()
+	client := m.ClustersMgr.MasterClient.GetClient()
 	ctx := context.Background()
 	cm := &corev1.ConfigMap{}
 

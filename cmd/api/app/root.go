@@ -47,7 +47,7 @@ func runHelp(cmd *cobra.Command, args []string) {
 func GetRootCmd(args []string) *cobra.Command {
 	opt := DefaultRootOption()
 	rootCmd := &cobra.Command{
-		Use:               "sym-api",
+		Use:               "api",
 		Short:             "Request a new project",
 		SilenceUsage:      true,
 		DisableAutoGenTag: true,

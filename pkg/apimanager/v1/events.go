@@ -6,7 +6,7 @@ import (
 	"net/http"
 
 	"github.com/gin-gonic/gin"
-	"gitlab.dmall.com/arch/sym-admin/pkg/apiManager/model"
+	"gitlab.dmall.com/arch/sym-admin/pkg/apimanager/model"
 	workloadv1beta1 "gitlab.dmall.com/arch/sym-admin/pkg/apis/workload/v1beta1"
 	"gitlab.dmall.com/arch/sym-admin/pkg/utils"
 	corev1 "k8s.io/api/core/v1"
@@ -33,7 +33,7 @@ func (m *Manager) GetWarningEvents(c *gin.Context) {
 		return
 	}
 
-	clusters := m.K8sMgr.GetAll(clusterName)
+	clusters := m.ClustersMgr.GetAll(clusterName)
 	advList := []*workloadv1beta1.AdvDeployment{}
 	for _, cluster := range clusters {
 		adv := &workloadv1beta1.AdvDeployment{}

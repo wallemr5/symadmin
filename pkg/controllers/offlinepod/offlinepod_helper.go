@@ -6,7 +6,7 @@ import (
 	"time"
 
 	"github.com/go-logr/logr"
-	"gitlab.dmall.com/arch/sym-admin/pkg/apiManager/model"
+	"gitlab.dmall.com/arch/sym-admin/pkg/apimanager/model"
 	"gitlab.dmall.com/arch/sym-admin/pkg/labels"
 	pkgmanager "gitlab.dmall.com/arch/sym-admin/pkg/manager"
 	corev1 "k8s.io/api/core/v1"

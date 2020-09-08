@@ -124,7 +124,7 @@ echo "Container will exit"
 		},
 	}
 
-	for _, cluster := range m.K8sMgr.GetAll() {
+	for _, cluster := range m.ClustersMgr.GetAll() {
 		_, err := resources.Reconcile(context.TODO(), cluster.Client, ds, resources.Option{IsRecreate: true})
 		if err != nil {
 			klog.Errorf("cluster: %s  apply err: %v", cluster.Name, err)

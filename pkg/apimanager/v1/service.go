@@ -7,7 +7,7 @@ import (
 
 	"github.com/ghodss/yaml"
 	"github.com/gin-gonic/gin"
-	"gitlab.dmall.com/arch/sym-admin/pkg/apiManager/model"
+	"gitlab.dmall.com/arch/sym-admin/pkg/apimanager/model"
 	k8smanager "gitlab.dmall.com/arch/sym-admin/pkg/k8s/manager"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
@@ -22,7 +22,7 @@ func (m *Manager) GetServices(c *gin.Context) {
 	appName := c.Param("appName")
 	clusterName := c.Param("name")
 	namespace := c.Param("namespace")
-	clusters := m.K8sMgr.GetAll(clusterName)
+	clusters := m.ClustersMgr.GetAll(clusterName)
 
 	result, err := getService(clusters, namespace, appName)
 	if err != nil {
@@ -45,7 +45,7 @@ func (m *Manager) GetServiceInfo(c *gin.Context) {
 	serviceName := c.Param("svcName")
 	outFormat := c.DefaultQuery("format", "yaml")
 
-	cluster, err := m.K8sMgr.Get(clusterName)
+	cluster, err := m.ClustersMgr.Get(clusterName)
 	if err != nil {
 		klog.Errorf("get cluster error: %v", err)
 		AbortHTTPError(c, GetClusterError, "", err)

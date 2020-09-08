@@ -6,7 +6,7 @@ import (
 	"os"
 	"time"
 
-	"gitlab.dmall.com/arch/sym-admin/cmd/sym-api/app"
+	"gitlab.dmall.com/arch/sym-admin/cmd/api/app"
 )
 
 func main() {

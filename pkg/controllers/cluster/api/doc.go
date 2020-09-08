@@ -1,2 +1,2 @@
-// Package api is sym-api operator
+// Package api is api operator
 package api

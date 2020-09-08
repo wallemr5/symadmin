@@ -8,7 +8,7 @@ import (
 	"time"
 
 	"github.com/gin-gonic/gin"
-	"gitlab.dmall.com/arch/sym-admin/pkg/apiManager/model"
+	"gitlab.dmall.com/arch/sym-admin/pkg/apimanager/model"
 	"gitlab.dmall.com/arch/sym-admin/pkg/utils"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
@@ -60,7 +60,7 @@ func (m *Manager) GetPodEvent(c *gin.Context) {
 	podName := c.Param("podName")
 	namespace := c.Param("namespace")
 	limit, _ := strconv.ParseInt(c.DefaultQuery("limit", "10"), 10, 64)
-	clusters := m.K8sMgr.GetAll(clusterName)
+	clusters := m.ClustersMgr.GetAll(clusterName)
 
 	result := []*model.Event{}
 	for _, cluster := range clusters {
@@ -125,7 +125,7 @@ func (m *Manager) GetPodByIP(c *gin.Context) {
 	ctx := context.Background()
 	list := &corev1.PodList{}
 
-	clusters := m.K8sMgr.GetAll(clusterName)
+	clusters := m.ClustersMgr.GetAll(clusterName)
 	for _, cluster := range clusters {
 		err := cluster.Client.List(ctx, list, &client.ListOptions{
 			FieldSelector: fields.SelectorFromSet(fields.Set{"status.podIP": podIP})},
@@ -162,7 +162,7 @@ func (m *Manager) DeletePodByName(c *gin.Context) {
 	podName := c.Param("podName")
 	namespace := c.Param("namespace")
 
-	cluster, err := m.K8sMgr.Get(clusterName)
+	cluster, err := m.ClustersMgr.Get(clusterName)
 	if err != nil {
 		klog.Errorf("get cluster error: %v", err)
 		AbortHTTPError(c, GetClusterError, "", err)
@@ -198,7 +198,7 @@ func (m *Manager) GetPodByName(c *gin.Context) {
 	podName := c.Param("podName")
 	namespace := c.Param("namespace")
 
-	cluster, err := m.K8sMgr.Get(clusterName)
+	cluster, err := m.ClustersMgr.Get(clusterName)
 	if err != nil {
 		klog.Errorf("get cluster error: %v", err)
 		AbortHTTPError(c, GetClusterError, "", err)
@@ -252,7 +252,7 @@ func (m *Manager) DeletePodByGroup(c *gin.Context) {
 		return
 	}
 
-	clusters := m.K8sMgr.GetAll(clusterName)
+	clusters := m.ClustersMgr.GetAll(clusterName)
 	ctx := context.Background()
 	options := labels.Set{}
 	if group != "" {

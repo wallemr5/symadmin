@@ -10,7 +10,7 @@ import (
 	"time"
 
 	"github.com/gin-gonic/gin"
-	"gitlab.dmall.com/arch/sym-admin/pkg/apiManager/model"
+	"gitlab.dmall.com/arch/sym-admin/pkg/apimanager/model"
 	"gitlab.dmall.com/arch/sym-admin/pkg/helm/object"
 	k8sclient "gitlab.dmall.com/arch/sym-admin/pkg/k8s/client"
 	"gitlab.dmall.com/arch/sym-admin/pkg/resources"
@@ -27,16 +27,16 @@ import (
 const (
 	objTemp = `
 ---
-# Source: sym-api/templates/service.yaml
+# Source: api/templates/service.yaml
 apiVersion: v1
 kind: Service
 metadata:
-  name: test-sym-api
+  name: test-api
   namespace: sym-admin
   labels:
-    app.kubernetes.io/name: sym-api
-    helm.sh/chart: sym-api-1.0.17
-    app.kubernetes.io/instance: test-sym-api
+    app.kubernetes.io/name: api
+    helm.sh/chart: api-1.0.17
+    app.kubernetes.io/instance: test-api
     app.kubernetes.io/managed-by: Helm
 spec:
   type: ClusterIP
@@ -46,34 +46,34 @@ spec:
       targetPort: 8080
       protocol: TCP
   selector:
-    app.kubernetes.io/name: sym-api
-    app.kubernetes.io/instance: test-sym-api
+    app.kubernetes.io/name: api
+    app.kubernetes.io/instance: test-api
 ---
-# Source: sym-api/templates/deployment.yaml
+# Source: api/templates/deployment.yaml
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: test-sym-api
+  name: test-api
   namespace: sym-admin
   labels:
-    app.kubernetes.io/name: sym-api
-    helm.sh/chart: sym-api-1.0.17
-    app.kubernetes.io/instance: test-sym-api
+    app.kubernetes.io/name: api
+    helm.sh/chart: api-1.0.17
+    app.kubernetes.io/instance: test-api
     app.kubernetes.io/managed-by: Helm
 spec:
   replicas: 4
   selector:
     matchLabels:
-      app.kubernetes.io/name: sym-api
-      app.kubernetes.io/instance: test-sym-api
+      app.kubernetes.io/name: api
+      app.kubernetes.io/instance: test-api
   template:
     metadata:
       labels:
-        app.kubernetes.io/name: sym-api
-        app.kubernetes.io/instance: test-sym-api
+        app.kubernetes.io/name: api
+        app.kubernetes.io/instance: test-api
     spec:
       containers:
-        - name: sym-api
+        - name: api
           image: "symcn.tencentcloudcr.com/symcn/sym-admin-api:v1.0.10"
           imagePullPolicy: IfNotPresent
           args:
@@ -105,7 +105,7 @@ spec:
               memory: 256Mi
       imagePullSecrets:
         - name: tencenthubkey
-      serviceAccountName: sym-api
+      serviceAccountName: api
       affinity:
         podAntiAffinity:
           preferredDuringSchedulingIgnoredDuringExecution:
@@ -115,7 +115,7 @@ spec:
                 - key: app.kubernetes.io/name
                   operator: In
                   values:
-                  - sym-api
+                  - api
               topologyKey: kubernetes.io/hostname
             weight: 100
       hostAliases:
@@ -168,16 +168,16 @@ spec:
           - chartmuseum.dmall.com
           ip: 10.13.135.250
 ---
-# Source: sym-api/templates/ingress.yaml
+# Source: api/templates/ingress.yaml
 apiVersion: extensions/v1beta1
 kind: Ingress
 metadata:
-  name: test-sym-api
+  name: test-api
   namespace: sym-admin
   labels:
-    app.kubernetes.io/name: sym-api
-    helm.sh/chart: sym-api-1.0.17
-    app.kubernetes.io/instance: test-sym-api
+    app.kubernetes.io/name: api
+    helm.sh/chart: api-1.0.17
+    app.kubernetes.io/instance: test-api
     app.kubernetes.io/managed-by: Helm
   annotations:
     kubernetes.io/ingress.class: traefik
@@ -188,7 +188,7 @@ spec:
         paths:
           - path: /
             backend:
-              serviceName: test-sym-api
+              serviceName: test-api
               servicePort: http
 `
 )
@@ -310,7 +310,7 @@ func (m *Manager) LintLocalTemplate(c *gin.Context) {
 		return
 	}
 
-	manifest, message, isSuccess := lintK8sObj(m.K8sMgr.MasterClient.GetClient(), objs)
+	manifest, message, isSuccess := lintK8sObj(m.ClustersMgr.MasterClient.GetClient(), objs)
 	// c.String(http.StatusOK, manifest)
 	c.IndentedJSON(http.StatusOK, gin.H{
 		"success":  isSuccess,
@@ -354,7 +354,7 @@ func (m *Manager) LintHelmTemplate(c *gin.Context) {
 		return
 	}
 
-	manifest, message, isSuccess := lintK8sObj(m.K8sMgr.MasterClient.GetClient(), objs)
+	manifest, message, isSuccess := lintK8sObj(m.ClustersMgr.MasterClient.GetClient(), objs)
 	c.IndentedJSON(http.StatusOK, gin.H{
 		"success":  isSuccess,
 		"message":  message,

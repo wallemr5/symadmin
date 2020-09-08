@@ -216,7 +216,7 @@ appName: query string, the unique app name. <br/>
 
 <br/>
 e.g. <br/>
-<a href=""></a>/api/pod/logfiles?name=aa&podName=bbcc&container=sym-api&projectCode=bbcc<br/>
+<a href=""></a>/api/pod/logfiles?name=aa&podName=bbcc&container=api&projectCode=bbcc<br/>
 `
 
 // HandleLogsDesc ...

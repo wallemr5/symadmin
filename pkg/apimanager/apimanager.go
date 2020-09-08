@@ -1,12 +1,12 @@
-package apiManager
+package apimanager
 
 import (
 	"context"
 	"fmt"
 	"time"
 
-	apiv1 "gitlab.dmall.com/arch/sym-admin/pkg/apiManager/v1"
-	apiv2 "gitlab.dmall.com/arch/sym-admin/pkg/apiManager/v2"
+	apiv1 "gitlab.dmall.com/arch/sym-admin/pkg/apimanager/v1"
+	apiv2 "gitlab.dmall.com/arch/sym-admin/pkg/apimanager/v2"
 	workloadv1beta1 "gitlab.dmall.com/arch/sym-admin/pkg/apis/workload/v1beta1"
 	"gitlab.dmall.com/arch/sym-admin/pkg/healthcheck"
 	k8smanager "gitlab.dmall.com/arch/sym-admin/pkg/k8s/manager"
@@ -20,10 +20,10 @@ import (
 // APIManager ...
 type APIManager struct {
 	Opt           *Option
-	Cluster       k8smanager.CustomeCluster
+	Cluster       k8smanager.CustomizedCluster
 	Router        *router.Router
 	HealthHandler healthcheck.Handler
-	K8sMgr        *k8smanager.ClusterManager
+	ClustersMgr   *k8smanager.ClusterManager
 }
 
 // Option ...
@@ -34,7 +34,7 @@ type Option struct {
 	ResyncPeriod       time.Duration
 	Features           []string
 
-	// use expose /metrics, /read, /live, /pprof, /api.
+	// exposing the api such as /metrics, /read, /live, /pprof, /api.
 	HTTPAddr       string
 	GinLogEnabled  bool
 	GinLogSkipPath []string
@@ -54,7 +54,7 @@ func DefaultOption() *Option {
 }
 
 // NewAPIManager ...
-func NewAPIManager(cli k8smanager.MasterClient, opt *Option, componentName string) (*APIManager, error) {
+func NewAPIManager(masterCli k8smanager.MasterClient, opt *Option, componentName string) (*APIManager, error) {
 	healthHandler := healthcheck.GetHealthHandler()
 	healthHandler.AddLivenessCheck("goroutine_threshold",
 		healthcheck.GoroutineCountCheck(opt.GoroutineThreshold))
@@ -67,10 +67,10 @@ func NewAPIManager(cli k8smanager.MasterClient, opt *Option, componentName strin
 	v1 := apiv1.Manager{}
 	v2 := apiv2.Manager{}
 
-	klog.Info("start init multi cluster manager ... ")
-	k8sMgr, err := k8smanager.NewClusterManager(cli, k8smanager.DefaultClusterManagerOption(true, labels.GetClusterLs()))
+	klog.Info("start to initialize multiple clusters' manager ... ")
+	clustersMgr, err := k8smanager.NewClusterManager(masterCli, k8smanager.DefaultClusterManagerOption(true, labels.GetClusterLs()))
 	if err != nil {
-		klog.Fatalf("unable to new k8s manager err: %v", err)
+		klog.Fatalf("unable to create a clusters' manager, err: %v", err)
 	}
 
 	routerOptions := &router.Options{
@@ -88,20 +88,20 @@ func NewAPIManager(cli k8smanager.MasterClient, opt *Option, componentName strin
 	rt.AddRoutes("cluster", v1.Routes())
 	rt.AddRoutes("cluster", v2.Routes())
 	apiMgr.Router = rt
-	apiMgr.K8sMgr = k8sMgr
-	v1.K8sMgr = k8sMgr
-	v2.K8sMgr = k8sMgr
-	apiMgr.K8sMgr.AddPreInit(func() {
-		klog.Infof("preInit manager cluster informer ... ")
-		for _, c := range apiMgr.K8sMgr.GetAll() {
+	apiMgr.ClustersMgr = clustersMgr
+	v1.ClustersMgr = clustersMgr
+	v2.ClustersMgr = clustersMgr
+	apiMgr.ClustersMgr.AddPreInit(func() {
+		klog.Infof("Initializing an informer for a cluster in advanced ... ")
+		for _, c := range apiMgr.ClustersMgr.GetAll() {
 			apiMgr.registryResource(c)
 		}
 	})
 
 	if opt.IsMeta {
-		apiMgr.Cluster = k8sMgr
-		v1.Cluster = k8sMgr
-		v2.Cluster = k8sMgr
+		apiMgr.Cluster = clustersMgr
+		v1.Cluster = clustersMgr
+		v2.Cluster = clustersMgr
 	} else {
 		// apiMgr.Cluster = cli
 	}
@@ -169,11 +169,11 @@ func (m *APIManager) registryResource(cluster *k8smanager.Cluster) error {
 
 // ClusterChange ...
 func (m *APIManager) ClusterChange() {
-	for list := range m.K8sMgr.ClusterAddInfo {
+	for list := range m.ClustersMgr.ClusterAddInfo {
 		for name := range list {
-			cluster, err := m.K8sMgr.Get(name)
+			cluster, err := m.ClustersMgr.Get(name)
 			if err != nil {
-				klog.Errorf("get cluster[%s] faile: %+v", cluster.Name, err)
+				klog.Errorf("getting the cluster by name :[%s] failed: %+v", cluster.Name, err)
 				break
 			}
 			m.registryResource(cluster)

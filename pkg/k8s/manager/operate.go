@@ -30,14 +30,15 @@ type BaseCluster interface {
 	DeletePod(opts types.NamespacedName, clusterNames ...string) error
 }
 
-// CustomeCluster extend the methods of the basic cluster, including some special business methods.
-type CustomeCluster interface {
+// CustomizedCluster as the extension of the basic cluster,
+// it includes the extra methods for handling your own business.
+type CustomizedCluster interface {
 	BaseCluster
 	GetHelmRelease(opts map[string]string, clusterNames ...string) ([]*helmv3.Release, error)
 }
 
-// GetOriginKubeCli returns the kubecli of the master cluster client if len(clusterNames) == 0, otherwise
-// returns the specific kubecli.
+// GetOriginKubeCli return the client of the master cluster as default if len(clusterNames) == 0,
+// otherwise it will return a client with the special name.
 func (m *ClusterManager) GetOriginKubeCli(clusterNames ...string) (kubernetes.Interface, error) {
 	if len(clusterNames) > 0 {
 		if len(clusterNames) > 1 {

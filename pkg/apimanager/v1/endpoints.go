@@ -7,7 +7,7 @@ import (
 	"strconv"
 
 	"github.com/gin-gonic/gin"
-	"gitlab.dmall.com/arch/sym-admin/pkg/apiManager/model"
+	"gitlab.dmall.com/arch/sym-admin/pkg/apimanager/model"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/labels"
@@ -19,7 +19,7 @@ import (
 func (m *Manager) GetEndpoints(c *gin.Context) {
 	clusterName := c.Param("name")
 	appName := c.Param("appName")
-	clusters := m.K8sMgr.GetAll(clusterName)
+	clusters := m.ClustersMgr.GetAll(clusterName)
 
 	ctx := context.Background()
 	eps := make([]*model.Endpoint, 0, 4)

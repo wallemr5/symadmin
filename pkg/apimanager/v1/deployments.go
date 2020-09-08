@@ -7,7 +7,7 @@ import (
 
 	"github.com/ghodss/yaml"
 	"github.com/gin-gonic/gin"
-	"gitlab.dmall.com/arch/sym-admin/pkg/apiManager/model"
+	"gitlab.dmall.com/arch/sym-admin/pkg/apimanager/model"
 	appv1 "k8s.io/api/apps/v1"
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/types"
@@ -66,7 +66,7 @@ func (m *Manager) GetDeploymentInfo(c *gin.Context) {
 	deployName := c.Param("deployName")
 	outFormat := c.DefaultQuery("format", "yaml")
 
-	cluster, err := m.K8sMgr.Get(clusterName)
+	cluster, err := m.ClustersMgr.Get(clusterName)
 	if err != nil {
 		klog.Errorf("get cluster error: %v", err)
 		AbortHTTPError(c, GetClusterError, "", err)

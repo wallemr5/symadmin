@@ -5,7 +5,7 @@ import (
 
 	"sync"
 
-	"gitlab.dmall.com/arch/sym-admin/pkg/apiManager/model"
+	"gitlab.dmall.com/arch/sym-admin/pkg/apimanager/model"
 	"k8s.io/klog"
 )
 

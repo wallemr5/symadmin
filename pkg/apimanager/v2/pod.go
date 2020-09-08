@@ -7,7 +7,7 @@ import (
 	"sort"
 
 	"github.com/gin-gonic/gin"
-	"gitlab.dmall.com/arch/sym-admin/pkg/apiManager/model"
+	"gitlab.dmall.com/arch/sym-admin/pkg/apimanager/model"
 	"gitlab.dmall.com/arch/sym-admin/pkg/utils"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/fields"
@@ -272,7 +272,7 @@ func (m *Manager) DeletePodByName(c *gin.Context) {
 	podName := c.Param("podName")
 	namespace := c.Param("namespace")
 
-	cluster, err := m.K8sMgr.Get(clusterName)
+	cluster, err := m.ClustersMgr.Get(clusterName)
 	if err != nil {
 		klog.Errorf("get cluster error: %v", err)
 		c.IndentedJSON(http.StatusBadRequest, gin.H{

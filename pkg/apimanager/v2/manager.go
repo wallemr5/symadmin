@@ -6,6 +6,6 @@ import (
 
 // Manager ...
 type Manager struct {
-	Cluster k8smanager.CustomeCluster
-	K8sMgr  *k8smanager.ClusterManager
+	Cluster     k8smanager.CustomizedCluster
+	ClustersMgr *k8smanager.ClusterManager
 }

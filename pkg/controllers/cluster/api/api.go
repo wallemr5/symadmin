@@ -23,7 +23,7 @@ type reconciler struct {
 // New ...
 func New(k *k8smanager.Cluster, obj *workloadv1beta1.Cluster, env *helmv3.HelmEnv) common.ComponentReconciler {
 	return &reconciler{
-		name: "sym-api",
+		name: "api",
 		k:    k,
 		obj:  obj,
 		env:  env,

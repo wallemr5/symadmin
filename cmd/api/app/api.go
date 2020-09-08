@@ -20,7 +20,7 @@ import (
 	"time"
 
 	"github.com/spf13/cobra"
-	"gitlab.dmall.com/arch/sym-admin/pkg/apiManager"
+	"gitlab.dmall.com/arch/sym-admin/pkg/apimanager"
 	k8sclient "gitlab.dmall.com/arch/sym-admin/pkg/k8s/client"
 	"k8s.io/klog"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
@@ -36,21 +36,21 @@ var (
 
 // NewAPICmd ...
 func NewAPICmd(cli *DksCli) *cobra.Command {
-	opt := apiManager.DefaultOption()
+	opt := apimanager.DefaultOption()
 	cmd := &cobra.Command{
 		Use:     "api",
 		Aliases: []string{"api"},
-		Short:   "Manage sym api server",
+		Short:   "The api server with supporting to interact with multiple clusters",
 		Run: func(cmd *cobra.Command, args []string) {
 			PrintFlags(cmd.Flags())
 
 			cfg, err := cli.GetK8sConfig()
 			if err != nil {
-				klog.Fatalf("unable to get kubeconfig err: %v", err)
+				klog.Fatalf("unable to get kubeconfig, err: %v", err)
 			}
 
 			rp := time.Second * 120
-			mgr, err := ctrlmanager.New(cfg, ctrlmanager.Options{
+			ctrlMgr, err := ctrlmanager.New(cfg, ctrlmanager.Options{
 				Scheme:                 k8sclient.GetScheme(),
 				MetricsBindAddress:     "0",
 				HealthProbeBindAddress: "0",
@@ -59,30 +59,29 @@ func NewAPICmd(cli *DksCli) *cobra.Command {
 				SyncPeriod: &rp,
 			})
 			if err != nil {
-				klog.Fatalf("unable to new manager err: %v", err)
+				klog.Fatalf("unable to create a controllers manager, err: %v", err)
 			}
 
-			stopCh := signals.SetupSignalHandler()
-
-			k8sCli := k8smanager.MasterClient{
+			masterCli := k8smanager.MasterClient{
 				KubeCli: cli.GetKubeInterfaceOrDie(),
-				Manager: mgr,
+				Manager: ctrlMgr,
 			}
-			apiMgr, err := apiManager.NewAPIManager(k8sCli, opt, "controller")
+			apiMgr, err := apimanager.NewAPIManager(masterCli, opt, "controller")
 			if err != nil {
-				klog.Fatalf("unable to NewDksManager err: %v", err)
+				klog.Fatalf("unable to create the api manager, err: %v", err)
 			}
 
 			// add http server Runnable
-			mgr.Add(apiMgr.Router)
+			ctrlMgr.Add(apiMgr.Router)
 
 			// add k8s cluster manager Runnable
-			mgr.Add(apiMgr.K8sMgr)
+			ctrlMgr.Add(apiMgr.ClustersMgr)
 
 			logger.Info("zap debug", "SyncPeriod", rp)
-			klog.Info("starting manager")
-			if err := mgr.Start(stopCh); err != nil {
-				klog.Fatalf("problem start running manager err: %v", err)
+			klog.Info("starting the controllers manager...")
+			stopCh := signals.SetupSignalHandler()
+			if err := ctrlMgr.Start(stopCh); err != nil {
+				klog.Fatalf("start running controllers manager, err: %v", err)
 			}
 		},
 	}

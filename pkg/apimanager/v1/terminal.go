@@ -86,7 +86,7 @@ func (m *Manager) GetTerminal(c *gin.Context) {
 		return
 	}
 
-	cluster, err := m.K8sMgr.Get(clusterName)
+	cluster, err := m.ClustersMgr.Get(clusterName)
 	if err != nil {
 		klog.Errorf("get cluster error: %+v", err)
 		AbortHTTPError(c, GetClusterError, "", err)
@@ -133,7 +133,7 @@ func (m *Manager) ExecOnceWithHTTP(c *gin.Context) {
 		return
 	}
 
-	cluster, err := m.K8sMgr.Get(clusterName)
+	cluster, err := m.ClustersMgr.Get(clusterName)
 	if err != nil {
 		klog.Errorf("get cluster error: %+v", err)
 		AbortHTTPError(c, GetClusterError, "", err)
@@ -164,7 +164,7 @@ func (m *Manager) GetFiles(c *gin.Context) {
 		AbortHTTPError(c, ParamInvalidError, "", errors.New("can not get container"))
 		return
 	}
-	cluster, err := m.K8sMgr.Get(clusterCode)
+	cluster, err := m.ClustersMgr.Get(clusterCode)
 	if err != nil {
 		klog.Errorf("get cluster error: %+v", err)
 		AbortHTTPError(c, GetClusterError, "", err)
@@ -364,7 +364,7 @@ func (m *Manager) GetOfflineLogTerminal(c *gin.Context) {
 
 	path := fmt.Sprintf("/web/logs/app/%s/%s", projectCode, appCode)
 
-	cluster, err := m.K8sMgr.Get(clusterName)
+	cluster, err := m.ClustersMgr.Get(clusterName)
 	if err != nil {
 		klog.Errorf("get cluster error: %+v", err)
 		AbortHTTPError(c, GetClusterError, "", err)

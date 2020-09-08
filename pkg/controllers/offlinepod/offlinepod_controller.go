@@ -6,7 +6,7 @@ import (
 	"time"
 
 	json "github.com/json-iterator/go"
-	"gitlab.dmall.com/arch/sym-admin/pkg/apiManager/model"
+	"gitlab.dmall.com/arch/sym-admin/pkg/apimanager/model"
 	workloadv1beta1 "gitlab.dmall.com/arch/sym-admin/pkg/apis/workload/v1beta1"
 	pkgmanager "gitlab.dmall.com/arch/sym-admin/pkg/manager"
 	corev1 "k8s.io/api/core/v1"

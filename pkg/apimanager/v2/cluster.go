@@ -5,13 +5,13 @@ import (
 	"sort"
 
 	"github.com/gin-gonic/gin"
-	"gitlab.dmall.com/arch/sym-admin/pkg/apiManager/model"
+	"gitlab.dmall.com/arch/sym-admin/pkg/apimanager/model"
 )
 
 // GetClusters returns all cluster's status.
 func (m *Manager) GetClusters(c *gin.Context) {
 	clusterName := c.Param("clusterCode")
-	clusters := m.K8sMgr.GetAll(clusterName)
+	clusters := m.ClustersMgr.GetAll(clusterName)
 
 	status := make([]*model.ClusterStatus, 0, 4)
 	for _, c := range clusters {

@@ -8,7 +8,7 @@ import (
 	"time"
 
 	"github.com/gin-gonic/gin"
-	"gitlab.dmall.com/arch/sym-admin/pkg/apiManager/model"
+	"gitlab.dmall.com/arch/sym-admin/pkg/apimanager/model"
 	"gitlab.dmall.com/arch/sym-admin/pkg/utils"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
@@ -24,7 +24,7 @@ func (m *Manager) GetPodEvent(c *gin.Context) {
 	namespace := c.Param("namespace")
 	podName := c.Param("podName")
 	limit, _ := strconv.ParseInt(c.DefaultQuery("limit", "10"), 10, 64)
-	clusters := m.K8sMgr.GetAll(clusterName)
+	clusters := m.ClustersMgr.GetAll(clusterName)
 
 	result := []*model.Event{}
 	for _, cluster := range clusters {

@@ -472,7 +472,7 @@ func (m *ClusterManager) Start(stopCh <-chan struct{}) error {
 	if m.PreInit != nil {
 		m.PreInit()
 	}
-	klog.Info("start cluster manager check loop ... ")
+	klog.Info("start checking process of cluster manager ... ")
 	wait.Until(m.cluterCheck, time.Minute, stopCh)
 
 	klog.Info("close manager info")
