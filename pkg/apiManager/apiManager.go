@@ -68,7 +68,7 @@ func NewAPIManager(cli k8smanager.MasterClient, opt *Option, componentName strin
 	v2 := apiv2.Manager{}
 
 	klog.Info("start init multi cluster manager ... ")
-	k8sMgr, err := k8smanager.NewManager(cli, k8smanager.DefaultClusterManagerOption(true, labels.GetClusterLs()))
+	k8sMgr, err := k8smanager.NewClusterManager(cli, k8smanager.DefaultClusterManagerOption(true, labels.GetClusterLs()))
 	if err != nil {
 		klog.Fatalf("unable to new k8s manager err: %v", err)
 	}

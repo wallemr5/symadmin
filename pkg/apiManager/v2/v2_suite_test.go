@@ -61,7 +61,7 @@ var _ = BeforeSuite(func() {
 		Manager: mgr,
 	}
 
-	k8sMgr, err := k8smanager.NewManager(
+	k8sMgr, err := k8smanager.NewClusterManager(
 		k8sCli,
 		k8smanager.DefaultClusterManagerOption(true, labels.GetClusterLs()),
 	)

@@ -150,12 +150,12 @@ func (m *Manager) GetAppGroupVersion(c *gin.Context) {
 
 // TODO phase:
 // 1. 发布中 -> Pending
-// 2. 回滚中 -> Pending / ContainerCreating
-// 3. 停止中 -> Terminating -> pod.DeletionTimestamp != nil
-// 4. 准备中 -> ContainerCreating -> pod.status.phase = Pending & container.state = Waiting ,container.state.reason = ContainerCreating
-// 5. 已在线 -> Running
-// 6. 发布失败 -> Failed
+// 2. 停止中 -> Terminating -> pod.DeletionTimestamp != nil
+// 3. 已在线 -> Running
+// 4. 发布失败 -> Failed
 func (m *Manager) getPodListByAppName(clusterName, namespace, appName, group, zone, ldcLabel, podIP, phase string) ([]*model.Pod, error) {
+	Terminating := "Terminating"
+
 	pods := make([]*model.Pod, 0, 4)
 	options := labels.Set{}
 	if group != "" {
@@ -175,7 +175,7 @@ func (m *Manager) getPodListByAppName(clusterName, namespace, appName, group, zo
 	if len(podIP) > 0 {
 		fieldMap["status.podIP"] = podIP
 	}
-	if len(phase) > 0 {
+	if len(phase) > 0 && phase != Terminating {
 		fieldMap["status.phase"] = phase
 	}
 	if len(fieldMap) > 0 {
@@ -198,6 +198,10 @@ func (m *Manager) getPodListByAppName(clusterName, namespace, appName, group, zo
 	}
 
 	for _, pod := range podList {
+		if phase == Terminating && pod.DeletionTimestamp == nil {
+			continue
+		}
+
 		apiPod := &model.Pod{
 			Id:           getPodID(pod.GetName()),
 			Name:         pod.GetName(),
