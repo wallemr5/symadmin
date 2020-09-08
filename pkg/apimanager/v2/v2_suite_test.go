@@ -67,7 +67,7 @@ var _ = BeforeSuite(func() {
 	)
 	Expect(err).NotTo(HaveOccurred())
 
-	manager = &Manager{K8sMgr: k8sMgr, Cluster: k8sMgr}
+	manager = &Manager{ClustersMgr: k8sMgr, Cluster: k8sMgr}
 }, timeout)
 
 type RootOption struct {
