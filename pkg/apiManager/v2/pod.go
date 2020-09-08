@@ -219,7 +219,7 @@ func (m *Manager) getPodListByAppName(clusterName, namespace, appName, group, zo
 			Labels:       pod.GetLabels(),
 		}
 
-		if phase == Terminating {
+		if pod.DeletionTimestamp != nil {
 			apiPod.Phase = corev1.PodPhase(Terminating)
 		}
 
