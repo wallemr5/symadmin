@@ -1,4 +1,4 @@
-VERSION ?= v1.1.0-dev16-8
+VERSION ?= v1.1.0-dev16-9
 # Image URL to use all building/pushing image targets
 IMG_REG ?= symcn.tencentcloudcr.com/symcn
 IMG_CTL := $(IMG_REG)/sym-admin-controller
@@ -39,7 +39,7 @@ manager-controller: generate fmt
 	GOOS=linux GOARCH=amd64 go build -o bin/sym-admin-controller -ldflags "-s -w -X $(ROOT)/pkg/version.Release=$(VERSION) -X $(ROOT)/pkg/version.Commit=$(COMMIT) -X $(ROOT)/pkg/version.BuildDate=$(BUILD_DATE)" cmd/controller/main.go
 
 manager-api: generate fmt
-	GOOS=linux GOARCH=amd64 go build -o bin/sym-admin-api -ldflags "-s -w -X $(ROOT)/pkg/version.Release=$(VERSION) -X $(ROOT)/pkg/version.Commit=$(COMMIT) -X $(ROOT)/pkg/version.BuildDate=$(BUILD_DATE)" cmd/sym-api/main.go
+	GOOS=linux GOARCH=amd64 go build -o bin/sym-admin-api -ldflags "-s -w -X $(ROOT)/pkg/version.Release=$(VERSION) -X $(ROOT)/pkg/version.Commit=$(COMMIT) -X $(ROOT)/pkg/version.BuildDate=$(BUILD_DATE)" cmd/api/main.go
 
 # Run against the configured Kubernetes cluster in ~/.kube/config
 run: generate fmt vet manifests
@@ -94,7 +94,7 @@ build-controller:
 
 build-api:
 	$(GO) -v -o bin/sym-admin-api -ldflags "-s -w -X  $(ROOT)/pkg/version.Release=$(VERSION) -X  $(ROOT)/pkg/version.Commit=$(COMMIT)   \
-	-X  $(ROOT)/pkg/version.BuildDate=$(BUILD_DATE)" cmd/sym-api/main.go
+	-X  $(ROOT)/pkg/version.BuildDate=$(BUILD_DATE)" cmd/api/main.go
 
 docker-push: docker-push-controller docker-push-api
 
@@ -118,7 +118,7 @@ helm-worker:
 	helm upgrade --install --force sym-ctl --namespace sym-admin --set image.tag=${VERSION},image.worker=true,image.master=false ./charts/sym-controller
 
 helm-api:
-	helm upgrade --install --force sym-api --namespace sym-admin --set image.tag=${VERSION} ./charts/sym-api
+	helm upgrade --install --force api --namespace sym-admin --set image.tag=${VERSION} ./charts/sym-api
 
 helm-cluster:
 	helm upgrade --install --force sym-ctl-cluster --namespace sym-admin --set image.tag=${VERSION},image.cluster=true,image.worker=false,image.master=false,image.leader=false,image.threadiness=1,rbac.name=sym-controller-cluster ./charts/sym-controller
@@ -127,32 +127,32 @@ helm-cluster:
 helm-cn:
 	helm upgrade --kubeconfig ${KUBECONFIG} --kube-context cn-tke-bj5-test-01 --install --create-namespace sym-ctl --namespace sym-admin  --set image.tag=${VERSION},image.worker=true,image.master=true,image.offlinepod=true,image.threadiness=1,resources.limits.cpu=1,resources.requests.cpu="500m" ./charts/sym-controller
 	helm upgrade --kubeconfig ${KUBECONFIG} --kube-context cn-tke-cd-test-01 --install --create-namespace sym-ctl --namespace sym-admin  --set image.tag=${VERSION},image.worker=true,image.master=false,image.threadiness=1,resources.limits.cpu=1,resources.requests.cpu="500m" ./charts/sym-controller
-	helm upgrade --kubeconfig ${KUBECONFIG} --kube-context cn-tke-bj5-test-01 --install --create-namespace sym-api --namespace sym-admin --set image.tag=${VERSION},ingress.hosts[0].host=testapi-djj.sym.dmall.com,ingress.hosts[0].paths[0]=/,resources.limits.cpu=1,resources.requests.cpu="500m",replicaCount=2  ./charts/sym-api
+	helm upgrade --kubeconfig ${KUBECONFIG} --kube-context cn-tke-bj5-test-01 --install --create-namespace api --namespace sym-admin --set image.tag=${VERSION},ingress.hosts[0].host=testapi-djj.sym.dmall.com,ingress.hosts[0].paths[0]=/,resources.limits.cpu=1,resources.requests.cpu="500m",replicaCount=2  ./charts/sym-api
 
 helm-dev:
 	helm upgrade --kubeconfig ${KUBECONFIG} --kube-context dev-tke-gz-bj5-glb --install --create-namespace sym-ctl --namespace sym-admin  --set image.tag=${VERSION},image.worker=true,image.master=true,image.offlinepod=true,image.threadiness=1,resources.limits.cpu=1,resources.requests.cpu="500m" ./charts/sym-controller
 	helm upgrade --kubeconfig ${KUBECONFIG} --kube-context dev-tke-rz-cd-glb --install --create-namespace sym-ctl --namespace sym-admin  --set image.tag=${VERSION},image.worker=true,image.master=false,image.threadiness=1,resources.limits.cpu=1,resources.requests.cpu="500m" ./charts/sym-controller
-	helm upgrade --kubeconfig ${KUBECONFIG} --kube-context dev-tke-gz-bj5-glb --install --create-namespace sym-api --namespace sym-admin --set image.tag=${VERSION},replicaCount=2,ingress.annotations."kubernetes\.io/ingress\.class"=contour,ingress.hosts[0].host=testapi-glb.sym.dmall.com,ingress.hosts[0].paths[0]=/,resources.limits.cpu=1,resources.requests.cpu="500m",replicaCount=1 ./charts/sym-api
+	helm upgrade --kubeconfig ${KUBECONFIG} --kube-context dev-tke-gz-bj5-glb --install --create-namespace api --namespace sym-admin --set image.tag=${VERSION},replicaCount=2,ingress.annotations."kubernetes\.io/ingress\.class"=contour,ingress.hosts[0].host=testapi-glb.sym.dmall.com,ingress.hosts[0].paths[0]=/,resources.limits.cpu=1,resources.requests.cpu="500m",replicaCount=1 ./charts/sym-api
 	helm upgrade --kubeconfig ${KUBECONFIG} --kube-context dev-tke-rz-cd-glb-02 --install --create-namespace sym-ctl --namespace sym-admin  --set image.tag=${VERSION},image.worker=true,image.master=false,image.threadiness=1,resources.limits.cpu=1,resources.requests.cpu="500m" ./charts/sym-controller
 
 helm-dev-df:
 	helm upgrade --kubeconfig ${KUBECONFIG} --kube-context dev-df-hk-01 --install --create-namespace sym-ctl --namespace sym-admin  --set image.tag=${VERSION},image.worker=true,image.master=true,image.offlinepod=true,image.threadiness=1,resources.limits.cpu=1,resources.requests.cpu="500m" ./charts/sym-controller
-	helm upgrade --kubeconfig ${KUBECONFIG} --kube-context dev-df-hk-01 --install --create-namespace sym-api --namespace sym-admin --set image.tag=${VERSION},replicaCount=2,ingress.hosts[0].host=devapi.sym.inner-dmall.com.hk,ingress.hosts[0].paths[0]=/,resources.limits.cpu=1,resources.requests.cpu="500m",replicaCount=2 ./charts/sym-api
+	helm upgrade --kubeconfig ${KUBECONFIG} --kube-context dev-df-hk-01 --install --create-namespace api --namespace sym-admin --set image.tag=${VERSION},replicaCount=2,ingress.hosts[0].host=devapi.sym.inner-dmall.com.hk,ingress.hosts[0].paths[0]=/,resources.limits.cpu=1,resources.requests.cpu="500m",replicaCount=2 ./charts/sym-api
 
 helm-test-df:
 	helm upgrade --kubeconfig ${KUBECONFIG} --kube-context test-df-hk-01 --install --create-namespace sym-ctl --namespace sym-admin  --set image.tag=${VERSION},image.worker=true,image.master=true,image.offlinepod=true,image.threadiness=1,resources.limits.cpu=1,resources.requests.cpu="500m" ./charts/sym-controller
-	helm upgrade --kubeconfig ${KUBECONFIG} --kube-context test-df-hk-01 --install --create-namespace sym-api --namespace sym-admin --set image.tag=${VERSION},replicaCount=2,ingress.annotations."kubernetes\.io/ingress\.class"=contour,ingress.hosts[0].host=testapi.sym.inner-dmall.com.hk,ingress.hosts[0].paths[0]=/,resources.limits.cpu=1,resources.requests.cpu="500m",replicaCount=2 ./charts/sym-api
+	helm upgrade --kubeconfig ${KUBECONFIG} --kube-context test-df-hk-01 --install --create-namespace api --namespace sym-admin --set image.tag=${VERSION},replicaCount=2,ingress.annotations."kubernetes\.io/ingress\.class"=contour,ingress.hosts[0].host=testapi.sym.inner-dmall.com.hk,ingress.hosts[0].paths[0]=/,resources.limits.cpu=1,resources.requests.cpu="500m",replicaCount=2 ./charts/sym-api
 
 helm-test:
 	helm upgrade --kubeconfig ${KUBECONFIG} --kube-context test-tke-gz-bj5-bus-01 --install --create-namespace sym-ctl --namespace sym-admin --set image.tag=${VERSION},image.worker=true,image.master=true,image.offlinepod=true,image.threadiness=1,resources.limits.cpu=1,resources.requests.cpu="500m" ./charts/sym-controller
 	helm upgrade --kubeconfig ${KUBECONFIG} --kube-context test-tke-rz-bj5-bus-01 --install --create-namespace sym-ctl --namespace sym-admin  --set image.tag=${VERSION},image.worker=true,image.master=false,image.threadiness=1,resources.limits.cpu=1,resources.requests.cpu="500m" ./charts/sym-controller
 	helm upgrade --kubeconfig ${KUBECONFIG} --kube-context test-tke-rz-cd-bus-01 --install --create-namespace sym-ctl --namespace sym-admin  --set image.tag=${VERSION},image.worker=true,image.master=false,image.threadiness=1,resources.limits.cpu=1,resources.requests.cpu="500m" ./charts/sym-controller
-	helm upgrade --kubeconfig ${KUBECONFIG} --kube-context test-tke-gz-bj5-bus-01 --install --create-namespace sym-api --namespace sym-admin --set image.tag=${VERSION},ingress.hosts[0].host=testapi.sym.dmall.com,ingress.hosts[0].paths[0]=/,resources.limits.cpu=1,resources.requests.cpu="500m",replicaCount=2 ./charts/sym-api
+	helm upgrade --kubeconfig ${KUBECONFIG} --kube-context test-tke-gz-bj5-bus-01 --install --create-namespace api --namespace sym-admin --set image.tag=${VERSION},ingress.hosts[0].host=testapi.sym.dmall.com,ingress.hosts[0].paths[0]=/,resources.limits.cpu=1,resources.requests.cpu="500m",replicaCount=2 ./charts/sym-api
 
 helm-monitor:
 	helm upgrade --kubeconfig ${KUBECONFIG} --kube-context dev-tke-bj5-monit-01 --install --create-namespace sym-ctl --namespace sym-admin  --set image.tag=${VERSION},image.worker=true,image.master=true,image.offlinepod=true,image.threadiness=1,resources.limits.cpu=1,resources.requests.cpu="500m" ./charts/sym-controller
 	helm upgrade --kubeconfig ${KUBECONFIG} --kube-context dev-tke-bj5-test-01 --install --create-namespace sym-ctl --namespace sym-admin  --set image.tag=${VERSION},image.worker=true,image.master=false,image.threadiness=1,resources.limits.cpu=1,resources.requests.cpu="500m" ./charts/sym-controller
-	helm upgrade --kubeconfig ${KUBECONFIG} --kube-context dev-tke-bj5-monit-01 --install --create-namespace sym-api --namespace sym-admin --set image.tag=${VERSION},ingress.annotations."kubernetes\.io/ingress\.class"=contour,ingress.hosts[0].host=devapi.sym.dmall.com,ingress.hosts[0].paths[0]=/,resources.limits.cpu=1,resources.requests.cpu="500m",replicaCount=2 ./charts/sym-api
+	helm upgrade --kubeconfig ${KUBECONFIG} --kube-context dev-tke-bj5-monit-01 --install --create-namespace api --namespace sym-admin --set image.tag=${VERSION},ingress.annotations."kubernetes\.io/ingress\.class"=contour,ingress.hosts[0].host=devapi.sym.dmall.com,ingress.hosts[0].paths[0]=/,resources.limits.cpu=1,resources.requests.cpu="500m",replicaCount=2 ./charts/sym-api
 
 # find or download controller-gen
 # download controller-gen if necessary
