@@ -21,10 +21,13 @@ var (
 	LocalStorageName   = "local-storage"
 	PrometheusPvName   = "prometheus-pv"
 	GrafanaPvName      = "grafana-pv"
+	LokiPvName         = "loki-pv"
 	NodeSelectorKey    = "sym-preserve"
 	NodeSelectorVa     = "monitor"
+	LokiSelectorVa     = "loki-data"
 	NodeMonitorName    = "node-role.kubernetes.io/monitor"
 	MasterNodeLabelKey = "node-role.kubernetes.io/master"
+	NodeLokiName       = "node-role.kubernetes.io/loki"
 
 	ClusterAlert       = "clusterAlert"
 	ClusterType        = "clusterType"
@@ -114,25 +117,25 @@ func PreLabelsNs(k *k8smanager.Cluster, obj *workloadv1beta1.Cluster) error {
 }
 
 // PreLabelsNode ...
-func PreLabelsNode(k *k8smanager.Cluster, obj *workloadv1beta1.Cluster) error {
+func PreLabelsNode(k *k8smanager.Cluster, nodeName, nodeSelectorVa, nodeRoleName string) error {
 	node := &corev1.Node{}
 	err := k.Client.Get(context.TODO(), types.NamespacedName{
-		Name: obj.Spec.SymNodeName,
+		Name: nodeName,
 	}, node)
 	if err != nil {
-		klog.Errorf("get SymNodeName:%s err: %+v", obj.Spec.SymNodeName, err)
+		klog.Errorf("get SymNodeName:%s err: %+v", nodeName, err)
 		return err
 	}
 
 	isLabelChange := 0
 	midifyLabels := node.Labels
-	if keyVa, ok := node.Labels[NodeSelectorKey]; !ok && keyVa != NodeSelectorVa {
-		midifyLabels[NodeSelectorKey] = NodeSelectorVa
+	if keyVa, ok := node.Labels[NodeSelectorKey]; !ok && keyVa != nodeSelectorVa {
+		midifyLabels[NodeSelectorKey] = nodeSelectorVa
 		isLabelChange++
 	}
 
-	if _, ok := node.Labels[NodeMonitorName]; !ok {
-		midifyLabels[NodeMonitorName] = "sym"
+	if _, ok := node.Labels[nodeRoleName]; !ok {
+		midifyLabels[nodeRoleName] = "sym"
 		isLabelChange++
 	}
 
@@ -140,7 +143,7 @@ func PreLabelsNode(k *k8smanager.Cluster, obj *workloadv1beta1.Cluster) error {
 		node.Labels = midifyLabels
 		err := k.Client.Update(context.TODO(), node)
 		if err != nil {
-			klog.Errorf("update labes SymNodeName:%s err: %+v", obj.Spec.SymNodeName, err)
+			klog.Errorf("update labes SymNodeName:%s err: %+v", nodeName, err)
 			return err
 		}
 

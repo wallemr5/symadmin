@@ -30,15 +30,16 @@ type ClusterList struct {
 }
 
 type ClusterSpec struct {
-	KubeConfig  string            `json:"kubeConfig,omitempty"`
-	SymNodeName string            `json:"symNodeName"`
-	Meta        map[string]string `json:"meta,omitempty"`
-	DisplayName string            `json:"displayName,omitempty"`
-	Description string            `json:"description,omitempty"`
-	HelmSpec    *HelmSpec         `json:"helmSpec,omitempty"`
-	AlertSpec   *AlertSpec        `json:"alertSpec,omitempty"`
-	Apps        []*HelmChartSpec  `json:"apps,omitempty"`
-	Pause       bool              `json:"pause"`
+	KubeConfig   string            `json:"kubeConfig,omitempty"`
+	SymNodeName  string            `json:"symNodeName"`
+	LokiNodeName string            `json:"lokiNodeName"`
+	Meta         map[string]string `json:"meta,omitempty"`
+	DisplayName  string            `json:"displayName,omitempty"`
+	Description  string            `json:"description,omitempty"`
+	HelmSpec     *HelmSpec         `json:"helmSpec,omitempty"`
+	AlertSpec    *AlertSpec        `json:"alertSpec,omitempty"`
+	Apps         []*HelmChartSpec  `json:"apps,omitempty"`
+	Pause        bool              `json:"pause"`
 }
 
 type HelmSpec struct {

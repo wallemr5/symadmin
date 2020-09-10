@@ -30,6 +30,7 @@ const (
 
 const (
 	ClusterAnnotationMonitor     = "k8s.io/monitor"
+	ClusterAnnotationLoki        = "k8s.io/loki"
 	WorkLoadAnnotationHpa        = "hpa.autoscaling.dmall.com/Hpa"
 	WorkLoadAnnotationHpaMetrics = "hpa.autoscaling.dmall.com/Metrics"
 )

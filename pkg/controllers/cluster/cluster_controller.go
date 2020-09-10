@@ -3,6 +3,7 @@ package cluster
 import (
 	"context"
 	"fmt"
+	"gitlab.dmall.com/arch/sym-admin/pkg/controllers/cluster/lokistack"
 	"sort"
 	"time"
 
@@ -272,11 +273,16 @@ func (r *Reconciler) reconcileComponent(ctx context.Context, kcli *k8smanager.Cl
 		return 0, err
 	}
 
-	err = common.PreLabelsNode(kcli, obj)
+	err = common.PreLabelsNode(kcli, obj.Spec.SymNodeName, common.NodeSelectorVa, common.NodeMonitorName)
 	if err != nil {
 		return 0, err
 	}
-
+	if obj.Spec.LokiNodeName != "" {
+		err = common.PreLabelsNode(kcli, obj.Spec.LokiNodeName, common.LokiSelectorVa, common.NodeLokiName)
+		if err != nil {
+			return 0, err
+		}
+	}
 	phases := []common.ComponentReconciler{
 		other.New(kcli, obj, r.HelmSyncer.HelmEnv),
 		traefik.New(kcli, obj, r.HelmSyncer.HelmEnv),
@@ -284,6 +290,7 @@ func (r *Reconciler) reconcileComponent(ctx context.Context, kcli *k8smanager.Cl
 		monitor.New(r.Mgr, kcli, obj, r.HelmSyncer.HelmEnv),
 		sym_ctl.New(r.Mgr, kcli, obj, r.HelmSyncer.HelmEnv),
 		sym_api.New(kcli, obj, r.HelmSyncer.HelmEnv),
+		lokistack.New(kcli, obj, r.HelmSyncer.HelmEnv),
 	}
 
 	appHelms := make([]*workloadv1beta1.AppHelmStatus, 0, len(obj.Spec.Apps))
