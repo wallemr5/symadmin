@@ -3,6 +3,7 @@ package v1
 import (
 	"bytes"
 	"context"
+	"errors"
 	"fmt"
 	"io/ioutil"
 	"net/http"
@@ -228,7 +229,7 @@ func (m *Manager) GetHelmReleaseInfo(c *gin.Context) {
 	})
 }
 
-func lintK8sObj(c client.Client, objs object.K8sObjects) (string, string, bool) {
+func lintK8sObj(c client.Client, objs object.K8sObjects) (string, string, bool, error) {
 	isSuccess := true
 	message := "success"
 	ctx := context.TODO()
@@ -245,9 +246,10 @@ func lintK8sObj(c client.Client, objs object.K8sObjects) (string, string, bool) 
 		orgObj, _, err := s.Decode(utils.String2bytes(valueStr), nil, nil)
 		if err != nil {
 			klog.Errorf("%s/%sfailed to parse yaml to k8s object err: %+v, yml: \n%s", obj.Kind, obj.Name, err, valueStr)
-			message = fmt.Sprintf("%s/%s failed to parse yaml to k8s object err: %+v", obj.Kind, obj.Name, err)
-			isSuccess = false
-			continue
+			return "", "", false, err
+			// message = fmt.Sprintf("%s/%s failed to parse yaml to k8s object err: %+v", obj.Kind, obj.Name, err)
+			// isSuccess = false
+			// continue
 		}
 
 		isKnown := true
@@ -268,8 +270,10 @@ func lintK8sObj(c client.Client, objs object.K8sObjects) (string, string, bool) 
 			ingress := convertObj.(*v1beta1.Ingress)
 			ingress.Namespace = ns
 		default:
-			klog.Errorf("%s/%s unknown kind, yml: \n%s", obj.Kind, obj.Name, valueStr)
-			isKnown = false
+			msg := fmt.Sprintf("%s/%s unknown kind, yml: \n%s", obj.Kind, obj.Name, valueStr)
+			klog.Error(msg)
+			return "", "", false, errors.New(msg)
+			// isKnown = false
 		}
 
 		if !isKnown {
@@ -279,12 +283,13 @@ func lintK8sObj(c client.Client, objs object.K8sObjects) (string, string, bool) 
 		_, err = resources.Reconcile(ctx, c, convertObj, resources.Option{DesiredState: resources.DesiredStatePresent})
 		if err != nil {
 			klog.Errorf("%s/%s failed dry run err: %+v, yml: \n%s", obj.Kind, obj.Name, err, valueStr)
-			message = fmt.Sprintf("%s/%s failed dry run err: %+v", obj.Kind, obj.Name, err)
-			isSuccess = false
-			continue
+			return "", "", false, err
+			// message = fmt.Sprintf("%s/%s failed dry run err: %+v", obj.Kind, obj.Name, err)
+			// isSuccess = false
+			// continue
 		}
 
-		_ = retry.RetryOnConflict(retry.DefaultRetry, func() error {
+		err = retry.RetryOnConflict(retry.DefaultRetry, func() error {
 			time.Sleep(10 * time.Millisecond)
 			_, err = resources.Reconcile(ctx, c, convertObj, resources.Option{DesiredState: resources.DesiredStateAbsent})
 			if err != nil {
@@ -293,9 +298,12 @@ func lintK8sObj(c client.Client, objs object.K8sObjects) (string, string, bool) 
 			}
 			return nil
 		})
+		if err != nil {
+			return "", "", false, err
+		}
 	}
 
-	return buf.String(), message, isSuccess
+	return buf.String(), message, isSuccess, nil
 }
 
 // LintLocalTemplate ...
@@ -310,8 +318,15 @@ func (m *Manager) LintLocalTemplate(c *gin.Context) {
 		return
 	}
 
-	manifest, message, isSuccess := lintK8sObj(m.ClustersMgr.MasterClient.GetClient(), objs)
+	manifest, message, isSuccess, err := lintK8sObj(m.ClustersMgr.MasterClient.GetClient(), objs)
 	// c.String(http.StatusOK, manifest)
+	if err != nil {
+		c.IndentedJSON(http.StatusBadRequest, gin.H{
+			"success": false,
+			"message": err.Error(),
+		})
+		return
+	}
 	c.IndentedJSON(http.StatusOK, gin.H{
 		"success":  isSuccess,
 		"message":  message,
@@ -354,7 +369,14 @@ func (m *Manager) LintHelmTemplate(c *gin.Context) {
 		return
 	}
 
-	manifest, message, isSuccess := lintK8sObj(m.ClustersMgr.MasterClient.GetClient(), objs)
+	manifest, message, isSuccess, err := lintK8sObj(m.ClustersMgr.MasterClient.GetClient(), objs)
+	if err != nil {
+		c.IndentedJSON(http.StatusBadRequest, gin.H{
+			"success": false,
+			"message": err.Error(),
+		})
+		return
+	}
 	c.IndentedJSON(http.StatusOK, gin.H{
 		"success":  isSuccess,
 		"message":  message,
