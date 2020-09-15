@@ -142,6 +142,9 @@ hostAliases:
   - ip: "10.16.247.231"
     hostnames:
       - "cls-jvu2z5sv.ccs.tencent-cloud.com"
+  - ip: "10.16.247.230"
+    hostnames:
+      - "cls-pveb7ycx.ccs.tencent-cloud.com"
   - ip: "10.13.135.250"
     hostnames:
       - "chartmuseum.dmall.com"
