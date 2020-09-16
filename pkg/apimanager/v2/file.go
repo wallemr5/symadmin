@@ -145,10 +145,15 @@ func (m *Manager) ListFiles(c *gin.Context) {
 			f.IsDirectory = true
 			f.Name = strings.TrimSuffix(fileName, "/")
 		}
-		if !strings.HasSuffix(path, "/") {
+		if !strings.HasSuffix(path, "/") && f.Name != path {
 			path += "/"
 		}
-		f.FullPath = path + f.Name
+		// path is not a directory, fullpath = path
+		if f.Name == path {
+			f.FullPath = path
+		} else {
+			f.FullPath = path + f.Name
+		}
 		result = append(result, f)
 	}
 
