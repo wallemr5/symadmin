@@ -8,8 +8,11 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"gitlab.dmall.com/arch/sym-admin/pkg/apimanager/model"
+	workloadv1beta1 "gitlab.dmall.com/arch/sym-admin/pkg/apis/workload/v1beta1"
 	"gitlab.dmall.com/arch/sym-admin/pkg/utils"
+	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/fields"
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/types"
@@ -110,9 +113,7 @@ func (m *Manager) GetPodByLabels(c *gin.Context) {
 func (m *Manager) GetAppGroupVersion(c *gin.Context) {
 	clusterName := c.Param("clusterCode")
 	appName, ok := c.GetQuery("appName")
-	group := c.DefaultQuery("group", "")
 	namespace := c.DefaultQuery("namespace", "")
-	zone := c.DefaultQuery("symZone", "")
 
 	if !ok || appName == "" {
 		c.IndentedJSON(http.StatusBadRequest, gin.H{
@@ -123,7 +124,7 @@ func (m *Manager) GetAppGroupVersion(c *gin.Context) {
 		return
 	}
 
-	pods, err := m.getPodListByAppName(clusterName, namespace, appName, group, zone, "", "", "")
+	cluster, err := m.ClustersMgr.Get(clusterName)
 	if err != nil {
 		c.IndentedJSON(http.StatusBadRequest, gin.H{
 			"success":   false,
@@ -132,12 +133,53 @@ func (m *Manager) GetAppGroupVersion(c *gin.Context) {
 		})
 		return
 	}
+	appset := &workloadv1beta1.AppSet{}
+	err = cluster.Client.Get(context.Background(), types.NamespacedName{
+		Namespace: namespace,
+		Name:      appName,
+	}, appset)
 
-	result := make(map[string]string)
-	for _, pod := range pods {
-		_, ok := result[pod.Group]
-		if !ok {
-			result[pod.Group] = pod.ImageVersion
+	type Result struct {
+		Zone           string `json:"zone"`
+		Group          string `json:"group"`
+		Version        string `json:"version"`
+		LastUpdateTime string `json:"lastUpdateTime"`
+		OK             bool   `json:"ok"`
+	}
+
+	var result []*Result
+	for _, cls := range appset.Spec.ClusterTopology.Clusters {
+		for _, podSpec := range cls.PodSets {
+			if podSpec.Mata == nil {
+				continue
+			}
+
+			r := &Result{
+				Zone:    podSpec.Mata["sym-zone"],
+				Group:   podSpec.Mata["sym-group"],
+				Version: podSpec.Version,
+			}
+
+			for _, cls := range m.ClustersMgr.GetAll() {
+				deploy := &appsv1.Deployment{}
+				err := cls.Client.Get(context.Background(), types.NamespacedName{
+					Namespace: namespace,
+					Name:      podSpec.Name,
+				}, deploy)
+
+				if err != nil {
+					if apierrors.IsNotFound(err) {
+						continue
+					}
+					klog.Errorf("get deployment error: %v", err)
+					continue
+				}
+
+				r.LastUpdateTime = utils.FormatTime(deploy.Status.Conditions[0].LastUpdateTime.String())
+				r.OK = deploy.Status.AvailableReplicas == *deploy.Spec.Replicas &&
+					deploy.Status.UnavailableReplicas == 0
+			}
+			result = append(result, r)
 		}
 	}
 
