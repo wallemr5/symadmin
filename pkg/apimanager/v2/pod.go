@@ -5,12 +5,12 @@ import (
 	"net/http"
 	"regexp"
 	"sort"
+	"time"
 
 	"github.com/gin-gonic/gin"
 	"gitlab.dmall.com/arch/sym-admin/pkg/apimanager/model"
 	workloadv1beta1 "gitlab.dmall.com/arch/sym-admin/pkg/apis/workload/v1beta1"
 	"gitlab.dmall.com/arch/sym-admin/pkg/utils"
-	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/fields"
@@ -139,55 +139,70 @@ func (m *Manager) GetAppGroupVersion(c *gin.Context) {
 		Name:      appName,
 	}, appset)
 
+	if err != nil {
+		if apierrors.IsNotFound(err) {
+			c.IndentedJSON(http.StatusBadRequest, gin.H{
+				"success":   false,
+				"message":   err.Error(),
+				"resultMap": nil,
+			})
+			return
+		}
+	}
+
 	type Result struct {
-		Zone           string `json:"zone"`
-		Group          string `json:"group"`
-		Version        string `json:"version"`
-		LastUpdateTime string `json:"lastUpdateTime"`
-		OK             bool   `json:"ok"`
+		Zone      string `json:"zone"`
+		Group     string `json:"group"`
+		Version   string `json:"version"`
+		StartTime string `json:"startTime"`
+		OK        bool   `json:"ok"`
 	}
 
 	var result []*Result
+	statusPodSetMap := make(map[string]*workloadv1beta1.PodSetStatusInfo)
+	for _, cls := range appset.Status.AggrStatus.Clusters {
+		for _, podSet := range cls.PodSets {
+			statusPodSetMap[podSet.Name] = podSet
+		}
+
+	}
 	for _, cls := range appset.Spec.ClusterTopology.Clusters {
 		for _, podSpec := range cls.PodSets {
 			if podSpec.Mata == nil {
 				continue
 			}
 
+			startTime := podSpec.Mata["sym-time"]
+			if len(startTime) == 0 {
+				now := time.Now()
+				startTime = now.Format("2006-01-02 15:04:05")
+			}
 			r := &Result{
-				Zone:    podSpec.Mata["sym-zone"],
-				Group:   podSpec.Mata["sym-group"],
-				Version: podSpec.Version,
+				Zone:      podSpec.Mata["sym-zone"],
+				Group:     podSpec.Mata["sym-group"],
+				Version:   podSpec.Version,
+				StartTime: startTime,
+				OK:        isPodSetOk(statusPodSetMap[podSpec.Name]),
 			}
 
-			for _, cls := range m.ClustersMgr.GetAll() {
-				deploy := &appsv1.Deployment{}
-				err := cls.Client.Get(context.Background(), types.NamespacedName{
-					Namespace: namespace,
-					Name:      podSpec.Name,
-				}, deploy)
-
-				if err != nil {
-					if apierrors.IsNotFound(err) {
-						continue
-					}
-					klog.Errorf("get deployment error: %v", err)
-					continue
-				}
-
-				r.LastUpdateTime = utils.FormatTime(deploy.Status.Conditions[0].LastUpdateTime.String())
-				r.OK = deploy.Status.AvailableReplicas == *deploy.Spec.Replicas &&
-					deploy.Status.UnavailableReplicas == 0
-			}
 			result = append(result, r)
 		}
 	}
 
 	c.IndentedJSON(http.StatusOK, gin.H{
-		"success":   true,
-		"message":   nil,
-		"resultMap": result,
+		"success": true,
+		"message": nil,
+		"resultMap": gin.H{
+			"data": result,
+		},
 	})
+}
+
+func isPodSetOk(podSet *workloadv1beta1.PodSetStatusInfo) bool {
+	if podSet == nil {
+		return false
+	}
+	return podSet.Desired == podSet.Available && podSet.UnAvailable == 0
 }
 
 // TODO phase:
