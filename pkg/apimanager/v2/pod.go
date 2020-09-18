@@ -2,6 +2,7 @@ package v2
 
 import (
 	"context"
+	labels2 "gitlab.dmall.com/arch/sym-admin/pkg/labels"
 	"net/http"
 	"regexp"
 	"sort"
@@ -177,9 +178,14 @@ func (m *Manager) GetAppGroupVersion(c *gin.Context) {
 				now := time.Now()
 				startTime = now.Format("2006-01-02 15:04:05")
 			}
+			// - make Compatible with business
+			group := podSpec.Mata["sym-group"]
+			if group == labels2.CanaryGroup {
+				group = string(model.CanaryGroup)
+			}
 			r := &Result{
 				Zone:      podSpec.Mata["sym-zone"],
-				Group:     podSpec.Mata["sym-group"],
+				Group:     group,
 				Version:   podSpec.Version,
 				StartTime: startTime,
 				OK:        isPodSetOk(statusPodSetMap[podSpec.Name]),
