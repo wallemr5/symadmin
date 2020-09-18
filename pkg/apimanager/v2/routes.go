@@ -51,6 +51,12 @@ func (m *Manager) Routes() []*router.Route {
 			Handler: m.ListFiles,
 			Desc:    ListFileDesc,
 		},
+		{
+			Method:  "GET",
+			Path:    "/api/v2/cluster/:clusterCode/app/group/version",
+			Handler: m.GetAppGroupVersion,
+			Desc:    GetAppGroupVersionDesc,
+		},
 	}
 
 	routes = append(routes, apiRoutes...)

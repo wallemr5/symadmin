@@ -63,3 +63,6 @@ var TailFileDesc = ``
 
 // ListFileDesc ...
 var ListFileDesc = ``
+
+// GetAppGroupVersionDesc ...
+var GetAppGroupVersionDesc = ``
