@@ -1,0 +1,45 @@
+apiVersion: workload.dmall.com/v1beta1
+kind: Cluster
+metadata:
+  labels:
+    clusterName: tcc-sh-dks-rz-03
+  name: tcc-sh-dks-rz-03
+  namespace: sym-admin
+spec:
+  meta:
+    area: shanghai
+    az: SH
+    clusterIngressHead: dks-sh-rz-3
+    clusterType: tke
+    id: "3"
+    pause: false
+    symNodeName: 10.50.9.134
+    helmSpec:
+      maxHistory: 5
+      namespace: kube-system
+      overrideImageSpec: registry.cn-hangzhou.aliyuncs.com/google_containers/tiller:v2.13.1
+  apps:
+    - name: metrics-server
+      namespace: monitoring
+      repo: dmall
+    - name: contour
+      repo: dmall
+      namespace: projectcontour
+      chartVersion: 1.1.4
+    - name: monitor
+      repo: dmall
+      namespace: monitoring
+      chartName: prometheus-operator
+      chartVersion: 8.7.1
+      values:
+        custom-resources-config: disable
+        selector-only-system: disable
+        lpv-path: /root/prometheus-data
+        lpv-size: 20Gi
+        prom-limit-cpu: "1"
+        prom-limit-memory: 2Gi
+        prom-req-cpu: "0.5"
+        prom-req-memory: 1Gi
+        prom-retention: 7d
+        lpv-grafana-path: /root/grafana-data
+        lpv-grafana-size: 1Gi
